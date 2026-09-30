@@ -17,7 +17,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   product,
   categories,
 }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'clinical' | 'ingredients' | 'stock'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'clinical' | 'ingredients'>('general');
 
   // Form State
   const [name, setName] = useState('');
@@ -38,7 +38,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [status, setStatus] = useState<'Active' | 'Inactive' | 'Draft'>('Active');
   const [featured, setFeatured] = useState(false);
-  const [stockUnits, setStockUnits] = useState(50);
   const [batchNumber, setBatchNumber] = useState('');
 
   // New Ingredient Row
@@ -73,7 +72,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setIngredients(parsedIngredients);
       setStatus(product.status || 'Active');
       setFeatured(!!product.featured);
-      setStockUnits(product.stockUnits ?? 50);
       setBatchNumber(product.batchNumber || '');
     } else {
       // Defaults for new formulation
@@ -96,7 +94,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       ]);
       setStatus('Active');
       setFeatured(false);
-      setStockUnits(60);
       setBatchNumber(`SIT-2026-B${Math.floor(10 + Math.random() * 90)}`);
     }
   }, [product, categories, isOpen]);
@@ -170,7 +167,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       ingredients,
       status,
       featured,
-      stockUnits: Number(stockUnits) || 0,
       batchNumber: batchNumber.trim() || 'SIT-2026-B1',
     });
     onClose();
@@ -232,17 +228,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             }`}
           >
             3. Botanical Ingredients & Sizes
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('stock')}
-            className={`py-3 px-4 text-xs font-semibold border-b-2 transition ${
-              activeTab === 'stock'
-                ? 'border-emerald-400 text-emerald-300'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            4. Stock & Batch
           </button>
         </div>
 
@@ -544,42 +529,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 </div>
               </div>
 
-            </div>
-          )}
-
-          {/* TAB 4: STOCK */}
-          {activeTab === 'stock' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-emerald-300 mb-1">Current Stock Units Available</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={stockUnits}
-                    onChange={(e) => setStockUnits(Number(e.target.value))}
-                    className="w-full bg-[#0D281C] border border-[#23493C] rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                  <span className="text-[10px] text-gray-400 mt-1 block">Units below 25 trigger a low stock alert.</span>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-emerald-300 mb-1">Production Batch Number</label>
-                  <input
-                    type="text"
-                    value={batchNumber}
-                    onChange={(e) => setBatchNumber(e.target.value)}
-                    placeholder="e.g. SIT-2026-B10"
-                    className="w-full bg-[#0D281C] border border-[#23493C] rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#0D281C] border border-[#23493C] space-y-2">
-                <span className="text-xs font-bold text-emerald-300 block">Quality Assurance & Dispensary Compliance</span>
-                <p className="text-xs text-gray-400">
-                  Every batch manufactured conforms to Ayurvedic Pharmacopoeia of India (API) standards. Release authorized under Good Manufacturing Practices (GMP).
-                </p>
-              </div>
             </div>
           )}
 

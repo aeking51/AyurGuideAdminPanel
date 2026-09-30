@@ -27,8 +27,8 @@ export interface Product {
   imageUrl: string;
   status: 'Active' | 'Inactive' | 'Draft';
   featured: boolean;
-  stockUnits: number;
-  batchNumber: string;
+  stockUnits?: number;
+  batchNumber?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -7,7 +7,6 @@ import {
   List, 
   Filter, 
   Sparkles, 
-  AlertTriangle,
   RotateCcw
 } from 'lucide-react';
 import { Product, Category } from '../../types';
@@ -23,9 +22,6 @@ interface CatalogueViewProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onViewMonograph: (product: Product) => void;
-  onUpdateStock: (id: string | number, delta: number) => void;
-  onFilterLowStock: () => void;
-  isLowStockOnly: boolean;
 }
 
 export const CatalogueView: React.FC<CatalogueViewProps> = ({
@@ -37,9 +33,6 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   onEditProduct,
   onDeleteProduct,
   onViewMonograph,
-  onUpdateStock,
-  onFilterLowStock,
-  isLowStockOnly,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedDosha, setSelectedDosha] = useState<string>('ALL');
@@ -59,6 +52,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
         const str = typeof item === 'string' ? item : `${item.name} ${item.botanicalName || ''}`;
         return str.toLowerCase().includes(q);
       });
+
       if (!matchName && !matchSanskrit && !matchCode && !matchIndications && !matchIngredients) {
         return false;
       }
@@ -85,26 +79,17 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
       }
     }
 
-    // 5. Low Stock Only
-    if (isLowStockOnly) {
-      if ((product.stockUnits || 0) >= 25) {
-        return false;
-      }
-    }
-
     return true;
   });
 
   // Export to CSV
   const handleExportCSV = () => {
-    const headers = ['Code', 'Name', 'Sanskrit Name', 'Category', 'Stock Units', 'Batch Number', 'Status', 'Classical Reference', 'Indications'];
+    const headers = ['Code', 'Name', 'Sanskrit Name', 'Category', 'Status', 'Classical Reference', 'Indications'];
     const rows = filteredProducts.map(p => [
       `"${p.code || ''}"`,
       `"${p.name || ''}"`,
       `"${p.sanskritName || ''}"`,
       `"${p.categoryName || ''}"`,
-      p.stockUnits ?? 0,
-      `"${p.batchNumber || ''}"`,
       `"${p.status || ''}"`,
       `"${(p.classicalReference || '').replace(/"/g, '""')}"`,
       `"${(p.indications || '').replace(/"/g, '""')}"`
@@ -125,7 +110,6 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     setSelectedCategory('ALL');
     setSelectedDosha('ALL');
     setSelectedStatus('ALL');
-    if (isLowStockOnly) onFilterLowStock();
   };
 
   return (
@@ -178,21 +162,8 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
               <option value="Inactive">Inactive</option>
             </select>
 
-            {/* Low Stock Toggle Button */}
-            <button
-              onClick={onFilterLowStock}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
-                isLowStockOnly
-                  ? 'bg-amber-950 text-amber-300 border-amber-600'
-                  : 'bg-[#081C13] text-gray-300 border-[#23493C] hover:text-white'
-              }`}
-            >
-              <AlertTriangle className={`w-3.5 h-3.5 ${isLowStockOnly ? 'text-amber-400' : 'text-gray-400'}`} />
-              <span>Low Stock &lt;25</span>
-            </button>
-
             {/* Clear All */}
-            {(searchQuery || selectedCategory !== 'ALL' || selectedDosha !== 'ALL' || selectedStatus !== 'ALL' || isLowStockOnly) && (
+            {(searchQuery || selectedCategory !== 'ALL' || selectedDosha !== 'ALL' || selectedStatus !== 'ALL') && (
               <button
                 onClick={resetAllFilters}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-emerald-950/60"
@@ -261,11 +232,6 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
                 Keyword: "{searchQuery}"
               </span>
             )}
-            {isLowStockOnly && (
-              <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
-                Low Stock Filter
-              </span>
-            )}
           </div>
           <span className="text-[11px] text-emerald-400/80 font-mono">
             {viewMode === 'table' ? 'Interactive High-Density Table' : 'Tactile 3D Cards View'}
@@ -281,14 +247,13 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           onViewMonograph={onViewMonograph}
           onEditProduct={onEditProduct}
           onDeleteProduct={onDeleteProduct}
-          onUpdateStock={onUpdateStock}
+          onOpenNewProduct={onOpenNewProduct}
         />
       ) : (
         <ProductCardsView
           products={filteredProducts}
           onViewMonograph={onViewMonograph}
           onEditProduct={onEditProduct}
-          onUpdateStock={onUpdateStock}
         />
       )}
 

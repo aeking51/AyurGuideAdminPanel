@@ -4,10 +4,7 @@ import {
   FileText, 
   Edit3, 
   Sparkles, 
-  Plus, 
-  Minus,
-  Check,
-  AlertTriangle
+  Check
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -15,14 +12,12 @@ interface ProductCardsViewProps {
   products: Product[];
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
-  onUpdateStock: (id: string | number, delta: number) => void;
 }
 
 export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   products,
   onViewMonograph,
   onEditProduct,
-  onUpdateStock,
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
 
@@ -33,11 +28,21 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
     }));
   };
 
+  if (products.length === 0) {
+    return (
+      <div className="bg-[#0D281C]/70 rounded-2xl border border-[#23493C] p-12 text-center col-span-full">
+        <h3 className="text-lg font-serif font-bold text-gray-200">No Formulations in Central Database</h3>
+        <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
+          The central database contains no product cards. Create new medicines using the "+ New Medicine" button.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => {
         const isFlipped = !!flippedCards[product.id];
-        const isLowStock = (product.stockUnits || 0) < 25;
 
         return (
           <div key={product.id} className="h-[430px] w-full flip-card">
@@ -114,14 +119,13 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
 
                 {/* Bottom Controls */}
                 <div className="pt-3 border-t border-[#23493C] flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400">Stock:</span>
-                    <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                      isLowStock ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                    }`}>
-                      {product.stockUnits ?? 0}
-                    </span>
-                  </div>
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${
+                    product.status === 'Active'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-gray-800 text-gray-400 border border-gray-700'
+                  }`}>
+                    {product.status || 'Active'}
+                  </span>
 
                   <div className="flex items-center gap-2">
                     <button
@@ -209,22 +213,8 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
 
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => onUpdateStock(product.id, -5)}
-                      className="w-6 h-6 rounded bg-[#0D281C] text-gray-300 hover:text-white border border-[#23493C] flex items-center justify-center text-xs"
-                      title="Deduct 5"
-                    >
-                      -5
-                    </button>
-                    <button
-                      onClick={() => onUpdateStock(product.id, 10)}
-                      className="w-6 h-6 rounded bg-emerald-950 text-emerald-300 hover:text-white border border-emerald-800 flex items-center justify-center text-xs"
-                      title="Add 10"
-                    >
-                      +10
-                    </button>
-                    <button
                       onClick={() => onViewMonograph(product)}
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
                     >
                       Full Monograph
                     </button>

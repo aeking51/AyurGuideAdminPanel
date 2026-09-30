@@ -89,8 +89,8 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
               <strong className="text-sm text-[#0F382C]">{product.packings?.join(', ') || '450 ml'}</strong>
             </div>
             <div className="bg-white p-3 rounded-lg border border-[#E2D9CC]">
-              <span className="text-[10px] uppercase text-gray-500 font-bold block">Stock Available</span>
-              <strong className="text-sm text-emerald-800">{product.stockUnits ?? 0} Dispensary Units</strong>
+              <span className="text-[10px] uppercase text-gray-500 font-bold block">Formulation Status</span>
+              <strong className="text-sm text-emerald-800">{product.status || 'Active'} Published</strong>
             </div>
           </div>
 

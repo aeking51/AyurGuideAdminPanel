@@ -3,10 +3,7 @@ import {
   FileText, 
   Edit3, 
   Trash2, 
-  Plus, 
-  Minus, 
   AlertCircle,
-  ExternalLink,
   Sparkles
 } from 'lucide-react';
 import { Product } from '../../types';
@@ -16,7 +13,7 @@ interface ProductTableProps {
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
-  onUpdateStock: (id: string | number, delta: number) => void;
+  onOpenNewProduct?: () => void;
 }
 
 export const ProductTable: React.FC<ProductTableProps> = ({
@@ -24,16 +21,24 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   onViewMonograph,
   onEditProduct,
   onDeleteProduct,
-  onUpdateStock,
+  onOpenNewProduct,
 }) => {
   if (products.length === 0) {
     return (
       <div className="bg-[#0D281C]/70 rounded-2xl border border-[#23493C] p-12 text-center">
-        <AlertCircle className="w-12 h-12 text-amber-400 mx-auto mb-3 opacity-80" />
-        <h3 className="text-lg font-serif font-bold text-gray-200">No Medicines Found</h3>
-        <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
-          No formulations match the current filter criteria or search query. Try resetting filters or creating a new product entry.
+        <AlertCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-80" />
+        <h3 className="text-lg font-serif font-bold text-gray-200">No Formulations in Central Database</h3>
+        <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto mb-4">
+          The database is clean with no placeholder products. Start cataloging authentic classical Ayurvedic formulations.
         </p>
+        {onOpenNewProduct && (
+          <button
+            onClick={onOpenNewProduct}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
+          >
+            <span>+ Add First Medicine</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -48,16 +53,12 @@ export const ProductTable: React.FC<ProductTableProps> = ({
               <th className="py-3 px-3">Category</th>
               <th className="py-3 px-3">Dosha & Clinical Target</th>
               <th className="py-3 px-3">Packaging</th>
-              <th className="py-3 px-3 text-center">Stock Level</th>
               <th className="py-3 px-3 text-center">Status</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#23493C]/50">
             {products.map((product) => {
-              const isLowStock = (product.stockUnits || 0) < 25;
-              const isOutOfStock = (product.stockUnits || 0) <= 0;
-
               return (
                 <tr key={product.id} className="hover:bg-[#133829]/50 transition duration-150 group">
                   
@@ -132,41 +133,6 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                           {pkg}
                         </span>
                       ))}
-                    </div>
-                  </td>
-
-                  {/* Stock Level with Quick Stepper */}
-                  <td className="py-3 px-3 text-center">
-                    <div className="inline-flex flex-col items-center">
-                      <div className="flex items-center gap-1.5">
-                        <button 
-                          onClick={() => onUpdateStock(product.id, -1)}
-                          disabled={isOutOfStock}
-                          className="w-5 h-5 rounded flex items-center justify-center bg-emerald-950 text-gray-300 hover:text-white hover:bg-emerald-800 border border-emerald-800 disabled:opacity-40"
-                          title="Decrement 1 unit"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
-                          isOutOfStock
-                            ? 'bg-red-950 text-red-400 border border-red-800'
-                            : isLowStock
-                            ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                            : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                        }`}>
-                          {product.stockUnits ?? 0}
-                        </span>
-                        <button 
-                          onClick={() => onUpdateStock(product.id, 1)}
-                          className="w-5 h-5 rounded flex items-center justify-center bg-emerald-950 text-gray-300 hover:text-white hover:bg-emerald-800 border border-emerald-800"
-                          title="Increment 1 unit"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                      <span className="text-[9px] text-gray-500 mt-0.5 font-mono">
-                        {product.batchNumber || 'Batch A1'}
-                      </span>
                     </div>
                   </td>
 

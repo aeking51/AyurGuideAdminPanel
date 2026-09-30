@@ -6,6 +6,19 @@ const CATEGORIES_KEY = 'ayurguide_categories';
 const USERS_KEY = 'ayurguide_users';
 const AUDIT_KEY = 'ayurguide_audit_logs';
 const SUPABASE_KEY = 'ayurguide_supabase_config';
+const CLEANED_FLAG = 'ayurguide_v3_clean_central_db';
+
+// Automatically purge legacy mock placeholders if present
+if (typeof window !== 'undefined') {
+  try {
+    if (localStorage.getItem(CLEANED_FLAG) !== 'true') {
+      localStorage.removeItem(PRODUCTS_KEY);
+      localStorage.removeItem(USERS_KEY);
+      localStorage.removeItem(AUDIT_KEY);
+      localStorage.setItem(CLEANED_FLAG, 'true');
+    }
+  } catch {}
+}
 
 export class StorageService {
   static getProducts(): Product[] {
@@ -47,7 +60,7 @@ export class StorageService {
           updatedAt: now
         } as Product;
         products[index] = updatedProduct;
-        this.logAudit('MEDICINE_UPDATE', updatedProduct.code || updatedProduct.id, `Updated medicine "${updatedProduct.name}" (${updatedProduct.code})`);
+        this.logAudit('MEDICINE_UPDATE', updatedProduct.code || String(updatedProduct.id), `Updated medicine "${updatedProduct.name}" (${updatedProduct.code})`);
       } else {
         updatedProduct = {
           ...product,
@@ -57,7 +70,6 @@ export class StorageService {
           packings: product.packings || ['450 ml'],
           ingredients: product.ingredients || [],
           status: product.status || 'Active',
-          stockUnits: product.stockUnits || 50,
           batchNumber: product.batchNumber || `SIT-2026-${Math.floor(100 + Math.random() * 900)}`,
           featured: !!product.featured,
           createdAt: now,
@@ -76,7 +88,6 @@ export class StorageService {
         packings: product.packings || ['450 ml'],
         ingredients: product.ingredients || [],
         status: product.status || 'Active',
-        stockUnits: product.stockUnits || 50,
         batchNumber: product.batchNumber || `SIT-2026-${Math.floor(100 + Math.random() * 900)}`,
         featured: !!product.featured,
         createdAt: now,
@@ -97,23 +108,8 @@ export class StorageService {
 
     const filtered = products.filter(p => String(p.id) !== String(id));
     this.saveProducts(filtered);
-    this.logAudit('MEDICINE_DELETE', target.code || target.id, `Deleted medicine "${target.name}"`);
+    this.logAudit('MEDICINE_DELETE', target.code || String(target.id), `Deleted medicine "${target.name}"`);
     return true;
-  }
-
-  static updateStock(id: number | string, delta: number): Product | undefined {
-    const products = this.getProducts();
-    const index = products.findIndex(p => String(p.id) === String(id));
-    if (index === -1) return undefined;
-
-    const currentStock = products[index].stockUnits || 0;
-    const newStock = Math.max(0, currentStock + delta);
-    products[index].stockUnits = newStock;
-    products[index].updatedAt = new Date().toISOString();
-    this.saveProducts(products);
-
-    this.logAudit('STOCK_UPDATE', products[index].code, `Adjusted stock for ${products[index].name} (${delta > 0 ? '+' : ''}${delta}). New stock: ${newStock} units.`);
-    return products[index];
   }
 
   // Categories
@@ -192,7 +188,7 @@ export class StorageService {
     users[idx].roleTitle = newRole === 'ADMIN' ? 'Administrator' : newRole === 'PRACTITIONER' ? 'Ayurvedic Clinical Practitioner' : 'Wellness Seeker';
     this.saveUsers(users);
 
-    this.logAudit('ROLE_CHANGE', userId, `Changed role of user ${users[idx].name} (${users[idx].email}) from ${oldRole} to ${newRole}`);
+    this.logAudit('ROLE_CHANGE', String(userId), `Changed role of user ${users[idx].name} (${users[idx].email}) from ${oldRole} to ${newRole}`);
     return users[idx];
   }
 
@@ -201,9 +197,11 @@ export class StorageService {
     const idx = users.findIndex(u => String(u.id) === String(userId));
     if (idx === -1) return undefined;
 
-    users[idx].status = users[idx].status === 'Active' ? 'Suspended' : 'Active';
+    const newStatus = users[idx].status === 'Active' ? 'Suspended' : 'Active';
+    users[idx].status = newStatus;
     this.saveUsers(users);
-    this.logAudit('ROLE_CHANGE', userId, `Set user ${users[idx].name} status to ${users[idx].status}`);
+
+    this.logAudit('ROLE_CHANGE', String(userId), `Toggled status of user ${users[idx].name} to ${newStatus}`);
     return users[idx];
   }
 
@@ -221,18 +219,18 @@ export class StorageService {
     }
   }
 
-  static logAudit(actionType: AuditLog['actionType'], entityId: string | number, details: string): void {
+  static logAudit(actionType: AuditLog['actionType'], entityId: string | number, details: string, userEmail: string = 'sys.jerin@gmail.com'): void {
     const logs = this.getAuditLogs();
     const newLog: AuditLog = {
-      id: `LOG-${Date.now()}`,
+      id: `LOG-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
       timestamp: new Date().toISOString(),
-      userEmail: 'sys.jerin@gmail.com',
+      userEmail,
       actionType,
       entityId,
       details
     };
     logs.unshift(newLog);
-    // keep max 200 logs
+    // keep at most 200 logs locally
     if (logs.length > 200) logs.pop();
     localStorage.setItem(AUDIT_KEY, JSON.stringify(logs));
   }
@@ -249,7 +247,7 @@ export class StorageService {
         return {
           url: envUrl || parsed.url || "https://ksnsfilauqzxsegpjpdt.supabase.co",
           key: envKey || parsed.key || "",
-          connected: !!(envKey || parsed.key),
+          connected: !!(envKey || (parsed.key && parsed.key.length > 10)),
           lastSyncTime: parsed.lastSyncTime
         };
       }
@@ -258,7 +256,7 @@ export class StorageService {
     return {
       url: envUrl || "https://ksnsfilauqzxsegpjpdt.supabase.co",
       key: envKey || "",
-      connected: !!envKey
+      connected: !!(envKey && envKey.length > 10)
     };
   }
 

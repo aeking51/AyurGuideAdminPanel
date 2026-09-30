@@ -65,8 +65,7 @@ The repository includes a ready-to-deploy `vercel.json` optimized for Vite SPAs:
 
 - **Medicine Catalogue**: Interactive high-density table and 3D flippable card grid.
 - **Dravyaguna Energetics**: Rasa, Virya, Vipaka, Guna, and dynamic botanical ingredient builder.
-- **Dispensary Inventory**: Real-time batch numbers, low-stock threshold alerts, and instant bulk restock (+25, +50 units).
 - **Printable Clinical Monograph**: Formatted according to Ayurvedic Pharmacopoeia of India (API) standards with batch certification and QR code.
 - **Practitioner Directory**: User access control with role elevation (`ADMIN`, `PRACTITIONER`, `PATIENT`) and audit logging.
-- **Audit Ledger**: Chronological audit trail of all stock and clinical modifications with CSV export.
+- **Audit Ledger**: Chronological audit trail of all clinical modifications with CSV export.
 - **Supabase Cloud Integration**: Direct connection to cloud PostgreSQL with live sync and JSON disaster-recovery snapshot backups.

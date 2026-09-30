@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Layers, Plus, Edit3, Check, X } from 'lucide-react';
+import { Layers, Plus, Edit3, Check, X, Trash2 } from 'lucide-react';
 import { Category, Product } from '../../types';
 
 interface CategoriesViewProps {
   categories: Category[];
   products: Product[];
   onSaveCategory: (category: Partial<Category> & { name: string; code: string }) => void;
+  onDeleteCategory?: (id: number | string) => void;
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
   categories,
   products,
   onSaveCategory,
+  onDeleteCategory,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -105,13 +107,28 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
               <div className="pt-3 mt-3 border-t border-[#23493C]/60 flex items-center justify-between">
                 <span className="text-[10px] text-gray-500">Order: #{cat.sortOrder || 1}</span>
-                <button
-                  onClick={() => handleOpenEdit(cat)}
-                  className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleOpenEdit(cat)}
+                    className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </button>
+                  {onDeleteCategory && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete category "${cat.name}"?`)) {
+                          onDeleteCategory(cat.id);
+                        }
+                      }}
+                      className="p-1 rounded text-red-400 hover:text-red-300 transition"
+                      title="Delete Category"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

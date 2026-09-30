@@ -5,7 +5,6 @@ import {
   Users, 
   History, 
   Database, 
-  Boxes, 
   Sparkles,
   ShieldCheck,
   Search
@@ -30,7 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navItems = [
     { id: 'catalogue', label: 'Catalogue', icon: BookOpen },
-    { id: 'inventory', label: 'Inventory & Stock', icon: Boxes },
     { id: 'categories', label: 'Categories', icon: Layers },
     { id: 'users', label: 'Practitioners & Users', icon: Users },
     { id: 'audit', label: 'Audit Trail', icon: History },
@@ -84,10 +82,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div 
               onClick={() => setCurrentTab('database')} 
               className="cursor-pointer hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0D281C] border border-[#23493C] text-[11px] text-emerald-300 hover:border-emerald-600 transition"
-              title="Supabase Database Status"
+              title="Supabase Central Database Status"
             >
               <div className={`w-2 h-2 rounded-full ${syncStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span>{syncStatus.connected ? 'Cloud Synced' : 'Local Storage'}</span>
+              <span>{syncStatus.connected ? 'Supabase Realtime Live' : 'Offline / Local'}</span>
             </div>
 
             {/* Admin Badge */}
