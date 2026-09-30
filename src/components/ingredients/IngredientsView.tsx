@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Plus, Edit3, Trash2, X, Search, Flower2, BookOpen } from 'lucide-react';
 import { BotanicalIngredient } from '../../types';
+import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 
 interface IngredientsViewProps {
   ingredients: BotanicalIngredient[];
@@ -16,6 +17,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BotanicalIngredient | null>(null);
+  const [deletingItem, setDeletingItem] = useState<BotanicalIngredient | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -198,11 +200,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Delete botanical ingredient "${item.name}"?`)) {
-                            onDeleteIngredient(item.id);
-                          }
-                        }}
+                        onClick={() => setDeletingItem(item)}
                         className="p-1 rounded text-red-400 hover:text-red-300 transition"
                         title="Delete Ingredient"
                       >
@@ -307,6 +305,22 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingItem && (
+        <DeleteConfirmModal
+          isOpen={!!deletingItem}
+          onClose={() => setDeletingItem(null)}
+          onConfirm={() => {
+            onDeleteIngredient(deletingItem.id);
+          }}
+          title="Delete Botanical Ingredient"
+          itemType="Botanical Ingredient"
+          itemName={deletingItem.name}
+          itemSubtitle={deletingItem.botanicalName ? `Binomial: ${deletingItem.botanicalName}` : undefined}
+          warningMessage="This botanical herb will be permanently deleted from public.ingredients in Supabase."
+        />
       )}
 
     </div>

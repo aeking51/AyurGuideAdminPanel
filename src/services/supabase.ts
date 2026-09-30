@@ -338,14 +338,17 @@ export class SupabaseService {
         .select('*')
         .order('id', { ascending: true });
 
-      if (error || !data || data.length === 0) {
+      if (error) {
+        console.warn('Supabase categories fetch error:', error.message);
         return StorageService.getCategories();
       }
 
-      const mapped = data.map(mapRowToCategory);
+      // Strictly return categories stored in the database
+      const mapped = (data || []).map(mapRowToCategory);
       StorageService.saveCategories(mapped);
       return mapped;
-    } catch {
+    } catch (err) {
+      console.error('Error fetching categories from Supabase:', err);
       return StorageService.getCategories();
     }
   }
@@ -686,6 +689,7 @@ export class SupabaseService {
 
     try {
       await client.from('profiles').delete().eq('id', userId);
+      this.logAudit('ROLE_CHANGE', String(userId), `Deleted user profile #${userId} from public.profiles.`);
       return true;
     } catch {
       return false;

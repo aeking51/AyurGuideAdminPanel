@@ -3,6 +3,7 @@ import {
   RotateCw, 
   FileText, 
   Edit3, 
+  Trash2,
   Sparkles, 
   Check
 } from 'lucide-react';
@@ -12,12 +13,14 @@ interface ProductCardsViewProps {
   products: Product[];
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
+  onDeleteProduct?: (product: Product) => void;
 }
 
 export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   products,
   onViewMonograph,
   onEditProduct,
+  onDeleteProduct,
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
 
@@ -203,13 +206,24 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
 
                 {/* Back Controls */}
                 <div className="pt-2 border-t border-[#23493C] flex items-center justify-between">
-                  <button
-                    onClick={() => onEditProduct(product)}
-                    className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-[#0D281C] text-gray-200 hover:text-white border border-[#23493C]"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Edit Data</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => onEditProduct(product)}
+                      className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-[#0D281C] text-gray-200 hover:text-white border border-[#23493C] transition"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Edit</span>
+                    </button>
+                    {onDeleteProduct && (
+                      <button
+                        onClick={() => onDeleteProduct(product)}
+                        className="p-1.5 rounded-lg bg-[#0D281C] text-red-400 hover:text-red-300 hover:bg-red-950/60 border border-[#23493C] transition"
+                        title="Delete Product"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <button

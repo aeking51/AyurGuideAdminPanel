@@ -117,12 +117,12 @@ export class StorageService {
     try {
       const data = localStorage.getItem(CATEGORIES_KEY);
       if (!data) {
-        localStorage.setItem(CATEGORIES_KEY, JSON.stringify(initialCategories));
-        return initialCategories;
+        return [];
       }
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return initialCategories;
+      return [];
     }
   }
 

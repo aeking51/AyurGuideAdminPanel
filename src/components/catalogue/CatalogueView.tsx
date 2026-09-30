@@ -254,6 +254,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           products={filteredProducts}
           onViewMonograph={onViewMonograph}
           onEditProduct={onEditProduct}
+          onDeleteProduct={onDeleteProduct}
         />
       )}
 

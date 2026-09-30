@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Shield, UserCheck, CheckCircle, Ban, Plus, Trash2, X, UserPlus, AlertCircle } from 'lucide-react';
 import { User } from '../../types';
+import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 
 interface UsersViewProps {
   users: User[];
@@ -18,6 +19,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onDeleteUser,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'ADMIN' | 'PRACTITIONER' | 'PATIENT'>('PRACTITIONER');
@@ -188,11 +190,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                         </select>
                         {onDeleteUser && (
                           <button
-                            onClick={() => {
-                              if (window.confirm(`Delete user "${user.name}" (${user.email})?`)) {
-                                onDeleteUser(user.id);
-                              }
-                            }}
+                            onClick={() => setDeletingUser(user)}
                             className="p-1 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/60 transition"
                             title="Delete User"
                           >
@@ -291,6 +289,24 @@ export const UsersView: React.FC<UsersViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingUser && (
+        <DeleteConfirmModal
+          isOpen={!!deletingUser}
+          onClose={() => setDeletingUser(null)}
+          onConfirm={() => {
+            if (onDeleteUser) {
+              onDeleteUser(deletingUser.id);
+            }
+          }}
+          title="Delete Clinical Personnel"
+          itemType="User"
+          itemName={deletingUser.name}
+          itemSubtitle={`Email: ${deletingUser.email} (${deletingUser.role})`}
+          warningMessage="This clinical personnel profile will be permanently deleted from public.profiles in Supabase. They will lose access to the administration portal."
+        />
       )}
 
     </div>

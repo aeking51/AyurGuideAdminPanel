@@ -12,6 +12,7 @@ import { AuditView } from './components/audit/AuditView';
 import { DatabaseView } from './components/database/DatabaseView';
 import { ProductModal } from './components/catalogue/ProductModal';
 import { MonographModal } from './components/catalogue/MonographModal';
+import { DeleteConfirmModal } from './components/common/DeleteConfirmModal';
 
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [monographProduct, setMonographProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   // Fetch all central data from Supabase
   const loadCentralData = useCallback(async () => {
@@ -120,12 +122,17 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (prod: Product) => {
-    if (window.confirm(`Are you sure you want to delete formulation "${prod.name}" (${prod.code})?`)) {
-      setProducts(prev => prev.filter(p => String(p.id) !== String(prod.id)));
-      await SupabaseService.deleteProduct(prod.id);
-      SupabaseService.fetchAuditLogs().then(setAuditLogs);
-    }
+  const handleDeleteProduct = (prod: Product) => {
+    setDeletingProduct(prod);
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    const target = deletingProduct;
+    setDeletingProduct(null);
+    setProducts(prev => prev.filter(p => String(p.id) !== String(target.id)));
+    await SupabaseService.deleteProduct(target.id);
+    SupabaseService.fetchAuditLogs().then(setAuditLogs);
   };
 
   // ==========================================
@@ -155,11 +162,17 @@ export const App: React.FC = () => {
   // ==========================================
   // CATEGORY CRUD HANDLERS
   // ==========================================
-  const handleSaveCategory = async (catData: Partial<Category> & { name: string; code?: string }) => {
+  const handleSaveCategory = async (catData: Partial<Category> & { name: string; code?: string; title?: string; description?: string; icon?: string }) => {
     try {
       if (catData.id) {
+        const oldCat = categories.find(c => String(c.id) === String(catData.id));
         const updated = await SupabaseService.updateCategory(catData.id, catData);
         setCategories(prev => prev.map(c => String(c.id) === String(updated.id) ? updated : c));
+        if (oldCat && oldCat.name !== updated.name) {
+          setProducts(prev => prev.map(p => 
+            p.categoryName === oldCat.name ? { ...p, categoryName: updated.name } : p
+          ));
+        }
       } else {
         const created = await SupabaseService.createCategory({ ...catData, name: catData.name });
         setCategories(prev => [...prev, created]);
@@ -171,7 +184,13 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: number | string) => {
+    const target = categories.find(c => String(c.id) === String(id));
     setCategories(prev => prev.filter(c => String(c.id) !== String(id)));
+    if (target) {
+      setProducts(prev => prev.map(p => 
+        p.categoryName === target.name ? { ...p, categoryName: undefined } : p
+      ));
+    }
     await SupabaseService.deleteCategory(id);
     SupabaseService.fetchAuditLogs().then(setAuditLogs);
   };
@@ -320,6 +339,20 @@ export const App: React.FC = () => {
         product={monographProduct}
         onClose={() => setMonographProduct(null)}
       />
+
+      {/* Product Deletion Confirmation Modal */}
+      {deletingProduct && (
+        <DeleteConfirmModal
+          isOpen={!!deletingProduct}
+          onClose={() => setDeletingProduct(null)}
+          onConfirm={confirmDeleteProduct}
+          title="Delete Formulation"
+          itemType="Medicine"
+          itemName={deletingProduct.name}
+          itemSubtitle={`Code: ${deletingProduct.code} • Category: ${deletingProduct.categoryName || 'General'}`}
+          warningMessage="This medicine and its clinical formulation details will be permanently removed from public.products in Supabase."
+        />
+      )}
 
     </div>
   );
