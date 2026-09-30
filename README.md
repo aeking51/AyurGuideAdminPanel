@@ -1,22 +1,72 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# AyurGuide — Clinical Administration Portal (React + Vite)
 
-# Run and deploy your AI Studio app
+A modern desktop Web Administration Portal for **AyurGuide** (Ayurvedic Medicine Catalogue & Clinical Dispensary Management System) built with **React**, **TypeScript**, **Tailwind CSS**, **Lucide Icons**, and **Supabase PostgreSQL**.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/f8e68887-9b63-472a-85e6-f605b4fe4728
+## 🚀 Quick Start (Local Development)
 
-## Run Locally
+```bash
+# 1. Install dependencies
+npm install
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+# 2. Configure environment variables (optional, defaults to offline local storage)
+cp .env.example .env
 
+# 3. Start development server on port 3000
+npm run dev
+```
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
-7. If you have already published your app in AI Studio, please [request upload key reset](https://support.google.com/googleplay/android-developer/answer/9842756#zippy=%2Crequest-an-upload-key-reset) in Google Play Console.
+The portal will open at `http://localhost:3000`.
+
+---
+
+## 🌐 Deploying to Vercel (Step-by-Step)
+
+The repository includes a ready-to-deploy `vercel.json` optimized for Vite SPAs:
+
+1. Push your repository to **GitHub**.
+2. Go to [Vercel Dashboard](https://vercel.com/new) and click **"Add New Project"**.
+3. Import your GitHub repository.
+4. Vercel will automatically detect:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Under **Environment Variables**, add:
+   - **`VITE_SUPABASE_URL`**: `https://ksnsfilauqzxsegpjpdt.supabase.co`
+   - **`VITE_SUPABASE_ANON_KEY`**: *(Your Supabase anon public key)*
+6. Click **Deploy**. Vercel will build and publish your admin website with single-page routing preconfigured.
+
+---
+
+## 🔐 Setting Environment Variables
+
+### 1. In Vercel
+- Navigate to **Project Settings** &gt; **Environment Variables**.
+- Key: `VITE_SUPABASE_URL` | Value: `https://ksnsfilauqzxsegpjpdt.supabase.co`
+- Key: `VITE_SUPABASE_ANON_KEY` | Value: `your-anon-key`
+- Scope: *Production, Preview, Development*.
+
+### 2. In GitHub Actions & Secrets
+- Navigate to your repository on GitHub.
+- Go to **Settings** &gt; **Secrets and variables** &gt; **Actions**.
+- Click **"New repository secret"**:
+  - Name: `VITE_SUPABASE_URL` | Secret: `https://ksnsfilauqzxsegpjpdt.supabase.co`
+  - Name: `VITE_SUPABASE_ANON_KEY` | Secret: `your-anon-key`
+
+### 3. In Google AI Studio
+- Click the **Secrets (Key icon)** in the AI Studio left sidebar.
+- Add secret `VITE_SUPABASE_ANON_KEY` (or `GEMINI_API_KEY`).
+- AI Studio automatically injects this secret into `.env` at container boot.
+
+---
+
+## 🛠️ Features Included
+
+- **Medicine Catalogue**: Interactive high-density table and 3D flippable card grid.
+- **Dravyaguna Energetics**: Rasa, Virya, Vipaka, Guna, and dynamic botanical ingredient builder.
+- **Dispensary Inventory**: Real-time batch numbers, low-stock threshold alerts, and instant bulk restock (+25, +50 units).
+- **Printable Clinical Monograph**: Formatted according to Ayurvedic Pharmacopoeia of India (API) standards with batch certification and QR code.
+- **Practitioner Directory**: User access control with role elevation (`ADMIN`, `PRACTITIONER`, `PATIENT`) and audit logging.
+- **Audit Ledger**: Chronological audit trail of all stock and clinical modifications with CSV export.
+- **Supabase Cloud Integration**: Direct connection to cloud PostgreSQL with live sync and JSON disaster-recovery snapshot backups.

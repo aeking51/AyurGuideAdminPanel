@@ -239,14 +239,26 @@ export class StorageService {
 
   // Supabase Config
   static getSupabaseConfig(): SupabaseConfig {
+    const envUrl = (import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || "").trim();
+    const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY || import.meta.env.SUPABASE_KEY || "").trim();
+
     try {
       const data = localStorage.getItem(SUPABASE_KEY);
-      if (data) return JSON.parse(data);
+      if (data) {
+        const parsed = JSON.parse(data);
+        return {
+          url: envUrl || parsed.url || "https://ksnsfilauqzxsegpjpdt.supabase.co",
+          key: envKey || parsed.key || "",
+          connected: !!(envKey || parsed.key),
+          lastSyncTime: parsed.lastSyncTime
+        };
+      }
     } catch {}
+
     return {
-      url: "https://ksnsfilauqzxsegpjpdt.supabase.co",
-      key: "",
-      connected: false
+      url: envUrl || "https://ksnsfilauqzxsegpjpdt.supabase.co",
+      key: envKey || "",
+      connected: !!envKey
     };
   }
 
