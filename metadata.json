@@ -1,0 +1,8 @@
+{
+  "name": "Remix AyurGuide",
+  "description": "Ayurveda Medicine Catalogue & Clinical Administration Web Portal with real-time inventory, monograph generator, practitioner controls, and Supabase integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

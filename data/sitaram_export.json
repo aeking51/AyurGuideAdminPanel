@@ -1,0 +1,602 @@
+{
+  "admins": [
+    {
+      "id": 1,
+      "username": "jerin_admin",
+      "email": "sys.jerin@gmail.com",
+      "password_hash": "1b75012a5c0d4fdc8b66122b0529ce56725e88ee09a5637179a25d22e86df2b8",
+      "salt": "7ae20f6938a06631137fb30a12aa72c2",
+      "name": "Jerin Administrator",
+      "role": "Lead Systems Administrator",
+      "avatar": "",
+      "created_at": "2026-09-14T12:02:00.055131"
+    },
+    {
+      "id": 2,
+      "username": "sitaram_admin",
+      "email": "admin@sitaramayurveda.com",
+      "password_hash": "0c1c66455daa60acf60e0bbb393f7bcfef78a930c87310d9f79f86a171564f9f",
+      "salt": "0da7c237c1909f08118cee451cab9e59",
+      "name": "Dr. D. Ramanathan",
+      "role": "Chief Medical Administrator",
+      "avatar": "",
+      "created_at": "2026-09-14T12:02:00.055131"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Arishtam",
+      "code": "ARI",
+      "description": "Self-generated herbal fermented elixirs and tonics prepared with boiled decoction bases.",
+      "sort_order": 1,
+      "status": "Active"
+    },
+    {
+      "id": 2,
+      "name": "Asavam",
+      "code": "ASA",
+      "description": "Fermented herbal infusions prepared with fresh juices or cold water extracts.",
+      "sort_order": 2,
+      "status": "Active"
+    },
+    {
+      "id": 3,
+      "name": "Arkam",
+      "code": "ARK",
+      "description": "Distilled herbal extracts capturing essential aromatic actives.",
+      "sort_order": 3,
+      "status": "Active"
+    },
+    {
+      "id": 4,
+      "name": "Bhasmas / Ksharams",
+      "code": "BHA",
+      "description": "Calcined nano-mineral preparations and purified alkaline botanical ashes.",
+      "sort_order": 4,
+      "status": "Active"
+    },
+    {
+      "id": 5,
+      "name": "Choornams",
+      "code": "CHO",
+      "description": "Finely sifted botanical powders for digestive, metabolic and systemic therapeutic use.",
+      "sort_order": 5,
+      "status": "Active"
+    },
+    {
+      "id": 6,
+      "name": "Gulika, Gulika Tablets, Capsules",
+      "code": "GUL",
+      "description": "Classical hand-rolled pills, compressed tablets and vegetarian capsules.",
+      "sort_order": 6,
+      "status": "Active"
+    },
+    {
+      "id": 7,
+      "name": "Single Herb Vegan Capsules",
+      "code": "SHC",
+      "description": "Pure single botanical standard extracts in 100% vegetarian plant cellulose shells.",
+      "sort_order": 7,
+      "status": "Active"
+    },
+    {
+      "id": 8,
+      "name": "Kashayams",
+      "code": "KAS",
+      "description": "Concentrated aqueous herbal extracts formulated according to classical treatises.",
+      "sort_order": 8,
+      "status": "Active"
+    },
+    {
+      "id": 9,
+      "name": "Kashayam Tablets",
+      "code": "KTB",
+      "description": "Spray-dried aqueous herbal decoctions compressed into convenient, precise tablet forms.",
+      "sort_order": 9,
+      "status": "Active"
+    },
+    {
+      "id": 10,
+      "name": "Preservative Free Kashayam Sachet",
+      "code": "KSC",
+      "description": "Pure vacuum-sealed classical decoctions with zero artificial preservatives or stabilizers.",
+      "sort_order": 10,
+      "status": "Active"
+    },
+    {
+      "id": 11,
+      "name": "Lehyams",
+      "code": "LEH",
+      "description": "Semi-solid nutritive herbal jams prepared in raw jaggery, honey and cow ghee.",
+      "sort_order": 11,
+      "status": "Active"
+    },
+    {
+      "id": 12,
+      "name": "Ghruthams",
+      "code": "GHR",
+      "description": "Medicated cow ghee preparations crossing the blood-brain barrier for deep cellular delivery.",
+      "sort_order": 12,
+      "status": "Active"
+    },
+    {
+      "id": 13,
+      "name": "Avartis",
+      "code": "AVA",
+      "description": "Repeatedly potentiated herbal lipid formulations processed up to 101 cycles.",
+      "sort_order": 13,
+      "status": "Active"
+    },
+    {
+      "id": 14,
+      "name": "Soft Gel Capsules",
+      "code": "SGC",
+      "description": "Lipid-soluble classical medicated oils and actives encapsulated for modern palate.",
+      "sort_order": 14,
+      "status": "Active"
+    },
+    {
+      "id": 15,
+      "name": "Sevams / Vasthi Thailams",
+      "code": "SVT",
+      "description": "Internal administration and panchakarma basti (enema) medicated oils.",
+      "sort_order": 15,
+      "status": "Active"
+    },
+    {
+      "id": 16,
+      "name": "Eranda Thailams",
+      "code": "ERA",
+      "description": "Herbal-infused purified castor oil preparations for metabolic purgation and vata disorders.",
+      "sort_order": 16,
+      "status": "Active"
+    },
+    {
+      "id": 17,
+      "name": "Thailams",
+      "code": "THI",
+      "description": "Traditional sesame oil-based external and internal medicated preparations.",
+      "sort_order": 17,
+      "status": "Active"
+    },
+    {
+      "id": 18,
+      "name": "Kuzhambu",
+      "code": "KUZ",
+      "description": "Thick, viscous poly-herbal multi-oil formulations for musculoskeletal and joint disorders.",
+      "sort_order": 19,
+      "status": "Active"
+    },
+    {
+      "id": 19,
+      "name": "Lepams / Ointments",
+      "code": "LEP",
+      "description": "Therapeutic herbal pastes, creams and topical emollient salves for dermatological applications.",
+      "sort_order": 21,
+      "status": "Active"
+    },
+    {
+      "id": 20,
+      "name": "Ointments / Creams",
+      "code": "OIN",
+      "description": "Modern topical emollient bases infused with classical actives.",
+      "sort_order": 20,
+      "status": "Active"
+    },
+    {
+      "id": 21,
+      "name": "Ethical Patents",
+      "code": "PAT",
+      "description": "Scientifically validated proprietary intellectual formulas and targeted therapeutic blends.",
+      "sort_order": 24,
+      "status": "Active"
+    },
+    {
+      "id": 22,
+      "name": "Drops",
+      "code": "DRP",
+      "description": "Nasal (Nasya), ear (Karnapoorana) and eye drop formulations.",
+      "sort_order": 22,
+      "status": "Active"
+    },
+    {
+      "id": 23,
+      "name": "Syrups / Tonics",
+      "code": "SYR",
+      "description": "Palatable sweet medicinal syrups for pediatric and geriatric care.",
+      "sort_order": 23,
+      "status": "Active"
+    },
+    {
+      "id": 24,
+      "name": "Miscellaneous Products",
+      "code": "MIS",
+      "description": "General wellness and traditional Ayurvedic adjuncts.",
+      "sort_order": 24,
+      "status": "Active"
+    },
+    {
+      "id": 25,
+      "name": "Kera Thailams",
+      "code": "KTH",
+      "description": "Pitta-pacifying cooling medicated oils prepared in pure cold-pressed coconut oil.",
+      "sort_order": 18,
+      "status": "Active"
+    },
+    {
+      "id": 26,
+      "name": "Mukkuttu",
+      "code": "MUK",
+      "description": "Classical formulations prepared using a synergy of three distinct medicated lipid bases.",
+      "sort_order": 20,
+      "status": "Active"
+    },
+    {
+      "id": 27,
+      "name": "Rasakriya",
+      "code": "RAS",
+      "description": "Deeply concentrated and solidified herbal extracts boiled down to crystalline potency.",
+      "sort_order": 22,
+      "status": "Active"
+    },
+    {
+      "id": 28,
+      "name": "O.T.C Products",
+      "code": "OTC",
+      "description": "Direct consumer wellness preparations, lozenges, balms and health boosters.",
+      "sort_order": 23,
+      "status": "Active"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "code": "SA-00001",
+      "name": "Abhayarishtam",
+      "category_id": 1,
+      "classical_reference": "Ashtangahrudayam, Arshorogadhikaram",
+      "packings_json": "[\"450 ml\", \"200 ml\"]",
+      "ingredients_json": "[\"Abhaya (Terminalia chebula)\", \"Dhatri (Emblica officinalis)\", \"Kapitha (Feronia elephantum)\", \"Vishala (Citrullus colocynthis)\"]",
+      "usage": "15 to 25 ml twice daily after meals with equal quantity of warm water.",
+      "indications": "Arshas (Hemorrhoids), Udara (Abdominal disorders), Vibanda (Constipation), Agnimandya (Impaired digestion).",
+      "description": "Classic Ayurvedic fermented formulation indicated primarily for hemorrhoids, sluggish digestion, and chronic constipation.",
+      "image_url": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-18T05:22:37.1003+00:00",
+      "updated_at": "2026-09-18T05:22:37.1003+00:00"
+    },
+    {
+      "id": 2,
+      "code": "SA-00002",
+      "name": "Amritarishtam",
+      "category_id": 1,
+      "classical_reference": "Bhaishajya Ratnavali, Jwaradhikaram",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[\"Amrita / Guduchi (Tinospora cordifolia)\", \"Bilva (Aegle marmelos)\", \"Agnimantha (Premna integrifolia)\", \"Shyonaka (Oroxylum indicum)\"]",
+      "usage": "15 to 25 ml twice daily after food.",
+      "indications": "Jwara (Chronic & intermittent fevers), Jeerna Jwara, Ajeerna, Yakrit roga (Hepatic sluggishness).",
+      "description": "Potent immunomodulatory elixir that detoxifies Ama, strengthens hepatic function, and relieves recurrent pyrexia.",
+      "image_url": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-18T05:22:37.1003+00:00",
+      "updated_at": "2026-09-18T05:22:37.1003+00:00"
+    },
+    {
+      "id": 3,
+      "code": "SA-00003",
+      "name": "Ashokarishtam",
+      "category_id": 1,
+      "classical_reference": "Bhaishajya Ratnavali, Pradaradhikaram",
+      "packings_json": "[\"450 ml\", \"200 ml\"]",
+      "ingredients_json": "[\"Ashoka (Saraca asoca)\", \"Dhataki (Woodfordia fruticosa)\", \"Musta (Cyperus rotundus)\", \"Haritaki (Terminalia chebula)\"]",
+      "usage": "15 to 25 ml twice daily after food or as directed by the physician.",
+      "indications": "Asrigdara (Menorrhagia), Pradara (Leucorrhea), Katishoola (Low back pain), Shweta Pradara.",
+      "description": "Classical uterine tonic indicated for hormonal harmony, excessive menstrual bleeding, and pelvic comfort.",
+      "image_url": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-18T05:22:37.1003+00:00",
+      "updated_at": "2026-09-18T05:22:37.1003+00:00"
+    },
+    {
+      "id": 4,
+      "code": "SA-13160",
+      "name": "Triphala Churna",
+      "category_id": 1,
+      "classical_reference": "Charaka Samhita",
+      "packings_json": "[\"100 g\", \"200 g\"]",
+      "ingredients_json": "[\"Haritaki\", \"Bibhitaki\", \"Amalaki\"]",
+      "usage": "3-6g with warm water at bedtime",
+      "indications": "Constipation, Eye disorders, Detoxification",
+      "description": "Three magical fruits formulation",
+      "image_url": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-18T05:22:42.189888+00:00",
+      "updated_at": "2026-09-18T05:23:19.555541+00:00"
+    },
+    {
+      "id": 32,
+      "code": "SA-88225",
+      "name": "Dashamoolarishtam",
+      "category_id": 1,
+      "classical_reference": "Sharangadhara Samhita",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "15-25 ml twice daily after food \u2022 Anupana: Equal volume of warm water",
+      "indications": "Traditionally used to support digestion, strength, vitality, and recovery from physical exhaustion.",
+      "description": "Classical fermented elixir made from ten sacred roots (Dashamoola) to revitalize tissues and kindle agni.",
+      "image_url": "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:29:11.246007+00:00",
+      "updated_at": "2026-09-25T09:29:11.246047+00:00"
+    },
+    {
+      "id": 33,
+      "code": "SA-92629",
+      "name": "Ashwagandha Root",
+      "category_id": 1,
+      "classical_reference": "Charaka Samhita Chikitsa Sthana 1.1 / AFI Vol. I",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "3-6g with warm milk \u2022 Anupana: Warm cow milk or ghee",
+      "indications": "Somatic vitality, adrenal support, and deep restful restorative sleep.",
+      "description": "Somatic vitality, adrenal adaptogen support, and deep restful sleep.",
+      "image_url": "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:23.648691+00:00",
+      "updated_at": "2026-09-25T09:32:23.648735+00:00"
+    },
+    {
+      "id": 34,
+      "code": "SA-20904",
+      "name": "Brahmi Vati",
+      "category_id": 1,
+      "classical_reference": "Bhaishajya Ratnavali Manasaroga Chikitsa / AFI",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "1-2 tablets twice daily \u2022 Anupana: Saraswatarishta or warm milk",
+      "indications": "Deep mental clarity, cognitive retention, and nervous system tranquility.",
+      "description": "Deep mental clarity, memory retention, and nervous system balance.",
+      "image_url": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:24.776271+00:00",
+      "updated_at": "2026-09-25T09:32:24.776289+00:00"
+    },
+    {
+      "id": 35,
+      "code": "SA-76907",
+      "name": "Chyawanprash Avaleha",
+      "category_id": 1,
+      "classical_reference": "Charaka Samhita Chikitsa Sthana 1.1.62-74",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "1-2 tablespoons morning & evening \u2022 Anupana: Warm milk",
+      "indications": "Immuno-modulatory rejuvenation, lung health, and vitality for all seasons.",
+      "description": "Premier classical Rasayana rich in natural Vitamin C and 40+ botanical herbs.",
+      "image_url": "https://images.unsplash.com/photo-1577401239170-897942555fb3?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:25.739997+00:00",
+      "updated_at": "2026-09-25T09:32:25.740008+00:00"
+    },
+    {
+      "id": 36,
+      "code": "SA-25363",
+      "name": "Kumkumadi Thailam",
+      "category_id": 1,
+      "classical_reference": "Ashtanga Hrudayam / Bhaishajya Ratnavali",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "3-5 drops external application \u2022 Anupana: Gentle circular facial massage",
+      "indications": "Facial radiance, hyperpigmentation correction, and epidermal glow.",
+      "description": "Luxurious Kashmiri saffron and red sandalwood infused classical beauty oil.",
+      "image_url": "https://images.unsplash.com/photo-1608248597359-253106517e44?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:26.69712+00:00",
+      "updated_at": "2026-09-25T09:32:26.697138+00:00"
+    },
+    {
+      "id": 37,
+      "code": "SA-43264",
+      "name": "Yogaraj Guggulu",
+      "category_id": 1,
+      "classical_reference": "Bhaishajya Ratnavali Amavata Chikitsa",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "2 tablets twice daily \u2022 Anupana: Warm water or Dashamoolarishtam",
+      "indications": "Joint flexibility, synovial comfort, and elimination of metabolic ama.",
+      "description": "Time-honored detoxifying and anti-inflammatory classical Guggulu compound.",
+      "image_url": "https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:27.72595+00:00",
+      "updated_at": "2026-09-25T09:32:27.725962+00:00"
+    },
+    {
+      "id": 38,
+      "code": "SA-72205",
+      "name": "Shatavari Kalpa",
+      "category_id": 1,
+      "classical_reference": "Ayurvedic Pharmacopoeia of India (API)",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "1-2 teaspoons twice daily \u2022 Anupana: Warm milk",
+      "indications": "Hormonal balance, maternal vitality, and reproductive tissue nourishment.",
+      "description": "Delicious Shatavari granules enriched with cardamom for female vitality.",
+      "image_url": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:28.759346+00:00",
+      "updated_at": "2026-09-25T09:32:28.759359+00:00"
+    },
+    {
+      "id": 39,
+      "code": "SA-58259",
+      "name": "Mahanarayan Thailam",
+      "category_id": 1,
+      "classical_reference": "Bhaishajya Ratnavali Vatavyadhi Chikitsa",
+      "packings_json": "[\"450 ml\"]",
+      "ingredients_json": "[]",
+      "usage": "External Abhyanga oil massage \u2022 Anupana: Followed by hot steam fomentation (Swedana)",
+      "indications": "Musculoskeletal strength, tendon relaxation, and alleviation of chronic stiffness.",
+      "description": "Master classical abhyanga oil formulated with 50+ roots and botanicals.",
+      "image_url": "https://images.unsplash.com/photo-1512290900672-1f4963507d6d?w=600",
+      "status": "Active",
+      "featured": 0,
+      "created_at": "2026-09-25T09:32:29.629925+00:00",
+      "updated_at": "2026-09-25T09:32:29.629937+00:00"
+    }
+  ],
+  "ingredients": [
+    {
+      "id": 1,
+      "name": "Abhaya",
+      "botanical_name": "Terminalia chebula",
+      "sanskrit_name": "Haritaki",
+      "part_used": "Fruit rind"
+    },
+    {
+      "id": 2,
+      "name": "Amrita / Guduchi",
+      "botanical_name": "Tinospora cordifolia",
+      "sanskrit_name": "Guduchi",
+      "part_used": "Stem"
+    },
+    {
+      "id": 3,
+      "name": "Ashoka",
+      "botanical_name": "Saraca asoca",
+      "sanskrit_name": "Ashoka",
+      "part_used": "Stem bark"
+    },
+    {
+      "id": 4,
+      "name": "Dhatri",
+      "botanical_name": "Emblica officinalis",
+      "sanskrit_name": "Amalaki",
+      "part_used": "Pericarp"
+    },
+    {
+      "id": 5,
+      "name": "Bilva",
+      "botanical_name": "Aegle marmelos",
+      "sanskrit_name": "Bilva",
+      "part_used": "Root / Fruit"
+    },
+    {
+      "id": 6,
+      "name": "Musta",
+      "botanical_name": "Cyperus rotundus",
+      "sanskrit_name": "Mustaka",
+      "part_used": "Rhizome"
+    }
+  ],
+  "manufacturers": [
+    {
+      "id": 1,
+      "name": "Sitaram Ayurveda Pvt. Ltd. (Main Unit)",
+      "code": "SAT-KL-01",
+      "license": "AYUSH-GMP/KL/2004/0018",
+      "contact_person": "Dr. V. Radhakrishnan",
+      "email": "production@sitaramayurveda.com",
+      "phone": "+91 487 2381238",
+      "address": "Round South, Thrissur, Kerala - 680001, India",
+      "status": "Active"
+    }
+  ],
+  "users": [
+    {
+      "id": "user_admin_jerin",
+      "name": "Jerin MR",
+      "email": "sys.jerin@gmail.com",
+      "role": "ADMIN",
+      "status": "Active",
+      "prakriti": "Tridoshic",
+      "designation": "Chief Administrator & System Director",
+      "phone": "+91 98450 11001",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120",
+      "clinical_notes": "Primary system administrator. Full clinical pharmacopoeia, formulation inventory, and user directory management.",
+      "adherence_percent": 98,
+      "password_hash": "717937cf74665e9ec0f3f5ea72ff7565ee0ca48c5b7c1bf430aa0a6f6c261497",
+      "salt": "52784158ff66877f14220f8736887b17",
+      "created_at": "2026-09-26T11:34:01.276306",
+      "updated_at": "2026-09-26T11:34:01.276306"
+    },
+    {
+      "id": "user_practitioner_meera",
+      "name": "Dr. Meera Nambiar",
+      "email": "dr.meera@ayurguide.org",
+      "role": "PRACTITIONER",
+      "status": "Active",
+      "prakriti": "Pitta",
+      "designation": "Chief Ayurvedic Consultant",
+      "phone": "+91 98450 77777",
+      "avatar_url": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120",
+      "clinical_notes": "Specialist in Dravyaguna (Herbal pharmacology) & Kayachikitsa.",
+      "adherence_percent": 94,
+      "password_hash": "a2edcaf2aff3940ac2d4e6053af92cbb36f26a090ab64b8a70d78afd8367ea21",
+      "salt": "98abf278f2372c939903f15144f83ade",
+      "created_at": "2026-09-26T11:34:01.276306",
+      "updated_at": "2026-09-26T11:59:50.987111"
+    },
+    {
+      "id": "user_patient_arjun",
+      "name": "Arjun Mehta",
+      "email": "arjun.m@example.com",
+      "role": "PATIENT",
+      "status": "Active",
+      "prakriti": "Vata",
+      "designation": "Wellness Seeker",
+      "phone": "+91 98450 44004",
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120",
+      "clinical_notes": "Practicing Dinacharya routine and herbal tea regimen for grounding nervous system.",
+      "adherence_percent": 88,
+      "password_hash": "a2edcaf2aff3940ac2d4e6053af92cbb36f26a090ab64b8a70d78afd8367ea21",
+      "salt": "98abf278f2372c939903f15144f83ade",
+      "created_at": "2026-09-26T11:34:01.276306",
+      "updated_at": "2026-09-28T05:55:55.307755"
+    },
+    {
+      "id": "user_admin_ramanathan",
+      "name": "Dr. D. Ramanathan",
+      "email": "admin@sitaramayurveda.com",
+      "role": "ADMIN",
+      "status": "Active",
+      "prakriti": "Tridoshic",
+      "designation": "Chief Medical Administrator",
+      "phone": "+91 98450 00000",
+      "avatar_url": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120",
+      "clinical_notes": "Chief Medical Administrator & Formulary Director.",
+      "adherence_percent": 99,
+      "password_hash": "717937cf74665e9ec0f3f5ea72ff7565ee0ca48c5b7c1bf430aa0a6f6c261497",
+      "salt": "52784158ff66877f14220f8736887b17",
+      "created_at": "2026-09-26T11:34:01.276306",
+      "updated_at": "2026-09-26T11:34:01.276306"
+    },
+    {
+      "id": "user_practitioner_3926c86b",
+      "name": "Test Synced Practitioner",
+      "email": "practitioner.sync.test@ayurguide.org",
+      "role": "PRACTITIONER",
+      "status": "Active",
+      "prakriti": "Pitta",
+      "designation": "BAMS Clinical Consultant",
+      "phone": "+91 99999 88888",
+      "avatar_url": "",
+      "clinical_notes": "",
+      "adherence_percent": 85,
+      "password_hash": "680fb33fc8ef91ecdf1b4a927e82ca4e1ead5636e6e44683e712d7a036d3c8e0",
+      "salt": "b0dd2699c1f7d8c45a7e99857f454b0d",
+      "created_at": "2026-09-26T11:59:36.463711",
+      "updated_at": "2026-09-26T11:59:36.463711"
+    }
+  ]
+}

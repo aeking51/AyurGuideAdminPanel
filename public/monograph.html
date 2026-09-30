@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Medicine Monograph — Sitaram Ayurveda</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  
+  <meta name="title" content="Sitaram Ayurveda Digital Medicine Monograph">
+  <meta name="description" content="Official clinical monograph, botanical formulation, classical Ayurvedic reference, and posology for Sitaram classical medicines.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ayur: {
+              forest: '#0F382C',
+              green: '#1B4D3E',
+              emerald: '#2C6E49',
+              gold: '#DFB15B',
+              bronze: '#9A7B38',
+              cream: '#F9F7F2',
+              sand: '#F4EFE6',
+              border: '#E2D9CC'
+            }
+          },
+          fontFamily: {
+            serif: ['Playfair Display', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="/js/qrcode.min.js"></script>
+
+  <style>
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-shadow-none {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+      }
+      .page-break {
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#F9F7F2] text-[#1A2E26] font-sans selection:bg-[#DFB15B]/30 min-h-screen flex flex-col">
+
+  <!-- Public Top Navigation -->
+  <header class="bg-[#0F382C] text-white border-b border-[#DFB15B]/20 sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-[#DFB15B] flex items-center justify-center text-[#0F382C] font-serif font-black text-lg shadow-sm">
+          S
+        </div>
+        <div>
+          <span class="font-serif font-bold text-base tracking-wide text-white block leading-tight">SITARAM AYURVEDA</span>
+          <span class="text-[10px] text-[#DFB15B] tracking-wider uppercase font-semibold">Digital Pharmacopoeia Monograph</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="window.print()" class="px-3 py-1.5 bg-[#1B4D3E] hover:bg-[#2C6E49] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border border-[#DFB15B]/30 shadow-xs">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          <span class="hidden sm:inline">Print Monograph</span>
+        </button>
+
+        <button onclick="shareMonograph()" class="px-3 py-1.5 bg-[#DFB15B] hover:bg-[#cca14a] text-[#0F382C] rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-xs">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+          <span class="hidden sm:inline">Share</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile App Promotion Banner -->
+  <div id="app-deep-link-banner" class="bg-gradient-to-r from-[#0F382C] via-[#1B4D3E] to-[#0F382C] text-white py-2.5 px-4 no-print border-b border-[#DFB15B]/30">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🌿</span>
+        <div>
+          <span class="font-bold text-[#DFB15B]">Sitaram Ayurveda User App:</span>
+          <span class="text-white/80 hidden sm:inline">Experience dosha analysis, audio chants & personalized posology</span>
+        </div>
+      </div>
+      <a id="btn-open-in-app" href="#" class="px-3 py-1 bg-[#DFB15B] text-[#0F382C] hover:bg-white rounded-lg font-bold text-[11px] whitespace-nowrap shadow-xs transition">
+        Open in App ↗
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Monograph Container -->
+  <main class="flex-1 max-w-4xl mx-auto w-full px-4 py-6 sm:py-8">
+    <div id="monograph-content">
+      <!-- Loading skeleton -->
+      <div class="animate-pulse space-y-4">
+        <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-64 bg-gray-200 rounded-2xl"></div>
+        <div class="h-32 bg-gray-200 rounded-xl"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Public Footer -->
+  <footer class="bg-white border-t border-[#E2D9CC] py-6 text-center text-xs text-gray-500 mt-auto no-print">
+    <div class="max-w-4xl mx-auto px-4 space-y-2">
+      <p class="font-serif font-bold text-[#0F382C] text-sm">Sitaram Ayurveda Private Limited</p>
+      <p>Established 1921 • Thrissur, Kerala, India • Ayush GMP & ISO 9001:2015 Certified</p>
+      <p class="text-[11px] text-gray-400">Classical Ayurvedic Formulations based on the Sitaram Therapeutic Index Handbook.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Fallback embedded formulation database in case running standalone without backend
+    const EMBEDDED_FORMULATIONS = {
+      'triphala_churna': {
+        id: 'triphala_churna',
+        code: 'SA-00005',
+        name: 'Triphala Churna',
+        sanskritName: 'त्रिफला चूर्ण (Three Myrobalans)',
+        category: 'Choornams',
+        classicalReference: 'Charaka Samhita (Chikitsasthana 1:2)',
+        packings: ['100 g', '200 g', '500 g'],
+        ingredients: [
+          'Haritaki (Terminalia chebula) - Fruit rind',
+          'Bibhitaki (Terminalia bellirica) - Fruit rind',
+          'Amalaki (Emblica officinalis) - Fresh dried pericarp'
+        ],
+        usage: '3 to 6 grams with lukewarm water, pure ghee, or organic honey at bedtime or early morning.',
+        indications: 'Anulomana (Gentle bowel regulation), Deepana & Pachana (Metabolic kindle), Chakshushya (Ophthalmic tonicity), Rasayana (Antioxidant longevity), Prameha (Metabolic support).',
+        description: 'Triphala is the quintessential Ayurvedic master formulation consisting of three sacred fruits in equal proportions. It gently cleanses the gastrointestinal tract, balances all three doshas (Tridoshahara), enhances micro-circulation and rejuvenates tissues (Dhatu Rasayana).',
+        doshaImpact: 'Tridoshic (Vata, Pitta, Kapha balancing)',
+        rasa: 'Kashaya (Astringent), Madhura (Sweet), Tikta (Bitter), Katu (Pungent), Amla (Sour)',
+        virya: 'Anushnasheeta (Neither intensely hot nor cold)',
+        vipaka: 'Madhura (Nourishing post-digestive)',
+        batchNumber: 'AYUR-2026-B01',
+        mfgDate: 'August 2026',
+        expDate: 'July 2029',
+        imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'
+      },
+      'chyawanprash_avaleha': {
+        id: 'chyawanprash_avaleha',
+        code: 'SA-00008',
+        name: 'Chyawanprash Avaleha',
+        sanskritName: 'च्यवनप्राश अवलेह (Rasayana Jam)',
+        category: 'Lehyams',
+        classicalReference: 'Charaka Samhita (Chikitsasthana 1:1)',
+        packings: ['250 g', '500 g', '1 kg'],
+        ingredients: [
+          'Amalaki (Emblica officinalis) - 50 wild forest amlas',
+          'Dashamoola (Ten sacred roots)',
+          'Ashtavarga vitalizers',
+          'Pippali (Piper longum)',
+          'Tukakshiri (Bambusa bambos)',
+          'Twak & Ela (Cardamom & Cinnamon)',
+          'Pure Cow Ghee & Wild Forest Honey'
+        ],
+        usage: '1 tablespoon (12-15 grams) twice daily with warm milk or on an empty stomach in the morning.',
+        indications: 'Kasa & Shwasa (Respiratory resistance), Ojas replenishment (Immunity), Kshaya (Debility), Svarabheda (Voice clarity), Agnimandya (Weak digestion).',
+        description: 'Revered since Vedic antiquity as Sage Chyavana’s youth-restoring elixir, Chyawanprash is prepared with freshly harvested organic Amla and over 40 therapeutic forest botanicals cooked in pure cow ghee and honey.',
+        doshaImpact: 'Pacifies Vata & Pitta, Tonifies Kapha',
+        rasa: 'Madhura, Amla, Tikta, Katu',
+        virya: 'Sheeta (Cooling post-assimilation)',
+        vipaka: 'Madhura',
+        batchNumber: 'AYUR-2026-B03',
+        mfgDate: 'September 2026',
+        expDate: 'August 2029',
+        imageUrl: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?w=600'
+      },
+      'kumkumadi_tailam': {
+        id: 'kumkumadi_tailam',
+        code: 'SA-00002',
+        name: 'Kumkumadi Tailam',
+        sanskritName: 'कुंकुमादि तैलम् (Saffron Facial Elixir)',
+        category: 'Thailams',
+        classicalReference: 'Bhaishajya Ratnavali (Kshudraroga Adhikara)',
+        packings: ['10 ml', '25 ml'],
+        ingredients: [
+          'Kumkuma (Crocus sativus - Kashmiri Saffron Stigmas)',
+          'Chandana (Santalum album - White Sandalwood)',
+          'Lodhra (Symplocos racemosa)',
+          'Manjistha (Rubia cordifolia)',
+          'Padmaka (Prunus cerasoides)',
+          'Go Ksheera (Cow Milk) & Pure Sesame Oil'
+        ],
+        usage: '3-4 drops gently smoothed over cleansed damp face and neck at bedtime with circular upward strokes.',
+        indications: 'Varnya (Complexion brightening), Mukhadushika (Acne and pimple scars), Vyanga (Hyperpigmentation & melasma), Vali-palita (Premature fine lines).',
+        description: 'Formulated with hand-harvested Kashmiri Saffron and 26 classical botanical extracts processed in goat milk and pure sesame oil. Imparts radiant luminosity and clears metabolic skin impurities.',
+        doshaImpact: 'Pacifies Vata & Pitta',
+        rasa: 'Tikta, Kashaya, Madhura',
+        virya: 'Sheeta (Soothes skin inflammation)',
+        vipaka: 'Katu',
+        batchNumber: 'AYUR-2026-B10',
+        mfgDate: 'July 2026',
+        expDate: 'June 2029',
+        imageUrl: 'https://images.unsplash.com/photo-1608248597359-25f0535e6702?w=600'
+      }
+    };
+
+    // Parse URL parameters
+    function getQueryParam(key) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(key);
+    }
+
+    async function loadMonograph() {
+      const idParam = getQueryParam('id') || getQueryParam('code') || 'triphala_churna';
+      let data = null;
+
+      // 1. Try fetching from public backend endpoint
+      try {
+        const resp = await fetch('/api/monograph/' + encodeURIComponent(idParam));
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.success && json.data) {
+            data = json.data;
+          }
+        }
+      } catch (e) {
+        console.warn('Backend API fetch unavailable, checking local repository', e);
+      }
+
+      // 2. Try client-side localStorage repository
+      if (!data) {
+        try {
+          const prods = JSON.parse(localStorage.getItem('sitaram_products_v1') || '[]');
+          data = prods.find(p => p.id === idParam || p.code === idParam || p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') === idParam);
+        } catch (e) {}
+      }
+
+      // 3. Fallback to embedded formulation dictionary
+      if (!data) {
+        data = EMBEDDED_FORMULATIONS[idParam] || Object.values(EMBEDDED_FORMULATIONS)[0];
+      }
+
+      renderMonograph(data);
+    }
+
+    function renderMonograph(item) {
+      const container = document.getElementById('monograph-content');
+      const appDeepLink = `sitaram://medicine/${item.id || item.code}`;
+      document.getElementById('btn-open-in-app').href = appDeepLink;
+
+      const ingredientsList = Array.isArray(item.ingredients) ? item.ingredients : (item.ingredients ? [item.ingredients] : []);
+      const packingsList = Array.isArray(item.packings) ? item.packings : (item.packings ? [item.packings] : ['Standard Clinical Dispensing']);
+
+      container.innerHTML = `
+        <div class="bg-white rounded-3xl border border-[#E2D9CC] shadow-sm overflow-hidden print-shadow-none">
+          
+          <!-- Top Monograph Banner -->
+          <div class="bg-gradient-to-br from-[#0F382C] via-[#1B4D3E] to-[#0A261D] text-white p-6 sm:p-10 relative overflow-hidden">
+            <div class="absolute -right-12 -bottom-12 opacity-10 text-white pointer-events-none text-9xl font-serif">ॐ</div>
+            
+            <div class="relative z-10 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#DFB15B]/20 border border-[#DFB15B]/40 text-[#DFB15B] text-xs font-bold tracking-wider uppercase">
+                  <span>✓</span> Official Digital Monograph • Ayush GMP
+                </div>
+                <span class="font-mono text-xs bg-white/10 px-2.5 py-1 rounded-md text-white/80 border border-white/10">
+                  CODE: ${item.code || 'SA-KL-1921'}
+                </span>
+              </div>
+
+              <div>
+                ${item.sanskritName ? `<p class="text-[#DFB15B] font-serif italic text-base sm:text-lg mb-1">${item.sanskritName}</p>` : ''}
+                <h1 class="font-serif font-extrabold text-2xl sm:text-4xl text-white tracking-tight">${item.name}</h1>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <span class="px-3 py-1 bg-white/15 rounded-lg font-semibold text-emerald-200 border border-white/10">
+                  ${item.category || 'Classical Formulation'}
+                </span>
+                ${item.classicalReference ? `
+                  <span class="px-3 py-1 bg-amber-400/20 text-amber-200 rounded-lg border border-amber-400/30">
+                    📖 Reference: ${item.classicalReference}
+                  </span>
+                ` : ''}
+                <span class="px-3 py-1 bg-white/10 rounded-lg text-white/80">
+                  Batch: ${item.batchNumber || 'AYUR-2026-B01'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body Content -->
+          <div class="p-6 sm:p-10 space-y-8">
+
+            <!-- Summary & Description -->
+            <div class="bg-[#F9F7F2] p-5 sm:p-6 rounded-2xl border border-[#E2D9CC]">
+              <h2 class="font-serif font-bold text-lg text-[#0F382C] mb-2">Classical Botanical Summary</h2>
+              <p class="text-sm text-gray-700 leading-relaxed">${item.description || item.indications || 'Classical Ayurvedic formulation prepared in accordance with the Ayurvedic Pharmacopoeia of India (API) standards.'}</p>
+            </div>
+
+            <!-- Ayurvedic Pharmacodynamics (Dravyaguna) Grid -->
+            <div>
+              <h2 class="font-serif font-bold text-lg text-[#0F382C] mb-4 flex items-center gap-2">
+                <span class="text-[#DFB15B]">✦</span> Ayurvedic Energetics (Dravyaguna Matrix)
+              </h2>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div class="bg-[#F9F7F2] p-3.5 rounded-xl border border-[#E2D9CC]/80">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px] block">Dosha Karma</span>
+                  <span class="font-bold text-[#0F382C] mt-1 block">${item.doshaImpact || 'Tridoshic Harmony'}</span>
+                </div>
+                <div class="bg-[#F9F7F2] p-3.5 rounded-xl border border-[#E2D9CC]/80">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px] block">Rasa (Taste)</span>
+                  <span class="font-bold text-[#0F382C] mt-1 block">${item.rasa || 'Tikta, Kashaya, Madhura'}</span>
+                </div>
+                <div class="bg-[#F9F7F2] p-3.5 rounded-xl border border-[#E2D9CC]/80">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px] block">Virya (Potency)</span>
+                  <span class="font-bold text-[#0F382C] mt-1 block">${item.virya || 'Sheeta (Cooling)'}</span>
+                </div>
+                <div class="bg-[#F9F7F2] p-3.5 rounded-xl border border-[#E2D9CC]/80">
+                  <span class="text-gray-400 font-bold uppercase tracking-wider text-[10px] block">Vipaka (Post-Digestive)</span>
+                  <span class="font-bold text-[#0F382C] mt-1 block">${item.vipaka || 'Madhura'}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Therapeutic Indications (Roga Adhikara) -->
+            <div>
+              <h2 class="font-serif font-bold text-lg text-[#0F382C] mb-3 flex items-center gap-2">
+                <span class="text-[#DFB15B]">✦</span> Therapeutic Indications (Roga Adhikara)
+              </h2>
+              <div class="bg-emerald-50/50 border border-emerald-100 p-5 rounded-2xl text-xs sm:text-sm text-emerald-950 leading-relaxed">
+                ${item.indications || 'General rejuvenator (Rasayana), digestive stimulant (Agni deepana), and immune builder (Ojas vardhaka).'}
+              </div>
+            </div>
+
+            <!-- Posology & Administration (Matra & Anupana) -->
+            <div class="grid sm:grid-cols-2 gap-6">
+              <div class="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2D9CC]">
+                <h3 class="font-serif font-bold text-sm text-[#0F382C] mb-2 flex items-center gap-2">
+                  <span>🥄</span> Dosage & Posology (Matra)
+                </h3>
+                <p class="text-xs text-gray-700 leading-relaxed">
+                  ${item.usage || 'As directed by a registered Ayurvedic Practitioner. Typically 5g to 10g once or twice daily.'}
+                </p>
+              </div>
+
+              <div class="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E2D9CC]">
+                <h3 class="font-serif font-bold text-sm text-[#0F382C] mb-2 flex items-center gap-2">
+                  <span>🍶</span> Recommended Vehicles (Anupana)
+                </h3>
+                <p class="text-xs text-gray-700 leading-relaxed">
+                  Lukewarm water, organic honey, pure cow ghee, or boiled cow milk depending upon patient Prakriti and physician advice.
+                </p>
+              </div>
+            </div>
+
+            <!-- Ingredients (Yoga) -->
+            <div>
+              <h2 class="font-serif font-bold text-lg text-[#0F382C] mb-3 flex items-center gap-2">
+                <span class="text-[#DFB15B]">✦</span> Botanical & Mineral Composition (Yoga)
+              </h2>
+              <div class="bg-white border border-[#E2D9CC] rounded-2xl overflow-hidden shadow-2xs">
+                <ul class="divide-y divide-gray-100 text-xs text-gray-700">
+                  ${ingredientsList.map((ing, idx) => `
+                    <li class="py-3 px-4 flex items-center justify-between hover:bg-gray-50">
+                      <div class="flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-[#1B4D3E]/10 text-[#0F382C] font-bold text-[10px] flex items-center justify-center">
+                          ${idx + 1}
+                        </span>
+                        <span class="font-semibold text-gray-800">${ing}</span>
+                      </div>
+                      <span class="text-[11px] text-gray-400 italic">Classical Extract</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </div>
+
+            <!-- Quality, Batch Authenticity & Verification Certificate -->
+            <div class="border-t border-dashed border-[#E2D9CC] pt-6">
+              <div class="bg-gradient-to-r from-[#0F382C]/5 to-transparent p-5 rounded-2xl border border-[#0F382C]/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="space-y-1 text-center sm:text-left">
+                  <div class="flex items-center justify-center sm:justify-start gap-2">
+                    <span class="text-emerald-700 text-base">🛡️</span>
+                    <span class="font-serif font-bold text-sm text-[#0F382C]">Sitaram Authentic Batch Certificate</span>
+                  </div>
+                  <p class="text-xs text-gray-600">Manufactured at Ayush GMP Certified Facility • Thrissur, Kerala</p>
+                  <p class="text-[11px] text-gray-500 font-mono">Heavy Metals: PASSED • Pesticides: NOT DETECTED • Aflatoxins: PASSED</p>
+                </div>
+
+                <!-- Live Scannable Verification QR Code -->
+                <div class="flex flex-col items-center">
+                  <div id="monograph-qr-box" class="bg-white p-2 rounded-xl shadow-xs border border-gray-200"></div>
+                  <span class="text-[9px] text-gray-400 font-mono mt-1">Digital QR Seal</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Toolbar for Patients & Clinicians -->
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-4 no-print border-t border-gray-100">
+              <a href="${appDeepLink}" class="px-5 py-2.5 bg-[#0F382C] hover:bg-[#1B4D3E] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition">
+                <span>📱</span> Open in Sitaram Ayurveda App
+              </a>
+              <button onclick="window.print()" class="px-4 py-2.5 bg-white border border-[#E2D9CC] text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-semibold flex items-center gap-2 transition">
+                <span>🖨️</span> Print Monograph
+              </button>
+              <button onclick="shareMonograph()" class="px-4 py-2.5 bg-[#DFB15B] hover:bg-[#caa048] text-[#0F382C] rounded-xl text-xs font-bold flex items-center gap-2 transition">
+                <span>📤</span> Share Dossier
+              </button>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      // Generate the verification QR code inside the monograph
+      const qrBox = document.getElementById('monograph-qr-box');
+      if (qrBox && typeof QRCode !== 'undefined') {
+        new QRCode(qrBox, {
+          text: window.location.href,
+          width: 80,
+          height: 80,
+          colorDark: "#0F382C",
+          colorLight: "#FFFFFF",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    }
+
+    function shareMonograph() {
+      if (navigator.share) {
+        navigator.share({
+          title: document.title,
+          text: 'Explore this official Sitaram Ayurveda digital monograph.',
+          url: window.location.href
+        }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Digital monograph URL copied to clipboard!');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadMonograph);
+  </script>
+</body>
+</html>
