@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StorageService } from './services/storage';
 import { SupabaseService } from './services/supabase';
-import { Product, Category, User, AuditLog, SupabaseConfig } from './types';
+import { Product, Category, User, AuditLog, SupabaseConfig, BotanicalIngredient } from './types';
 import { Navbar } from './components/layout/Navbar';
 import { StatsBar } from './components/layout/StatsBar';
 import { CatalogueView } from './components/catalogue/CatalogueView';
+import { IngredientsView } from './components/ingredients/IngredientsView';
 import { CategoriesView } from './components/categories/CategoriesView';
 import { UsersView } from './components/users/UsersView';
 import { AuditView } from './components/audit/AuditView';
@@ -15,6 +16,7 @@ import { MonographModal } from './components/catalogue/MonographModal';
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [botanicalIngredients, setBotanicalIngredients] = useState<BotanicalIngredient[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(StorageService.getSupabaseConfig());
@@ -32,15 +34,17 @@ export const App: React.FC = () => {
   // Fetch all central data from Supabase
   const loadCentralData = useCallback(async () => {
     try {
-      const [fetchedProducts, fetchedCategories, fetchedUsers, fetchedLogs] = await Promise.all([
+      const [fetchedProducts, fetchedCategories, fetchedIngredients, fetchedUsers, fetchedLogs] = await Promise.all([
         SupabaseService.fetchProducts(),
         SupabaseService.fetchCategories(),
+        SupabaseService.fetchBotanicalIngredients(),
         SupabaseService.fetchUsers(),
         SupabaseService.fetchAuditLogs()
       ]);
 
       setProducts(fetchedProducts);
       setCategories(fetchedCategories);
+      setBotanicalIngredients(fetchedIngredients);
       setUsers(fetchedUsers);
       setAuditLogs(fetchedLogs);
       setSupabaseConfig(StorageService.getSupabaseConfig());
@@ -63,6 +67,10 @@ export const App: React.FC = () => {
       },
       onCategoryChange: () => {
         SupabaseService.fetchCategories().then(setCategories);
+        SupabaseService.fetchAuditLogs().then(setAuditLogs);
+      },
+      onIngredientChange: () => {
+        SupabaseService.fetchBotanicalIngredients().then(setBotanicalIngredients);
         SupabaseService.fetchAuditLogs().then(setAuditLogs);
       },
       onUserChange: () => {
@@ -121,15 +129,39 @@ export const App: React.FC = () => {
   };
 
   // ==========================================
+  // BOTANICAL INGREDIENTS CRUD HANDLERS
+  // ==========================================
+  const handleSaveIngredient = async (item: Partial<BotanicalIngredient> & { name: string }) => {
+    try {
+      if (item.id) {
+        const updated = await SupabaseService.updateBotanicalIngredient(item.id, item);
+        setBotanicalIngredients(prev => prev.map(x => String(x.id) === String(updated.id) ? updated : x));
+      } else {
+        const created = await SupabaseService.createBotanicalIngredient(item);
+        setBotanicalIngredients(prev => [created, ...prev]);
+      }
+      SupabaseService.fetchAuditLogs().then(setAuditLogs);
+    } catch (err) {
+      console.error('Failed to save botanical ingredient:', err);
+    }
+  };
+
+  const handleDeleteIngredient = async (id: number | string) => {
+    setBotanicalIngredients(prev => prev.filter(x => String(x.id) !== String(id)));
+    await SupabaseService.deleteBotanicalIngredient(id);
+    SupabaseService.fetchAuditLogs().then(setAuditLogs);
+  };
+
+  // ==========================================
   // CATEGORY CRUD HANDLERS
   // ==========================================
-  const handleSaveCategory = async (catData: Partial<Category> & { name: string; code: string }) => {
+  const handleSaveCategory = async (catData: Partial<Category> & { name: string; code?: string }) => {
     try {
       if (catData.id) {
         const updated = await SupabaseService.updateCategory(catData.id, catData);
         setCategories(prev => prev.map(c => String(c.id) === String(updated.id) ? updated : c));
       } else {
-        const created = await SupabaseService.createCategory(catData);
+        const created = await SupabaseService.createCategory({ ...catData, name: catData.name });
         setCategories(prev => [...prev, created]);
       }
       SupabaseService.fetchAuditLogs().then(setAuditLogs);
@@ -225,6 +257,14 @@ export const App: React.FC = () => {
             onEditProduct={handleEditProduct}
             onDeleteProduct={handleDeleteProduct}
             onViewMonograph={(p) => setMonographProduct(p)}
+          />
+        )}
+
+        {currentTab === 'ingredients' && (
+          <IngredientsView
+            ingredients={botanicalIngredients}
+            onSaveIngredient={handleSaveIngredient}
+            onDeleteIngredient={handleDeleteIngredient}
           />
         )}
 

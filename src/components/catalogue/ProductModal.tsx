@@ -51,7 +51,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setName(product.name || '');
       setSanskritName(product.sanskritName || '');
       setCode(product.code || '');
-      setCategoryId(product.categoryId || (categories[0]?.id || 1));
+      const matchedCat = categories.find(c => 
+        (product.categoryName && c.name.toLowerCase() === product.categoryName.toLowerCase()) ||
+        c.id === product.categoryId
+      );
+      setCategoryId(matchedCat ? matchedCat.id : (product.categoryId || categories[0]?.id || 1));
       setClassicalReference(product.classicalReference || '');
       setImageUrl(product.imageUrl || '');
       setDescription(product.description || '');
@@ -59,7 +63,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setDoshaImpact(product.doshaImpact || '');
       setTargetDoshas(product.targetDoshas || []);
       setHealthGoals(product.healthGoals || []);
-      setUsage(product.usage || '');
+      setUsage(product.usage || product.dosage || '');
       setIndications(product.indications || '');
       setPackings(product.packings || ['450 ml']);
       
@@ -148,12 +152,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       return;
     }
 
+    const selectedCategory = categories.find(c => c.id === categoryId);
+    const resolvedCatName = selectedCategory ? selectedCategory.name : (categories[0]?.name || '');
+
     onSave({
       id: product?.id,
       name: name.trim(),
+      categoryName: resolvedCatName,
+      categoryId,
       sanskritName: sanskritName.trim(),
       code: code.trim() || `SA-${Math.floor(10000 + Math.random() * 90000)}`,
-      categoryId,
       classicalReference: classicalReference.trim(),
       imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
       description: description.trim(),
@@ -546,7 +554,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>Save Medicine</span>
+              <span>{product ? 'Update Formulation' : 'Save Medicine'}</span>
             </button>
           </div>
 

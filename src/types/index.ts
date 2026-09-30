@@ -1,30 +1,42 @@
 export interface IngredientItem {
-  id?: number;
+  id?: number | string;
   name: string;
   botanicalName?: string;
   sanskritName?: string;
   partUsed?: string;
   classicalRole?: string;
+  therapeuticAction?: string;
+}
+
+export interface BotanicalIngredient {
+  id: number | string;
+  name: string;
+  botanicalName?: string;
+  sanskritName?: string;
+  therapeuticAction?: string;
+  partUsed?: string;
+  createdAt?: string;
 }
 
 export interface Product {
   id: number | string;
   code: string;
   name: string;
-  sanskritName: string;
-  categoryId: number;
   categoryName?: string;
-  classicalReference: string;
+  categoryId?: number;
+  sanskritName?: string;
+  classicalReference?: string;
   packings: string[];
   ingredients: (string | IngredientItem)[];
   usage: string;
-  indications: string;
-  description: string;
+  dosage?: string;
+  indications?: string;
+  description?: string;
   primaryBenefit?: string;
   doshaImpact?: string;
   targetDoshas?: string[];
   healthGoals?: string[];
-  imageUrl: string;
+  imageUrl?: string;
   status: 'Active' | 'Inactive' | 'Draft';
   featured: boolean;
   stockUnits?: number;
@@ -36,11 +48,15 @@ export interface Product {
 export interface Category {
   id: number;
   name: string;
-  code: string;
-  description: string;
-  sortOrder: number;
-  status: 'Active' | 'Inactive';
+  code?: string;
+  title?: string;
+  description?: string;
+  icon?: string;
+  sortOrder?: number;
+  status?: 'Active' | 'Inactive';
   productCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface User {
@@ -59,7 +75,7 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   userEmail: string;
-  actionType: 'STOCK_UPDATE' | 'ROLE_CHANGE' | 'MEDICINE_CREATE' | 'MEDICINE_UPDATE' | 'MEDICINE_DELETE' | 'DATABASE_SYNC' | 'CATEGORY_UPDATE';
+  actionType: 'STOCK_UPDATE' | 'ROLE_CHANGE' | 'MEDICINE_CREATE' | 'MEDICINE_UPDATE' | 'MEDICINE_DELETE' | 'DATABASE_SYNC' | 'CATEGORY_UPDATE' | 'INGREDIENT_CREATE' | 'INGREDIENT_UPDATE' | 'INGREDIENT_DELETE';
   entityId: string | number;
   details: string;
 }

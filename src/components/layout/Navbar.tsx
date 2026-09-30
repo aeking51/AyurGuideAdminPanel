@@ -29,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navItems = [
     { id: 'catalogue', label: 'Catalogue', icon: BookOpen },
+    { id: 'ingredients', label: 'Botanicals', icon: Sparkles },
     { id: 'categories', label: 'Categories', icon: Layers },
     { id: 'users', label: 'Practitioners & Users', icon: Users },
     { id: 'audit', label: 'Audit Trail', icon: History },

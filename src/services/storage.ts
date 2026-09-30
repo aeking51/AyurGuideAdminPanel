@@ -130,24 +130,25 @@ export class StorageService {
     localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
   }
 
-  static upsertCategory(category: Partial<Category> & { name: string; code: string }): Category {
+  static upsertCategory(category: Partial<Category> & { name: string; code?: string }): Category {
     const categories = this.getCategories();
     let updated: Category;
+    const catCode = (category.code || category.name.slice(0, 3)).toUpperCase();
 
     if (category.id) {
       const idx = categories.findIndex(c => c.id === category.id);
       if (idx !== -1) {
-        updated = { ...categories[idx], ...category } as Category;
+        updated = { ...categories[idx], ...category, code: catCode } as Category;
         categories[idx] = updated;
       } else {
-        updated = { ...category, id: category.id, sortOrder: categories.length + 1, status: 'Active' } as Category;
+        updated = { ...category, id: category.id, code: catCode, sortOrder: categories.length + 1, status: 'Active' } as Category;
         categories.push(updated);
       }
     } else {
       updated = {
         id: Date.now(),
         name: category.name,
-        code: category.code.toUpperCase(),
+        code: catCode,
         description: category.description || '',
         sortOrder: categories.length + 1,
         status: category.status || 'Active'
@@ -156,7 +157,7 @@ export class StorageService {
     }
 
     this.saveCategories(categories);
-    this.logAudit('CATEGORY_UPDATE', updated.code, `Saved category "${updated.name}" (${updated.code})`);
+    this.logAudit('CATEGORY_UPDATE', updated.code || updated.name, `Saved category "${updated.name}" (${updated.code})`);
     return updated;
   }
 
