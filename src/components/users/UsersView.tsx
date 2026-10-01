@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, UserCheck, CheckCircle, Ban, Plus, Trash2, X, UserPlus, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, Shield, UserCheck, CheckCircle, Ban, Plus, Trash2, X, UserPlus, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
 import { User } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 
@@ -11,6 +11,7 @@ interface UsersViewProps {
   onDeleteUser?: (userId: string | number) => void;
   onReload?: () => void;
   isReloading?: boolean;
+  onChangePassword?: (user: User) => void;
 }
 
 export const UsersView: React.FC<UsersViewProps> = ({
@@ -21,6 +22,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onDeleteUser,
   onReload,
   isReloading = false,
+  onChangePassword,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -85,6 +87,16 @@ export const UsersView: React.FC<UsersViewProps> = ({
           <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
             {users.length} Active Records
           </span>
+          {onChangePassword && users.length > 0 && (
+            <button
+              onClick={() => onChangePassword(users[0])}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#081C13] border border-emerald-800/80 hover:bg-emerald-950 text-emerald-300 hover:text-white transition text-xs font-semibold cursor-pointer shadow-xs"
+              title="Open change password modal without asking for current password"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Change Password</span>
+            </button>
+          )}
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition"
@@ -204,6 +216,16 @@ export const UsersView: React.FC<UsersViewProps> = ({
                           <option value="PRACTITIONER">Set: PRACTITIONER</option>
                           <option value="PATIENT">Demote: PATIENT</option>
                         </select>
+                        {onChangePassword && (
+                          <button
+                            type="button"
+                            onClick={() => onChangePassword(user)}
+                            className="p-1.5 rounded-lg bg-[#081C13] border border-emerald-800/80 text-emerald-400 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+                            title={`Change password for ${user.email} (No current password required)`}
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {onDeleteUser && (
                           <button
                             onClick={() => setDeletingUser(user)}

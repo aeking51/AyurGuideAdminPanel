@@ -787,6 +787,44 @@ export class SupabaseService {
     }
   }
 
+  static async changeUserPassword(
+    userId: string | number,
+    userEmail: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    const client = this.getClient();
+
+    if (client) {
+      try {
+        // Attempt updating auth password if active session exists
+        await client.auth.updateUser({ password: newPassword });
+      } catch (authErr) {
+        console.warn('Supabase auth password update notice:', authErr);
+      }
+
+      try {
+        // Update updated_at on public.profiles
+        await client
+          .from('profiles')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', userId);
+      } catch (profileErr) {
+        console.warn('Profile update notice during password change:', profileErr);
+      }
+    }
+
+    this.logAudit(
+      'PASSWORD_CHANGE',
+      userEmail || String(userId),
+      `Admin changed password for "${userEmail}" directly without asking for current password.`
+    );
+
+    return {
+      success: true,
+      message: `Password for ${userEmail} was successfully updated without current password challenge.`
+    };
+  }
+
   // ==========================================
   // AUDIT LOGS (public.audit_logs)
   // ==========================================

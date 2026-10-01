@@ -15,7 +15,8 @@ import {
   LogIn,
   Check,
   X,
-  RefreshCw
+  RefreshCw,
+  KeyRound
 } from 'lucide-react';
 import { User } from '../../types';
 
@@ -31,6 +32,7 @@ interface NavbarProps {
   onSelectUser: (user: User | null) => void;
   onReloadCurrentTab?: () => void;
   isReloading?: boolean;
+  onChangePassword?: (user: User | null) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -44,7 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   users,
   onSelectUser,
   onReloadCurrentTab,
-  isReloading = false
+  isReloading = false,
+  onChangePassword,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
@@ -244,6 +247,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </>
                         )}
                       </div>
+
+                      {/* Change Password Option (No Current Password Required) */}
+                      {onChangePassword && (
+                        <div className="mt-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              onChangePassword(activeUser);
+                            }}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#0D281C] hover:bg-emerald-950 border border-emerald-800/80 text-emerald-300 hover:text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+                            title="Directly set a new password without entering current password"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Change Password</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 ml-1 font-mono">
+                              No Old Password
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Switch to Registered User */}

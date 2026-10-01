@@ -13,6 +13,7 @@ import { DatabaseView } from './components/database/DatabaseView';
 import { ProductModal } from './components/catalogue/ProductModal';
 import { MonographModal } from './components/catalogue/MonographModal';
 import { DeleteConfirmModal } from './components/common/DeleteConfirmModal';
+import { ChangePasswordModal } from './components/common/ChangePasswordModal';
 
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,6 +34,13 @@ export const App: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [monographProduct, setMonographProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
+  const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+
+  const handleOpenChangePassword = (user?: User | null) => {
+    setPasswordTargetUser(user || activeUser);
+    setIsPasswordModalOpen(true);
+  };
 
   // Fetch all central data from Supabase
   const loadCentralData = useCallback(async () => {
@@ -347,6 +355,7 @@ export const App: React.FC = () => {
         onSelectUser={handleSelectUser}
         onReloadCurrentTab={handleReloadCurrentTab}
         isReloading={reloadingSection !== null}
+        onChangePassword={handleOpenChangePassword}
       />
 
       {/* Main Container */}
@@ -405,6 +414,7 @@ export const App: React.FC = () => {
             onDeleteUser={handleDeleteUser}
             onReload={handleReloadUsers}
             isReloading={reloadingSection === 'users'}
+            onChangePassword={handleOpenChangePassword}
           />
         )}
 
@@ -438,6 +448,7 @@ export const App: React.FC = () => {
         onSave={handleSaveProduct}
         product={editingProduct}
         categories={categories}
+        availableIngredients={botanicalIngredients}
       />
 
       {/* Monograph Printable Modal */}
@@ -459,6 +470,17 @@ export const App: React.FC = () => {
           warningMessage="This medicine and its clinical formulation details will be permanently removed from public.products in Supabase."
         />
       )}
+
+      {/* Change Password Modal (Direct Admin Bypass - No Current Password) */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => {
+          setIsPasswordModalOpen(false);
+          setPasswordTargetUser(null);
+        }}
+        targetUser={passwordTargetUser || activeUser}
+        onPasswordChanged={loadCentralData}
+      />
 
     </div>
   );
