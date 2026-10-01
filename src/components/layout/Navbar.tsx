@@ -33,6 +33,7 @@ interface NavbarProps {
   onReloadCurrentTab?: () => void;
   isReloading?: boolean;
   onChangePassword?: (user: User | null) => void;
+  onSignOut?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -48,6 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onReloadCurrentTab,
   isReloading = false,
   onChangePassword,
+  onSignOut,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
@@ -225,14 +227,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                             </div>
                             <button
                               onClick={() => {
-                                onSelectUser(null);
                                 setIsUserMenuOpen(false);
+                                if (onSignOut) {
+                                  onSignOut();
+                                } else {
+                                  onSelectUser(null);
+                                }
                               }}
-                              className="px-2 py-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 text-[10px] font-medium flex items-center gap-1"
-                              title="Sign out and act as Guest user"
+                              className="px-2.5 py-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 text-[10px] font-medium flex items-center gap-1 cursor-pointer"
+                              title="Sign out of Admin Panel"
                             >
                               <LogOut className="w-3 h-3" />
-                              <span>Log Out</span>
+                              <span>Sign Out</span>
                             </button>
                           </>
                         ) : (
@@ -345,6 +351,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </>
               )}
             </div>
+
+            {/* Quick Sign Out button */}
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-950/80 border border-rose-800/60 text-rose-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+                title="Sign out of Admin Panel"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Sign Out</span>
+              </button>
+            )}
 
           </div>
         </div>

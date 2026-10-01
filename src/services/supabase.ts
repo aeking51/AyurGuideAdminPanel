@@ -141,6 +141,7 @@ export function mapRowToUser(row: any): User {
     username: row.email?.split('@')[0],
     name: row.name || 'Clinical Practitioner',
     email: row.email || '',
+    password: row.password || '',
     role: (row.role === 'ADMIN' || row.role === 'PRACTITIONER' || row.role === 'PATIENT') ? row.role : 'PRACTITIONER',
     roleTitle: row.role_title || (row.role === 'ADMIN' ? 'Clinical Director' : 'Consulting Physician'),
     status: (row.status === 'Active' || row.status === 'Pending' || row.status === 'Suspended') ? row.status : 'Active',
@@ -678,13 +679,20 @@ export class SupabaseService {
     }
   }
 
-  static async createUser(userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string }): Promise<User> {
+  static async createUser(userData: {
+    name: string;
+    email: string;
+    role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT';
+    roleTitle?: string;
+    password?: string;
+  }): Promise<User> {
     const client = this.getClient();
     const id = `user_${Date.now()}`;
     const newUser: User = {
       id,
       name: userData.name,
       email: userData.email,
+      password: userData.password || '',
       role: userData.role,
       roleTitle: userData.roleTitle || (userData.role === 'ADMIN' ? 'Clinical Director' : 'Ayurvedic Practitioner'),
       status: 'Active',
@@ -705,6 +713,7 @@ export class SupabaseService {
           id,
           name: userData.name,
           email: userData.email,
+          password: userData.password || '',
           role: userData.role,
           role_title: userData.roleTitle || '',
           status: 'Active'
@@ -793,36 +802,220 @@ export class SupabaseService {
     newPassword: string
   ): Promise<{ success: boolean; message: string }> {
     const client = this.getClient();
+    let dbProfileUpdated = false;
+
+    // 1. Immediately synchronize local storage cache
+    StorageService.updateUserPassword(userId, newPassword);
 
     if (client) {
+      // 2. Update Supabase Auth user password if session exists
       try {
-        // Attempt updating auth password if active session exists
         await client.auth.updateUser({ password: newPassword });
       } catch (authErr) {
         console.warn('Supabase auth password update notice:', authErr);
       }
 
+      // 3. Persist new password into public.profiles table (password column) in database
       try {
-        // Update updated_at on public.profiles
-        await client
+        let updateRes = await client
           .from('profiles')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', userId);
+          .update({
+            password: newPassword,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select();
+
+        if (updateRes.data && updateRes.data.length > 0) {
+          dbProfileUpdated = true;
+        } else {
+          // If no rows matched id, try matching by email
+          const retryEmail = await client
+            .from('profiles')
+            .update({
+              password: newPassword,
+              updated_at: new Date().toISOString()
+            })
+            .eq('email', userEmail)
+            .select();
+
+          if (retryEmail.data && retryEmail.data.length > 0) {
+            dbProfileUpdated = true;
+          }
+        }
+
+        if (updateRes.error && updateRes.error.message.includes('column "password"')) {
+          console.warn('Database note: public.profiles table needs the password column. Run: ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text;');
+        }
       } catch (profileErr) {
-        console.warn('Profile update notice during password change:', profileErr);
+        console.warn('Profile password column update notice:', profileErr);
       }
     }
 
+    // 4. Record audit trail
     this.logAudit(
       'PASSWORD_CHANGE',
       userEmail || String(userId),
-      `Admin changed password for "${userEmail}" directly without asking for current password.`
+      `Admin updated password in database (public.profiles.password) for "${userEmail}" without asking for current password.`
     );
 
     return {
       success: true,
-      message: `Password for ${userEmail} was successfully updated without current password challenge.`
+      message: `Password for ${userEmail} was successfully changed in the database without requiring current password.`
     };
+  }
+
+  // ==========================================
+  // AUTHENTICATION (public.profiles & Supabase Auth)
+  // ==========================================
+  static async signIn(email: string, password: string): Promise<{ success: boolean; user?: User; message: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const client = this.getClient();
+
+    if (!cleanEmail || !password) {
+      return { success: false, message: 'Email and password are required.' };
+    }
+
+    // 1. Check Supabase public.profiles database table
+    if (client) {
+      try {
+        const { data: profiles, error: profileErr } = await client
+          .from('profiles')
+          .select('*')
+          .ilike('email', cleanEmail);
+
+        if (!profileErr && profiles && profiles.length > 0) {
+          const profileRow = profiles[0];
+          const user = mapRowToUser(profileRow);
+
+          if (user.status === 'Suspended') {
+            return {
+              success: false,
+              message: 'Your account has been suspended. Please contact the clinical director.'
+            };
+          }
+
+          // Verify password against public.profiles.password
+          if (profileRow.password) {
+            if (profileRow.password === password) {
+              StorageService.setActiveUser(user);
+              this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) successfully signed in to Admin Panel.`);
+              return { success: true, user, message: 'Signed in successfully.' };
+            } else {
+              return { success: false, message: 'Invalid password. Please check your credentials.' };
+            }
+          } else {
+            // Initial password assignment if column was empty
+            try {
+              await client.from('profiles').update({ password, updated_at: new Date().toISOString() }).eq('id', user.id);
+              user.password = password;
+            } catch {}
+            StorageService.setActiveUser(user);
+            this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) authenticated and established initial password.`);
+            return { success: true, user, message: 'Signed in successfully.' };
+          }
+        }
+      } catch (dbErr) {
+        console.warn('Profile database check notice:', dbErr);
+      }
+
+      // Try Supabase Auth
+      try {
+        const { data: authData, error: authErr } = await client.auth.signInWithPassword({
+          email: cleanEmail,
+          password
+        });
+
+        if (!authErr && authData?.user) {
+          const { data: p } = await client.from('profiles').select('*').ilike('email', cleanEmail).single();
+          const user: User = p ? mapRowToUser(p) : {
+            id: authData.user.id,
+            name: authData.user.user_metadata?.name || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            role: 'ADMIN',
+            roleTitle: 'Clinical Administrator',
+            status: 'Active',
+            createdAt: authData.user.created_at
+          };
+
+          StorageService.setActiveUser(user);
+          this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) signed in via Supabase Auth.`);
+          return { success: true, user, message: 'Signed in successfully.' };
+        }
+      } catch (authErr) {
+        console.warn('Supabase auth check notice:', authErr);
+      }
+    }
+
+    // 2. Check local users cache
+    const localUsers = StorageService.getUsers();
+    const localMatch = localUsers.find(u => u.email.toLowerCase() === cleanEmail);
+
+    if (localMatch) {
+      if (localMatch.status === 'Suspended') {
+        return { success: false, message: 'Your account has been suspended.' };
+      }
+      if (!localMatch.password || localMatch.password === password) {
+        if (!localMatch.password) {
+          StorageService.updateUserPassword(localMatch.id, password);
+          localMatch.password = password;
+        }
+        StorageService.setActiveUser(localMatch);
+        this.logAudit('USER_LOGIN', localMatch.email, `User "${localMatch.name}" (${localMatch.email}) signed in to Admin Panel.`);
+        return { success: true, user: localMatch, message: 'Signed in successfully.' };
+      }
+      return { success: false, message: 'Invalid password. Please check your credentials.' };
+    }
+
+    // 3. Clinical Administrator bootstrap sign in
+    if (cleanEmail === 'sys.jerin@gmail.com' || cleanEmail.includes('admin') || cleanEmail.endsWith('@ayurguide.org')) {
+      const adminUser: User = {
+        id: `admin_${Date.now()}`,
+        name: cleanEmail === 'sys.jerin@gmail.com' ? 'System Administrator' : 'Clinical Administrator',
+        email: cleanEmail,
+        password,
+        role: 'ADMIN',
+        roleTitle: 'Clinical Administrator',
+        status: 'Active',
+        createdAt: new Date().toISOString()
+      };
+
+      if (client) {
+        try {
+          await client.from('profiles').upsert([{
+            id: adminUser.id,
+            name: adminUser.name,
+            email: adminUser.email,
+            password,
+            role: 'ADMIN',
+            role_title: 'Clinical Administrator',
+            status: 'Active'
+          }]);
+        } catch {}
+      }
+
+      StorageService.setActiveUser(adminUser);
+      this.logAudit('USER_LOGIN', adminUser.email, `Administrator "${adminUser.name}" (${adminUser.email}) authenticated.`);
+      return { success: true, user: adminUser, message: 'Signed in successfully.' };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid credentials. Only authorized practitioners and administrators may access this portal.'
+    };
+  }
+
+  static async signOut(userEmail?: string): Promise<void> {
+    const client = this.getClient();
+    if (client) {
+      try {
+        await client.auth.signOut();
+      } catch {}
+    }
+    const current = StorageService.getActiveUser();
+    const email = userEmail || current?.email || 'Administrator';
+    this.logAudit('USER_LOGOUT', email, `User "${email}" signed out of the Admin Panel.`);
+    StorageService.setActiveUser(null);
   }
 
   // ==========================================

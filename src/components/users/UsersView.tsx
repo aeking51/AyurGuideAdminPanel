@@ -7,7 +7,7 @@ interface UsersViewProps {
   users: User[];
   onUpdateRole: (userId: string | number, newRole: 'ADMIN' | 'PRACTITIONER' | 'PATIENT') => void;
   onToggleStatus: (userId: string | number) => void;
-  onAddUser?: (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string }) => void;
+  onAddUser?: (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string; password?: string }) => void;
   onDeleteUser?: (userId: string | number) => void;
   onReload?: () => void;
   isReloading?: boolean;
@@ -28,12 +28,14 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<'ADMIN' | 'PRACTITIONER' | 'PATIENT'>('PRACTITIONER');
   const [roleTitle, setRoleTitle] = useState('');
 
   const handleOpenAdd = () => {
     setName('');
     setEmail('');
+    setPassword('Ayur#2026!');
     setRole('PRACTITIONER');
     setRoleTitle('Ayurvedic Physician (BAMS)');
     setIsModalOpen(true);
@@ -49,6 +51,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
       onAddUser({
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        password: password.trim(),
         role,
         roleTitle: roleTitle.trim() || (role === 'ADMIN' ? 'Clinical Administrator' : role === 'PRACTITIONER' ? 'Ayurvedic Physician' : 'Registered Patient')
       });
@@ -131,6 +134,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                 <th className="py-3 px-4">User & Practitioner</th>
                 <th className="py-3 px-3">Email Address</th>
                 <th className="py-3 px-3">System Role</th>
+                <th className="py-3 px-3">Password (DB)</th>
                 <th className="py-3 px-3 text-center">Status</th>
                 <th className="py-3 px-3">Created</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -181,6 +185,30 @@ export const UsersView: React.FC<UsersViewProps> = ({
                         {isPractitioner && <UserCheck className="w-3 h-3" />}
                         <span>{user.role}</span>
                       </span>
+                    </td>
+
+                    {/* Password in Database */}
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-1.5">
+                        {user.password ? (
+                          <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-300 bg-emerald-950/80 border border-emerald-800/80 px-2 py-0.5 rounded-md" title="Password stored in public.profiles.password">
+                            <KeyRound className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>••••••••</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-500 italic">Not set</span>
+                        )}
+                        {onChangePassword && (
+                          <button
+                            type="button"
+                            onClick={() => onChangePassword(user)}
+                            className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-semibold ml-1 cursor-pointer"
+                            title="Directly change password without asking for old password"
+                          >
+                            Change
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     {/* Status */}
@@ -307,6 +335,20 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   placeholder="e.g. Chief Dravyaguna Specialist"
                   className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-emerald-300 mb-1">Account Password (Stored in Database)</label>
+                <input
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Set initial password (e.g. Ayur#2026!)"
+                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-emerald-500"
+                />
+                <span className="text-[10px] text-gray-400 mt-1 block">
+                  Stored directly in <code className="text-emerald-300 font-mono">public.profiles.password</code>. Can be updated anytime without current password.
+                </span>
               </div>
 
               <div className="pt-3 border-t border-[#23493C] flex items-center justify-end gap-3">

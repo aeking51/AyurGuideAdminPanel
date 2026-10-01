@@ -67,6 +67,7 @@ export interface User {
   username?: string;
   name: string;
   email: string;
+  password?: string;
   role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT';
   roleTitle?: string;
   status: 'Active' | 'Pending' | 'Suspended';

@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id character varying(100) NOT NULL,
   name character varying(255) NOT NULL,
   email character varying(255) NOT NULL,
+  password text NULL, -- Stores practitioner/admin account password
   role character varying(50) NULL DEFAULT 'PRACTITIONER'::character varying,
   role_title character varying(255) NULL DEFAULT 'Clinical Practitioner'::character varying,
   status character varying(50) NULL DEFAULT 'Active'::character varying,
@@ -96,6 +97,9 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_email_key UNIQUE (email)
 ) TABLESPACE pg_default;
+
+-- Migration to ensure password column exists on existing deployments
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text NULL;
 
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles (role);
 CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles (status);

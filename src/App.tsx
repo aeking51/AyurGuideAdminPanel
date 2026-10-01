@@ -14,6 +14,7 @@ import { ProductModal } from './components/catalogue/ProductModal';
 import { MonographModal } from './components/catalogue/MonographModal';
 import { DeleteConfirmModal } from './components/common/DeleteConfirmModal';
 import { ChangePasswordModal } from './components/common/ChangePasswordModal';
+import { LoginView } from './components/auth/LoginView';
 
 export const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -207,7 +208,7 @@ export const App: React.FC = () => {
   // ==========================================
   // USER / PRACTITIONER CRUD HANDLERS
   // ==========================================
-  const handleAddUser = async (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string }) => {
+  const handleAddUser = async (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string; password?: string }) => {
     try {
       const created = await SupabaseService.createUser(userData);
       setUsers(prev => [created, ...prev]);
@@ -264,6 +265,20 @@ export const App: React.FC = () => {
       });
     }
     SupabaseService.fetchAuditLogs().then(setAuditLogs);
+  };
+
+  const handleSignOut = async () => {
+    if (activeUser) {
+      await SupabaseService.signOut(activeUser.email);
+    } else {
+      StorageService.setActiveUser(null);
+    }
+    setActiveUser(null);
+  };
+
+  const handleLoginSuccess = (user: User) => {
+    setActiveUser(user);
+    loadCentralData();
   };
 
   // Config Handler
@@ -336,6 +351,11 @@ export const App: React.FC = () => {
     else await loadCentralData();
   };
 
+  // Authentication Guard: Require authentication to access the admin panel
+  if (!activeUser) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
       
@@ -356,6 +376,7 @@ export const App: React.FC = () => {
         onReloadCurrentTab={handleReloadCurrentTab}
         isReloading={reloadingSection !== null}
         onChangePassword={handleOpenChangePassword}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Container */}

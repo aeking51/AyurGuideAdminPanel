@@ -207,6 +207,22 @@ export class StorageService {
     return users[idx];
   }
 
+  static updateUserPassword(userId: number | string, newPassword: string): User | undefined {
+    const users = this.getUsers();
+    const idx = users.findIndex(u => String(u.id) === String(userId) || (u.email && String(u.email).toLowerCase() === String(userId).toLowerCase()));
+    if (idx !== -1) {
+      users[idx].password = newPassword;
+      this.saveUsers(users);
+      const active = this.getActiveUser();
+      if (active && (String(active.id) === String(users[idx].id) || active.email === users[idx].email)) {
+        active.password = newPassword;
+        this.setActiveUser(active);
+      }
+      return users[idx];
+    }
+    return undefined;
+  }
+
   // Active / Logged in User Management
   static getActiveUser(): User | null {
     try {

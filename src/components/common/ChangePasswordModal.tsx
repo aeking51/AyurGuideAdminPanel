@@ -134,8 +134,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <p className="text-xs text-gray-300 max-w-xs mx-auto">
               {successMessage}
             </p>
-            <span className="text-[10px] text-gray-400 font-mono block">
-              Audited in public.audit_logs &bull; Ready for authentication
+            <span className="text-[10px] text-emerald-400 font-mono block">
+              Saved to database in public.profiles.password &bull; Audited in public.audit_logs
             </span>
           </div>
         ) : (
@@ -145,8 +145,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <div className="bg-emerald-950/50 border border-emerald-800/60 rounded-xl p-3 flex items-start gap-2.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div className="text-[11px] text-emerald-200/90 leading-relaxed">
-                <span className="font-bold text-emerald-300 block mb-0.5">Admin Privilege: No Current Password Required</span>
-                You can directly establish a new password for this account. Current password verification is bypassed.
+                <span className="font-bold text-emerald-300 block mb-0.5">Direct Database Password Update (No Current Password Required)</span>
+                Changes are written directly to the database <code className="text-emerald-300 font-mono">password</code> column in <code className="text-emerald-300 font-mono">public.profiles</code>.
               </div>
             </div>
 

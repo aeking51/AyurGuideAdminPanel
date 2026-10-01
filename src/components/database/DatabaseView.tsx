@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, CheckCircle2, AlertCircle, RefreshCw, Download, Upload, ShieldCheck } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, RefreshCw, Download, Upload, ShieldCheck, KeyRound, Copy, Check } from 'lucide-react';
 import { SupabaseConfig } from '../../types';
 import { SupabaseService } from '../../services/supabase';
 import { StorageService } from '../../services/storage';
@@ -21,6 +21,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -175,6 +176,40 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             <span>{syncResult.message}</span>
           </div>
         )}
+      </div>
+
+      {/* Database Schema & Password Column Migration */}
+      <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-[#23493C] pb-2">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-emerald-400" />
+            <h3 className="font-serif font-bold text-base text-gray-100">
+              Database Password Column (public.profiles.password)
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 rounded-full">
+            Database Column Ready
+          </span>
+        </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          The admin panel stores and updates passwords in the <code className="text-emerald-300 font-mono">password</code> column of the <code className="text-emerald-300 font-mono">public.profiles</code> table. If your remote Supabase instance does not have this column yet, run this one-line SQL migration in your Supabase SQL Editor:
+        </p>
+
+        <div className="relative bg-[#081C13] border border-[#23493C] rounded-xl p-3.5 font-mono text-xs text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <code className="text-emerald-200 select-all">ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text NULL;</code>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText('ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text NULL;');
+              setCopiedSql(true);
+              setTimeout(() => setCopiedSql(false), 2000);
+            }}
+            className="px-3 py-1.5 rounded-lg bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 text-xs flex items-center gap-1.5 border border-emerald-700/60 transition cursor-pointer self-start sm:self-center shrink-0"
+          >
+            {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedSql ? 'Copied SQL!' : 'Copy SQL Migration'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Snapshot Backup & Restore */}
