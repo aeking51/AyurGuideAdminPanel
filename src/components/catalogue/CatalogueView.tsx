@@ -7,7 +7,8 @@ import {
   List, 
   Filter, 
   Sparkles, 
-  RotateCcw
+  RotateCcw,
+  RefreshCw
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { ProductTable } from './ProductTable';
@@ -22,6 +23,8 @@ interface CatalogueViewProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onViewMonograph: (product: Product) => void;
+  onReload?: () => void;
+  isReloading?: boolean;
 }
 
 export const CatalogueView: React.FC<CatalogueViewProps> = ({
@@ -33,6 +36,8 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   onEditProduct,
   onDeleteProduct,
   onViewMonograph,
+  onReload,
+  isReloading = false,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedDosha, setSelectedDosha] = useState<string>('ALL');
@@ -199,6 +204,19 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
                 <Grid className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Reload Products */}
+            {onReload && (
+              <button
+                onClick={onReload}
+                disabled={isReloading}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 text-xs font-semibold hover:text-white hover:bg-emerald-950/80 transition cursor-pointer disabled:opacity-50"
+                title="Reload formulations live from Supabase public.products"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
+                <span>{isReloading ? 'Reloading...' : 'Reload Products'}</span>
+              </button>
+            )}
 
             {/* Export CSV */}
             <button

@@ -4,7 +4,8 @@ import {
   Edit3, 
   Trash2, 
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Camera
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -74,6 +75,15 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
                           }}
                         />
+                        {product.images && product.images.length > 1 && (
+                          <div 
+                            className="absolute bottom-0.5 right-0.5 px-1 py-0.5 rounded bg-black/85 text-[8px] font-mono text-emerald-300 flex items-center gap-0.5 shadow-xs"
+                            title={`${product.images.length} medicine photos`}
+                          >
+                            <Camera className="w-2.5 h-2.5" />
+                            <span>{product.images.length}</span>
+                          </div>
+                        )}
                         {product.featured && (
                           <div className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-amber-500 text-[#081C13]" title="Featured Formulation">
                             <Sparkles className="w-2.5 h-2.5 fill-current" />

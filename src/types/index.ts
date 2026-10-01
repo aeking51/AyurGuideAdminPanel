@@ -6,6 +6,7 @@ export interface IngredientItem {
   partUsed?: string;
   classicalRole?: string;
   therapeuticAction?: string;
+  referenceLink?: string;
 }
 
 export interface BotanicalIngredient {
@@ -15,6 +16,7 @@ export interface BotanicalIngredient {
   sanskritName?: string;
   therapeuticAction?: string;
   partUsed?: string;
+  referenceLink?: string;
   createdAt?: string;
 }
 
@@ -37,6 +39,7 @@ export interface Product {
   targetDoshas?: string[];
   healthGoals?: string[];
   imageUrl?: string;
+  images?: string[];
   status: 'Active' | 'Inactive' | 'Draft';
   featured: boolean;
   stockUnits?: number;
@@ -72,12 +75,19 @@ export interface User {
 }
 
 export interface AuditLog {
-  id: string;
-  timestamp: string;
-  userEmail: string;
-  actionType: 'STOCK_UPDATE' | 'ROLE_CHANGE' | 'MEDICINE_CREATE' | 'MEDICINE_UPDATE' | 'MEDICINE_DELETE' | 'DATABASE_SYNC' | 'CATEGORY_UPDATE' | 'INGREDIENT_CREATE' | 'INGREDIENT_UPDATE' | 'INGREDIENT_DELETE';
-  entityId: string | number;
-  details: string;
+  id: string | number;
+  adminEmail: string; // Real user email or "Guest user"
+  action: string;
+  targetEntity?: string;
+  targetId?: string;
+  details?: string;
+  ipAddress?: string;
+  createdAt: string;
+  // Backward-compatibility properties
+  userEmail?: string;
+  actionType?: string;
+  entityId?: string | number;
+  timestamp?: string;
 }
 
 export interface SupabaseConfig {

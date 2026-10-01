@@ -6,6 +6,7 @@ const CATEGORIES_KEY = 'ayurguide_categories';
 const USERS_KEY = 'ayurguide_users';
 const AUDIT_KEY = 'ayurguide_audit_logs';
 const SUPABASE_KEY = 'ayurguide_supabase_config';
+const ACTIVE_USER_KEY = 'ayurguide_active_user';
 const CLEANED_FLAG = 'ayurguide_v3_clean_central_db';
 
 // Automatically purge legacy mock placeholders if present
@@ -206,6 +207,37 @@ export class StorageService {
     return users[idx];
   }
 
+  // Active / Logged in User Management
+  static getActiveUser(): User | null {
+    try {
+      const data = localStorage.getItem(ACTIVE_USER_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static setActiveUser(user: User | null): void {
+    try {
+      if (user) {
+        localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(ACTIVE_USER_KEY);
+      }
+    } catch {}
+  }
+
+  static getEffectiveUserEmail(customEmail?: string): string {
+    if (customEmail && customEmail.trim()) {
+      return customEmail.trim();
+    }
+    const active = this.getActiveUser();
+    if (active && active.email && active.email.trim()) {
+      return active.email.trim();
+    }
+    return 'Guest user';
+  }
+
   // Audit Logs
   static getAuditLogs(): AuditLog[] {
     try {
@@ -220,18 +252,72 @@ export class StorageService {
     }
   }
 
-  static logAudit(actionType: AuditLog['actionType'], entityId: string | number, details: string, userEmail: string = 'sys.jerin@gmail.com'): void {
+  static logAudit(
+    actionOrParams: string | {
+      action: string;
+      targetEntity?: string;
+      targetId?: string;
+      details?: string;
+      adminEmail?: string;
+      ipAddress?: string;
+    },
+    legacyEntityId?: string | number,
+    legacyDetails?: string,
+    legacyUserEmail?: string
+  ): void {
     const logs = this.getAuditLogs();
+    const now = new Date().toISOString();
+
+    let action = '';
+    let targetEntity = 'General';
+    let targetId = '';
+    let details = '';
+    let adminEmail = '';
+    let ipAddress = '127.0.0.1';
+
+    if (typeof actionOrParams === 'object') {
+      action = actionOrParams.action;
+      targetEntity = actionOrParams.targetEntity || 'General';
+      targetId = actionOrParams.targetId ? String(actionOrParams.targetId) : '';
+      details = actionOrParams.details || '';
+      adminEmail = actionOrParams.adminEmail || this.getEffectiveUserEmail();
+      ipAddress = actionOrParams.ipAddress || (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1');
+    } else {
+      action = actionOrParams;
+      targetId = legacyEntityId !== undefined ? String(legacyEntityId) : '';
+      details = legacyDetails || '';
+      adminEmail = legacyUserEmail || this.getEffectiveUserEmail();
+      ipAddress = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+      
+      const act = action.toUpperCase();
+      if (act.includes('MEDICINE') || act.includes('PRODUCT') || act.includes('STOCK')) targetEntity = 'Product';
+      else if (act.includes('CATEGORY')) targetEntity = 'Category';
+      else if (act.includes('INGREDIENT') || act.includes('BOTANICAL')) targetEntity = 'BotanicalIngredient';
+      else if (act.includes('USER') || act.includes('ROLE')) targetEntity = 'User';
+      else if (act.includes('DATABASE') || act.includes('SYNC')) targetEntity = 'System';
+    }
+
+    if (!adminEmail || !adminEmail.trim()) {
+      adminEmail = 'Guest user';
+    }
+
     const newLog: AuditLog = {
       id: `LOG-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-      timestamp: new Date().toISOString(),
-      userEmail,
-      actionType,
-      entityId,
-      details
+      adminEmail,
+      action,
+      targetEntity,
+      targetId,
+      details,
+      ipAddress,
+      createdAt: now,
+      // Compatibility aliases
+      userEmail: adminEmail,
+      actionType: action as any,
+      entityId: targetId,
+      timestamp: now,
     };
+
     logs.unshift(newLog);
-    // keep at most 200 logs locally
     if (logs.length > 200) logs.pop();
     localStorage.setItem(AUDIT_KEY, JSON.stringify(logs));
   }

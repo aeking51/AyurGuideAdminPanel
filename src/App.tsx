@@ -21,6 +21,7 @@ export const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(StorageService.getSupabaseConfig());
+  const [activeUser, setActiveUser] = useState<User | null>(() => StorageService.getActiveUser());
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -231,12 +232,100 @@ export const App: React.FC = () => {
     SupabaseService.fetchAuditLogs().then(setAuditLogs);
   };
 
+  // User session login/logout handler
+  const handleSelectUser = async (user: User | null) => {
+    const prevUser = activeUser;
+    setActiveUser(user);
+    StorageService.setActiveUser(user);
+
+    if (user) {
+      await SupabaseService.logAudit({
+        action: 'USER_LOGIN',
+        targetEntity: 'User',
+        targetId: user.email,
+        adminEmail: user.email,
+        details: `User "${user.name}" (${user.email}) logged in to clinical session.`
+      });
+    } else if (prevUser) {
+      await SupabaseService.logAudit({
+        action: 'USER_LOGOUT',
+        targetEntity: 'User',
+        targetId: prevUser.email,
+        adminEmail: prevUser.email,
+        details: `User "${prevUser.name}" logged out. Switched to Guest user.`
+      });
+    }
+    SupabaseService.fetchAuditLogs().then(setAuditLogs);
+  };
+
   // Config Handler
   const handleSaveSupabaseConfig = (cfg: SupabaseConfig) => {
     StorageService.saveSupabaseConfig(cfg);
     setSupabaseConfig(cfg);
     SupabaseService.resetClient();
     loadCentralData();
+  };
+
+  // Section-specific Reload Handlers
+  const [reloadingSection, setReloadingSection] = useState<string | null>(null);
+
+  const handleReloadProducts = async () => {
+    setReloadingSection('catalogue');
+    try {
+      const prods = await SupabaseService.fetchProducts();
+      setProducts(prods);
+    } finally {
+      setReloadingSection(null);
+    }
+  };
+
+  const handleReloadBotanicals = async () => {
+    setReloadingSection('ingredients');
+    try {
+      const bots = await SupabaseService.fetchBotanicalIngredients();
+      setBotanicalIngredients(bots);
+    } finally {
+      setReloadingSection(null);
+    }
+  };
+
+  const handleReloadCategories = async () => {
+    setReloadingSection('categories');
+    try {
+      const cats = await SupabaseService.fetchCategories();
+      setCategories(cats);
+    } finally {
+      setReloadingSection(null);
+    }
+  };
+
+  const handleReloadUsers = async () => {
+    setReloadingSection('users');
+    try {
+      const u = await SupabaseService.fetchUsers();
+      setUsers(u);
+    } finally {
+      setReloadingSection(null);
+    }
+  };
+
+  const handleReloadAuditLogs = async () => {
+    setReloadingSection('audit');
+    try {
+      const logs = await SupabaseService.fetchAuditLogs();
+      setAuditLogs(logs);
+    } finally {
+      setReloadingSection(null);
+    }
+  };
+
+  const handleReloadCurrentTab = async () => {
+    if (currentTab === 'catalogue') await handleReloadProducts();
+    else if (currentTab === 'ingredients') await handleReloadBotanicals();
+    else if (currentTab === 'categories') await handleReloadCategories();
+    else if (currentTab === 'users') await handleReloadUsers();
+    else if (currentTab === 'audit') await handleReloadAuditLogs();
+    else await loadCentralData();
   };
 
   return (
@@ -253,6 +342,11 @@ export const App: React.FC = () => {
           connected: supabaseConfig.connected || isRealtimeActive, 
           lastSync: supabaseConfig.lastSyncTime 
         }}
+        activeUser={activeUser}
+        users={users}
+        onSelectUser={handleSelectUser}
+        onReloadCurrentTab={handleReloadCurrentTab}
+        isReloading={reloadingSection !== null}
       />
 
       {/* Main Container */}
@@ -276,6 +370,8 @@ export const App: React.FC = () => {
             onEditProduct={handleEditProduct}
             onDeleteProduct={handleDeleteProduct}
             onViewMonograph={(p) => setMonographProduct(p)}
+            onReload={handleReloadProducts}
+            isReloading={reloadingSection === 'catalogue'}
           />
         )}
 
@@ -284,6 +380,8 @@ export const App: React.FC = () => {
             ingredients={botanicalIngredients}
             onSaveIngredient={handleSaveIngredient}
             onDeleteIngredient={handleDeleteIngredient}
+            onReload={handleReloadBotanicals}
+            isReloading={reloadingSection === 'ingredients'}
           />
         )}
 
@@ -293,6 +391,8 @@ export const App: React.FC = () => {
             products={products}
             onSaveCategory={handleSaveCategory}
             onDeleteCategory={handleDeleteCategory}
+            onReload={handleReloadCategories}
+            isReloading={reloadingSection === 'categories'}
           />
         )}
 
@@ -303,11 +403,17 @@ export const App: React.FC = () => {
             onToggleStatus={handleToggleUserStatus}
             onAddUser={handleAddUser}
             onDeleteUser={handleDeleteUser}
+            onReload={handleReloadUsers}
+            isReloading={reloadingSection === 'users'}
           />
         )}
 
         {currentTab === 'audit' && (
-          <AuditView logs={auditLogs} />
+          <AuditView 
+            logs={auditLogs} 
+            onReload={handleReloadAuditLogs}
+            isReloading={reloadingSection === 'audit'}
+          />
         )}
 
         {currentTab === 'database' && (

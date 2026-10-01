@@ -23,6 +23,12 @@ export function mapRowToProduct(row: any): Product {
     return fallback;
   };
 
+  const rawImages = row.images || row.photos || row.gallery_images;
+  const parsedImages = parseJson(rawImages, []);
+  const images = parsedImages.length > 0 
+    ? parsedImages 
+    : (row.image_url ? [row.image_url] : []);
+
   return {
     id: row.id,
     code: row.code || `SA-${row.id}`,
@@ -35,7 +41,8 @@ export function mapRowToProduct(row: any): Product {
     dosage: row.dosage || row.usage || '',
     indications: row.indications || '',
     description: row.description || '',
-    imageUrl: row.image_url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+    imageUrl: images[0] || row.image_url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+    images: images,
     status: (row.status === 'Active' || row.status === 'Inactive' || row.status === 'Draft') ? row.status : 'Active',
     featured: Boolean(row.featured),
     createdAt: row.created_at || new Date().toISOString(),
@@ -57,7 +64,12 @@ export function mapProductToRow(prod: Partial<Product>): Record<string, any> {
   }
   if (prod.indications !== undefined) row.indications = prod.indications;
   if (prod.description !== undefined) row.description = prod.description;
-  if (prod.imageUrl !== undefined) row.image_url = prod.imageUrl;
+  if (prod.images && prod.images.length > 0) {
+    row.images = prod.images;
+    row.image_url = prod.images[0] || prod.imageUrl || '';
+  } else if (prod.imageUrl !== undefined) {
+    row.image_url = prod.imageUrl;
+  }
   if (prod.status !== undefined) row.status = prod.status;
   if (prod.featured !== undefined) row.featured = Boolean(prod.featured);
   row.updated_at = new Date().toISOString();
@@ -104,6 +116,7 @@ export function mapRowToBotanicalIngredient(row: any): BotanicalIngredient {
     sanskritName: row.sanskrit_name || '',
     therapeuticAction: row.therapeutic_action || '',
     partUsed: row.part_used || '',
+    referenceLink: row.reference_link || row.reference_url || row.url || '',
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
@@ -115,6 +128,7 @@ export function mapBotanicalIngredientToRow(item: Partial<BotanicalIngredient>):
   if (item.sanskritName !== undefined) row.sanskrit_name = item.sanskritName;
   if (item.therapeuticAction !== undefined) row.therapeutic_action = item.therapeuticAction;
   if (item.partUsed !== undefined) row.part_used = item.partUsed;
+  if (item.referenceLink !== undefined) row.reference_link = item.referenceLink;
   return row;
 }
 
@@ -139,14 +153,44 @@ export function mapRowToUser(row: any): User {
 // 5. AUDIT LOGS MAPPERS (Matches public.audit_logs)
 // ====================================================================
 export function mapRowToAuditLog(row: any): AuditLog {
+  const adminEmail = (row.admin_email && String(row.admin_email).trim()) ? String(row.admin_email).trim() : 'Guest user';
+  const action = row.action || 'GENERAL_ACTION';
+  const targetId = row.target_id || '';
+  const timestamp = row.created_at || new Date().toISOString();
+
   return {
-    id: String(row.id),
-    timestamp: row.created_at || new Date().toISOString(),
-    userEmail: row.admin_email || 'sys.jerin@gmail.com',
-    actionType: (row.action || 'DATABASE_SYNC') as any,
-    entityId: row.target_id || '',
+    id: row.id,
+    adminEmail,
+    action,
+    targetEntity: row.target_entity || '',
+    targetId,
     details: row.details || '',
+    ipAddress: row.ip_address || '',
+    createdAt: timestamp,
+    // Backward-compatibility properties
+    userEmail: adminEmail,
+    actionType: action as any,
+    entityId: targetId,
+    timestamp,
   };
+}
+
+let detectedClientIp: string | null = null;
+if (typeof window !== 'undefined') {
+  fetch('https://api.ipify.org?format=json')
+    .then(r => r.json())
+    .then(d => { if (d?.ip) detectedClientIp = d.ip; })
+    .catch(() => {});
+}
+
+function inferTargetEntity(action: string): string {
+  const act = (action || '').toUpperCase();
+  if (act.includes('MEDICINE') || act.includes('PRODUCT') || act.includes('STOCK')) return 'Product';
+  if (act.includes('CATEGORY')) return 'Category';
+  if (act.includes('INGREDIENT') || act.includes('BOTANICAL')) return 'BotanicalIngredient';
+  if (act.includes('USER') || act.includes('ROLE')) return 'User';
+  if (act.includes('DATABASE') || act.includes('SYNC')) return 'System';
+  return 'General';
 }
 
 // Local cache key for ingredients
@@ -244,11 +288,21 @@ export class SupabaseService {
 
     try {
       const row = mapProductToRow(fullProd);
-      const { data, error } = await client
+      let { data, error } = await client
         .from('products')
         .insert([row])
         .select()
         .single();
+
+      if (error && error.message.toLowerCase().includes('images')) {
+        const altRow = { ...row };
+        delete altRow.images;
+        const retry = await client.from('products').insert([altRow]).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         console.warn('Supabase insert failed, saving locally:', error.message);
@@ -274,12 +328,22 @@ export class SupabaseService {
 
     try {
       const row = mapProductToRow(productData);
-      const { data, error } = await client
+      let { data, error } = await client
         .from('products')
         .update(row)
         .eq('id', id)
         .select()
         .single();
+
+      if (error && error.message.toLowerCase().includes('images')) {
+        const altRow = { ...row };
+        delete altRow.images;
+        const retry = await client.from('products').update(altRow).eq('id', id).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         console.warn('Supabase update failed, falling back to local:', error.message);
@@ -373,7 +437,7 @@ export class SupabaseService {
 
       const created = mapRowToCategory(data);
       StorageService.upsertCategory(created);
-      this.logAudit('CATEGORY_UPDATE', created.name, `Created category "${created.name}" in public.categories.`);
+      this.logAudit('CATEGORY_CREATE', created.code || created.name, `Created category "${created.name}" in public.categories.`);
       return created;
     } catch {
       return StorageService.upsertCategory({ ...categoryData, code: categoryData.code || categoryData.name.slice(0, 3).toUpperCase() });
@@ -401,6 +465,7 @@ export class SupabaseService {
 
       const updated = mapRowToCategory(data);
       StorageService.upsertCategory(updated);
+      this.logAudit('CATEGORY_UPDATE', updated.code || updated.name, `Updated category "${updated.name}" (${updated.code}).`);
       return updated;
     } catch {
       return StorageService.upsertCategory({ ...categoryData, id: Number(id), name: categoryData.name || '', code: categoryData.code || '' });
@@ -411,6 +476,7 @@ export class SupabaseService {
     const client = this.getClient();
     const cats = StorageService.getCategories().filter(c => String(c.id) !== String(id));
     StorageService.saveCategories(cats);
+    this.logAudit('CATEGORY_DELETE', String(id), `Deleted category ID #${id} from public.categories.`);
 
     if (!client) return true;
 
@@ -466,6 +532,7 @@ export class SupabaseService {
       sanskritName: item.sanskritName,
       therapeuticAction: item.therapeuticAction,
       partUsed: item.partUsed,
+      referenceLink: item.referenceLink,
       createdAt: new Date().toISOString()
     };
 
@@ -478,11 +545,22 @@ export class SupabaseService {
 
     try {
       const row = mapBotanicalIngredientToRow(item);
-      const { data, error } = await client
+      let { data, error } = await client
         .from('ingredients')
         .insert([row])
         .select()
         .single();
+
+      if (error && error.message.toLowerCase().includes('reference_link') && item.referenceLink) {
+        const altRow = { ...row };
+        delete altRow.reference_link;
+        altRow.reference_url = item.referenceLink;
+        const retry = await client.from('ingredients').insert([altRow]).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         const current = await this.fetchBotanicalIngredients();
@@ -510,7 +588,8 @@ export class SupabaseService {
       ...(idx !== -1 ? current[idx] : {}),
       ...item,
       id,
-      name: item.name || current[idx]?.name || 'Botanical'
+      name: item.name || current[idx]?.name || 'Botanical',
+      referenceLink: item.referenceLink !== undefined ? item.referenceLink : current[idx]?.referenceLink
     };
 
     if (!client) {
@@ -521,12 +600,23 @@ export class SupabaseService {
 
     try {
       const row = mapBotanicalIngredientToRow(item);
-      const { data, error } = await client
+      let { data, error } = await client
         .from('ingredients')
         .update(row)
         .eq('id', id)
         .select()
         .single();
+
+      if (error && error.message.toLowerCase().includes('reference_link') && item.referenceLink) {
+        const altRow = { ...row };
+        delete altRow.reference_link;
+        altRow.reference_url = item.referenceLink;
+        const retry = await client.from('ingredients').update(altRow).eq('id', id).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         if (idx !== -1) current[idx] = fallback;
@@ -634,7 +724,7 @@ export class SupabaseService {
       const users = StorageService.getUsers();
       users.unshift(created);
       StorageService.saveUsers(users);
-      this.logAudit('ROLE_CHANGE', created.email, `Created user profile "${created.name}" in public.profiles.`);
+      this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
       return created;
     } catch {
       const users = StorageService.getUsers();
@@ -666,6 +756,7 @@ export class SupabaseService {
     const u = users.find(x => String(x.id) === String(userId));
     const nextStatus = u?.status === 'Active' ? 'Suspended' : 'Active';
     StorageService.toggleUserStatus(userId);
+    this.logAudit('STATUS_CHANGE', String(userId), `Toggled account status to ${nextStatus} for user #${userId}.`);
 
     const client = this.getClient();
     if (!client) return;
@@ -683,13 +774,13 @@ export class SupabaseService {
   static async deleteUser(userId: string | number): Promise<boolean> {
     const users = StorageService.getUsers().filter(u => String(u.id) !== String(userId));
     StorageService.saveUsers(users);
+    this.logAudit('USER_DELETE', String(userId), `Deleted user profile #${userId} from public.profiles.`);
 
     const client = this.getClient();
     if (!client) return true;
 
     try {
       await client.from('profiles').delete().eq('id', userId);
-      this.logAudit('ROLE_CHANGE', String(userId), `Deleted user profile #${userId} from public.profiles.`);
       return true;
     } catch {
       return false;
@@ -723,18 +814,76 @@ export class SupabaseService {
     }
   }
 
-  static async logAudit(action: string, targetId: string, details: string): Promise<void> {
-    StorageService.logAudit(action as any, targetId, details);
+  static async logAudit(
+    actionOrParams: string | {
+      action: string;
+      targetEntity?: string;
+      targetId?: string;
+      details?: string;
+      adminEmail?: string;
+      ipAddress?: string;
+    },
+    legacyTargetId?: string,
+    legacyDetails?: string,
+    legacyTargetEntity?: string
+  ): Promise<void> {
+    let action = '';
+    let targetEntity = 'General';
+    let targetId = '';
+    let details = '';
+    let adminEmail = '';
+    let ipAddress = '';
+
+    if (typeof actionOrParams === 'object') {
+      action = actionOrParams.action;
+      targetEntity = actionOrParams.targetEntity || 'General';
+      targetId = actionOrParams.targetId ? String(actionOrParams.targetId) : '';
+      details = actionOrParams.details || '';
+      adminEmail = actionOrParams.adminEmail || StorageService.getEffectiveUserEmail();
+      ipAddress = actionOrParams.ipAddress || '';
+    } else {
+      action = actionOrParams;
+      targetId = legacyTargetId ? String(legacyTargetId) : '';
+      details = legacyDetails || '';
+      targetEntity = legacyTargetEntity || inferTargetEntity(action);
+      adminEmail = StorageService.getEffectiveUserEmail();
+    }
+
+    // Default to 'Guest user' if empty or not logged in
+    if (!adminEmail || !adminEmail.trim()) {
+      adminEmail = 'Guest user';
+    }
+
+    if (!ipAddress) {
+      ipAddress = detectedClientIp || (typeof window !== 'undefined' ? (window.location.hostname || '127.0.0.1') : '127.0.0.1');
+    }
+
+    StorageService.logAudit({
+      action,
+      targetEntity,
+      targetId,
+      details,
+      adminEmail,
+      ipAddress
+    });
+
     const client = this.getClient();
     if (!client) return;
 
     try {
-      await client.from('audit_logs').insert([{
-        admin_email: 'sys.jerin@gmail.com',
+      const row = {
+        admin_email: adminEmail,
         action,
-        target_id: targetId,
-        details,
-      }]);
+        target_entity: targetEntity || null,
+        target_id: targetId || null,
+        details: details || null,
+        ip_address: ipAddress || null,
+      };
+
+      const { error } = await client.from('audit_logs').insert([row]);
+      if (error) {
+        console.warn('Supabase logAudit notice:', error.message);
+      }
     } catch (e) {
       console.warn('Supabase logAudit notice:', e);
     }

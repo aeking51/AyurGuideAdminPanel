@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Sparkles, Check } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles, Check, Camera, Image as ImageIcon, Star } from 'lucide-react';
 import { Product, Category, IngredientItem } from '../../types';
 
 interface ProductModalProps {
@@ -26,6 +26,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [categoryId, setCategoryId] = useState<number>(1);
   const [classicalReference, setClassicalReference] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [primaryBenefit, setPrimaryBenefit] = useState('');
   const [doshaImpact, setDoshaImpact] = useState('');
@@ -57,7 +58,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       );
       setCategoryId(matchedCat ? matchedCat.id : (product.categoryId || categories[0]?.id || 1));
       setClassicalReference(product.classicalReference || '');
-      setImageUrl(product.imageUrl || '');
+      let loadedImages: string[] = [];
+      if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+        loadedImages = product.images.filter(Boolean);
+      } else if (product.imageUrl) {
+        loadedImages = [product.imageUrl];
+      }
+      setImages(loadedImages);
+      setImageUrl(loadedImages[0] || product.imageUrl || '');
       setDescription(product.description || '');
       setPrimaryBenefit(product.primaryBenefit || '');
       setDoshaImpact(product.doshaImpact || '');
@@ -84,6 +92,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCode(`SA-${Math.floor(10000 + Math.random() * 90000)}`);
       setCategoryId(categories[0]?.id || 1);
       setClassicalReference('Ashtanga Hrudayam / AFI');
+      setImages([
+        'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+        'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600',
+        'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600'
+      ]);
       setImageUrl('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600');
       setDescription('');
       setPrimaryBenefit('');
@@ -145,6 +158,50 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   };
 
+  const handleSetPhotoUrl = (index: number, url: string) => {
+    const next = [...images];
+    while (next.length <= index) {
+      next.push('');
+    }
+    next[index] = url;
+    setImages(next);
+    if (index === 0) {
+      setImageUrl(url);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    const next = images.filter((_, i) => i !== index);
+    setImages(next);
+    setImageUrl(next[0] || '');
+  };
+
+  const handleMakePrimary = (index: number) => {
+    if (index === 0 || !images[index]) return;
+    const target = images[index];
+    const remaining = images.filter((_, i) => i !== index);
+    const next = [target, ...remaining];
+    setImages(next);
+    setImageUrl(target);
+  };
+
+  const handleApplyPresetGroup = (count: 3 | 4) => {
+    const presets3 = [
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600', // Bottle packaging
+      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600', // Herbal extract / Decoction
+      'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600', // Pure Botanical Churna
+    ];
+    const presets4 = [
+      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600', // Bottle packaging
+      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600', // Formulation Tablets / Gulika
+      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600', // Decoction extract
+      'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600', // Dispensing Churna & Box
+    ];
+    const selected = count === 3 ? presets3 : presets4;
+    setImages(selected);
+    setImageUrl(selected[0]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -155,6 +212,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     const selectedCategory = categories.find(c => c.id === categoryId);
     const resolvedCatName = selectedCategory ? selectedCategory.name : (categories[0]?.name || '');
 
+    const validImages = images.map(img => img.trim()).filter(Boolean);
+    const primaryImg = validImages[0] || imageUrl.trim() || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
+
     onSave({
       id: product?.id,
       name: name.trim(),
@@ -163,7 +223,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       sanskritName: sanskritName.trim(),
       code: code.trim() || `SA-${Math.floor(10000 + Math.random() * 90000)}`,
       classicalReference: classicalReference.trim(),
-      imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
+      imageUrl: primaryImg,
+      images: validImages.length > 0 ? validImages : [primaryImg],
       description: description.trim(),
       primaryBenefit: primaryBenefit.trim(),
       doshaImpact: doshaImpact.trim(),
@@ -308,21 +369,118 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-emerald-300 mb-1">Image URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 bg-[#0D281C] border border-[#23493C] rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
-                  />
-                  {imageUrl && (
-                    <div className="w-9 h-9 rounded-lg overflow-hidden border border-[#23493C] shrink-0">
-                      <img src={imageUrl} alt="preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
+              {/* Group of 3 or 4 Medicine Photos */}
+              <div className="bg-[#0A2218] border border-[#23493C] rounded-xl p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-semibold text-emerald-300 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-emerald-400" />
+                      <span>Medicine Photo Gallery (Group of 3 or 4 Photos)</span>
+                    </label>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      Upload or link up to 4 angles: packaging bottle, back formulation label, medicine texture, and carton box.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                    <span className="text-[10px] text-gray-400 mr-1 hidden sm:inline">Quick Fill:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPresetGroup(3)}
+                      className="px-2.5 py-1 rounded-lg bg-[#081C13] border border-[#23493C] hover:border-emerald-500 text-[11px] text-emerald-300 font-medium transition cursor-pointer"
+                      title="Load 3 standard Ayurvedic medicine photos"
+                    >
+                      ⚡ Group of 3
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPresetGroup(4)}
+                      className="px-2.5 py-1 rounded-lg bg-[#081C13] border border-[#23493C] hover:border-emerald-500 text-[11px] text-emerald-300 font-medium transition cursor-pointer"
+                      title="Load 4 standard Ayurvedic medicine photos"
+                    >
+                      ⚡ Group of 4
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 Photo Slots */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[0, 1, 2, 3].map((idx) => {
+                    const slotLabels = [
+                      'Photo 1 (Bottle Cover)',
+                      'Photo 2 (Label / Back)',
+                      'Photo 3 (Decoction / Herb)',
+                      'Photo 4 (Box / Carton)'
+                    ];
+                    const currentImg = images[idx] || '';
+
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`bg-[#081C13] border rounded-xl p-2.5 flex flex-col justify-between transition ${
+                          currentImg ? 'border-emerald-700/60' : 'border-[#23493C] border-dashed hover:border-emerald-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5 font-medium">
+                          <span className="truncate">{slotLabels[idx]}</span>
+                          {idx === 0 && currentImg && (
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold text-[9px]">
+                              COVER
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Thumbnail or Empty State */}
+                        <div className="aspect-square w-full rounded-lg bg-[#0D281C] border border-[#23493C]/80 overflow-hidden relative group mb-2">
+                          {currentImg ? (
+                            <>
+                              <img 
+                                src={currentImg} 
+                                alt={`Medicine view ${idx + 1}`} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1.5 p-1">
+                                {idx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMakePrimary(idx)}
+                                    className="p-1 rounded bg-emerald-700 text-white text-[10px] hover:bg-emerald-600 cursor-pointer"
+                                    title="Make this the cover photo"
+                                  >
+                                    <Star className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePhoto(idx)}
+                                  className="p-1 rounded bg-red-700 text-white text-[10px] hover:bg-red-600 cursor-pointer"
+                                  title="Remove photo"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-center p-2">
+                              <ImageIcon className="w-6 h-6 mb-1 text-emerald-800/80" />
+                              <span className="text-[10px]">Photo {idx + 1}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* URL input field */}
+                        <input
+                          type="url"
+                          value={currentImg}
+                          onChange={(e) => handleSetPhotoUrl(idx, e.target.value)}
+                          placeholder="Paste image URL..."
+                          className="w-full bg-[#0D281C] border border-[#23493C] rounded-lg px-2 py-1 text-[11px] text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 font-mono"
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

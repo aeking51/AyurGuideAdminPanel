@@ -3,9 +3,10 @@ import {
   RotateCw, 
   FileText, 
   Edit3, 
-  Trash2,
+  Trash2, 
   Sparkles, 
-  Check
+  Check,
+  Camera
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -23,11 +24,20 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   onDeleteProduct,
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
+  const [activePhotoIndices, setActivePhotoIndices] = useState<Record<string | number, number>>({});
 
   const toggleFlip = (id: string | number) => {
     setFlippedCards(prev => ({
       ...prev,
       [id]: !prev[id]
+    }));
+  };
+
+  const handleSelectPhoto = (productId: string | number, photoIdx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePhotoIndices(prev => ({
+      ...prev,
+      [productId]: photoIdx
     }));
   };
 
@@ -65,35 +75,71 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                   </div>
 
                   {/* Image & Title */}
-                  <div className="flex gap-4 items-start mb-3">
-                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#081C13] border border-emerald-800/50 shrink-0 relative">
-                      <img 
-                        src={product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"} 
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
-                        }}
-                      />
-                      {product.featured && (
-                        <div className="absolute top-1 right-1 p-0.5 rounded-full bg-amber-500 text-[#081C13]">
-                          <Sparkles className="w-2.5 h-2.5 fill-current" />
-                        </div>
-                      )}
-                    </div>
+                  {(() => {
+                    const photos = product.images && product.images.length > 0 ? product.images : [product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"];
+                    const activeIdx = activePhotoIndices[product.id] !== undefined ? activePhotoIndices[product.id] : 0;
+                    const safeActiveIdx = activeIdx < photos.length ? activeIdx : 0;
+                    const activeImg = photos[safeActiveIdx] || photos[0];
 
-                    <div className="min-w-0">
-                      <h4 className="font-serif font-bold text-base text-gray-100 hover:text-emerald-300 transition cursor-pointer" onClick={() => onViewMonograph(product)}>
-                        {product.name}
-                      </h4>
-                      <p className="text-xs text-amber-200/90 font-serif truncate mt-0.5">
-                        {product.sanskritName}
-                      </p>
-                      <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">
-                        {product.classicalReference}
-                      </p>
-                    </div>
-                  </div>
+                    return (
+                      <div className="flex gap-4 items-start mb-3">
+                        <div className="flex flex-col items-center gap-1.5 shrink-0">
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#081C13] border border-emerald-800/50 shrink-0 relative group/img">
+                            <img 
+                              src={activeImg} 
+                              alt={product.name}
+                              className="w-full h-full object-cover transition duration-300"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
+                              }}
+                            />
+                            {photos.length > 1 && (
+                              <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded bg-black/75 text-[9px] font-mono text-emerald-300 flex items-center gap-0.5">
+                                <Camera className="w-2.5 h-2.5" />
+                                <span>{safeActiveIdx + 1}/{photos.length}</span>
+                              </div>
+                            )}
+                            {product.featured && (
+                              <div className="absolute top-1 right-1 p-0.5 rounded-full bg-amber-500 text-[#081C13]">
+                                <Sparkles className="w-2.5 h-2.5 fill-current" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Mini thumbnails if group of photos */}
+                          {photos.length > 1 && (
+                            <div className="flex items-center gap-1">
+                              {photos.map((_, pIdx) => (
+                                <button
+                                  key={pIdx}
+                                  type="button"
+                                  onClick={(e) => handleSelectPhoto(product.id, pIdx, e)}
+                                  className={`w-3.5 h-3.5 rounded-full transition border cursor-pointer ${
+                                    safeActiveIdx === pIdx 
+                                      ? 'bg-emerald-400 border-white scale-110' 
+                                      : 'bg-emerald-950 border-emerald-700/60 hover:bg-emerald-800'
+                                  }`}
+                                  title={`View photo ${pIdx + 1}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <h4 className="font-serif font-bold text-base text-gray-100 hover:text-emerald-300 transition cursor-pointer" onClick={() => onViewMonograph(product)}>
+                            {product.name}
+                          </h4>
+                          <p className="text-xs text-amber-200/90 font-serif truncate mt-0.5">
+                            {product.sanskritName}
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">
+                            {product.classicalReference}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Primary Benefit Box */}
                   <div className="bg-[#081C13]/60 rounded-xl p-3 border border-[#23493C]/60 mb-3 text-xs">

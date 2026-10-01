@@ -17,7 +17,8 @@ import {
   CircleDot,
   Flame,
   Pill,
-  Wine
+  Wine,
+  RefreshCw
 } from 'lucide-react';
 import { Category, Product } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
@@ -27,6 +28,8 @@ interface CategoriesViewProps {
   products: Product[];
   onSaveCategory: (category: Partial<Category> & { name: string; code?: string; title?: string; description?: string; icon?: string }) => void;
   onDeleteCategory?: (id: number | string) => void;
+  onReload?: () => void;
+  isReloading?: boolean;
 }
 
 const AVAILABLE_ICONS = [
@@ -47,6 +50,8 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   products,
   onSaveCategory,
   onDeleteCategory,
+  onReload,
+  isReloading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -149,13 +154,27 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-semibold hover:from-emerald-500 hover:to-emerald-600 transition shadow-sm self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Category</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {onReload && (
+            <button
+              onClick={onReload}
+              disabled={isReloading}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 hover:text-white hover:bg-emerald-950 transition text-xs font-semibold cursor-pointer disabled:opacity-50"
+              title="Reload categories live from Supabase public.categories"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
+              <span>{isReloading ? 'Reloading...' : 'Reload Categories'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-semibold hover:from-emerald-500 hover:to-emerald-600 transition shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Category</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar & Total Counter */}

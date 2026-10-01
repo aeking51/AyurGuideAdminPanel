@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { Sparkles, Plus, Edit3, Trash2, X, Search, Flower2, BookOpen } from 'lucide-react';
+import { 
+  Sparkles, 
+  Plus, 
+  Edit3, 
+  Trash2, 
+  X, 
+  Search, 
+  Flower2, 
+  BookOpen, 
+  Link2, 
+  ExternalLink,
+  RefreshCw 
+} from 'lucide-react';
 import { BotanicalIngredient } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 
@@ -7,12 +19,16 @@ interface IngredientsViewProps {
   ingredients: BotanicalIngredient[];
   onSaveIngredient: (item: Partial<BotanicalIngredient> & { name: string }) => void;
   onDeleteIngredient: (id: number | string) => void;
+  onReload?: () => void;
+  isReloading?: boolean;
 }
 
 export const IngredientsView: React.FC<IngredientsViewProps> = ({
   ingredients,
   onSaveIngredient,
   onDeleteIngredient,
+  onReload,
+  isReloading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,6 +41,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
   const [sanskritName, setSanskritName] = useState('');
   const [partUsed, setPartUsed] = useState('');
   const [therapeuticAction, setTherapeuticAction] = useState('');
+  const [referenceLink, setReferenceLink] = useState('');
 
   const filtered = ingredients.filter(item => {
     if (!searchQuery.trim()) return true;
@@ -34,7 +51,8 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
       (item.botanicalName || '').toLowerCase().includes(q) ||
       (item.sanskritName || '').toLowerCase().includes(q) ||
       (item.therapeuticAction || '').toLowerCase().includes(q) ||
-      (item.partUsed || '').toLowerCase().includes(q)
+      (item.partUsed || '').toLowerCase().includes(q) ||
+      (item.referenceLink || '').toLowerCase().includes(q)
     );
   });
 
@@ -45,6 +63,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
     setSanskritName('');
     setPartUsed('Root');
     setTherapeuticAction('Rasayana, Balya');
+    setReferenceLink('');
     setIsModalOpen(true);
   };
 
@@ -55,6 +74,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
     setSanskritName(item.sanskritName || '');
     setPartUsed(item.partUsed || '');
     setTherapeuticAction(item.therapeuticAction || '');
+    setReferenceLink(item.referenceLink || '');
     setIsModalOpen(true);
   };
 
@@ -71,7 +91,8 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
       botanicalName: botanicalName.trim(),
       sanskritName: sanskritName.trim(),
       partUsed: partUsed.trim(),
-      therapeuticAction: therapeuticAction.trim()
+      therapeuticAction: therapeuticAction.trim(),
+      referenceLink: referenceLink.trim()
     });
 
     setIsModalOpen(false);
@@ -88,11 +109,23 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             <h2 className="font-serif font-bold text-xl text-gray-100">Dravyaguna Botanical Pharmacopoeia</h2>
           </div>
           <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-            Central repository of standardized Ayurvedic botanical herbs and minerals from the <code>public.ingredients</code> table.
+            Central repository of standardized Ayurvedic botanical herbs and minerals from the <code>public.ingredients</code> table in Supabase.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {onReload && (
+            <button
+              onClick={onReload}
+              disabled={isReloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 hover:text-white hover:bg-emerald-950 transition text-xs font-semibold cursor-pointer disabled:opacity-50"
+              title="Reload botanicals live from Supabase public.ingredients"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
+              <span>{isReloading ? 'Reloading...' : 'Reload Botanicals'}</span>
+            </button>
+          )}
+
           <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
             {ingredients.length} Indexed Botanicals
           </span>
@@ -114,7 +147,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by common name, botanical binomial, or Sanskrit..."
+            placeholder="Search by common name, Latin binomial, Sanskrit, or URL..."
             className="w-full bg-[#081C13] border border-[#23493C] rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -131,7 +164,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             {searchQuery ? 'No Matching Botanicals Found' : 'No Botanical Ingredients Cataloged Yet'}
           </h3>
           <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto mb-5">
-            {searchQuery ? 'Try clearing your search query.' : 'Populate your pharmacopoeia with authentic herbs, parts used, and therapeutic actions.'}
+            {searchQuery ? 'Try clearing your search query.' : 'Populate your pharmacopoeia with authentic herbs, parts used, therapeutic actions, and research reference URLs.'}
           </p>
           {!searchQuery && (
             <button
@@ -153,6 +186,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
                 <th className="py-3 px-3">Sanskrit Name</th>
                 <th className="py-3 px-3">Part Used</th>
                 <th className="py-3 px-3">Therapeutic Action</th>
+                <th className="py-3 px-3">Reference Link</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -189,6 +223,26 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
                     {item.therapeuticAction || '—'}
                   </td>
 
+                  {/* Reference Link */}
+                  <td className="py-3 px-3">
+                    {item.referenceLink ? (
+                      <a
+                        href={item.referenceLink.startsWith('http') ? item.referenceLink : `https://${item.referenceLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#081C13] border border-[#23493C] text-[11px] text-emerald-400 hover:text-emerald-300 hover:border-emerald-600 transition max-w-[160px] truncate"
+                        title={item.referenceLink}
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0 text-emerald-400" />
+                        <span className="truncate">
+                          {item.referenceLink.replace(/^https?:\/\/(www\.)?/, '')}
+                        </span>
+                      </a>
+                    ) : (
+                      <span className="text-gray-600 text-xs">—</span>
+                    )}
+                  </td>
+
                   {/* Actions */}
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -223,7 +277,9 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#23493C] mb-4">
               <h3 className="text-base font-serif font-bold text-gray-100 flex items-center gap-2">
                 <Flower2 className="w-5 h-5 text-emerald-400" />
-                <span>{editingItem ? `Edit: ${editingItem.name}` : 'Catalog Botanical Ingredient'}</span>
+                <span className="tracking-wide uppercase text-sm font-semibold text-emerald-100">
+                  {editingItem ? `Edit Botanical Ingredient` : 'Catalog Botanical Ingredient'}
+                </span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -287,6 +343,39 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
                 />
               </div>
 
+              {/* Reference Link Field */}
+              <div>
+                <label className="block text-xs font-semibold text-emerald-300 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Reference Link</span>
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-normal">URL (monograph, research, pharmacopoeia)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={referenceLink}
+                    onChange={(e) => setReferenceLink(e.target.value)}
+                    placeholder="https://en.wikipedia.org/wiki/Withania_somnifera"
+                    className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 font-mono text-xs"
+                  />
+                </div>
+                {referenceLink.trim() && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400">
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                    <a
+                      href={referenceLink.startsWith('http') ? referenceLink : `https://${referenceLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline truncate"
+                    >
+                      Preview link ↗
+                    </a>
+                  </div>
+                )}
+              </div>
+
               <div className="pt-3 border-t border-[#23493C] flex items-center justify-end gap-3">
                 <button
                   type="button"
@@ -297,7 +386,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
                 >
                   Save Ingredient
                 </button>

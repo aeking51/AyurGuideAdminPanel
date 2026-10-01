@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Shield, UserCheck, CheckCircle, Ban, Plus, Trash2, X, UserPlus, AlertCircle } from 'lucide-react';
+import { Users, Shield, UserCheck, CheckCircle, Ban, Plus, Trash2, X, UserPlus, AlertCircle, RefreshCw } from 'lucide-react';
 import { User } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 
@@ -9,6 +9,8 @@ interface UsersViewProps {
   onToggleStatus: (userId: string | number) => void;
   onAddUser?: (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string }) => void;
   onDeleteUser?: (userId: string | number) => void;
+  onReload?: () => void;
+  isReloading?: boolean;
 }
 
 export const UsersView: React.FC<UsersViewProps> = ({
@@ -17,6 +19,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onToggleStatus,
   onAddUser,
   onDeleteUser,
+  onReload,
+  isReloading = false,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -65,7 +69,19 @@ export const UsersView: React.FC<UsersViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {onReload && (
+            <button
+              onClick={onReload}
+              disabled={isReloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 hover:text-white hover:bg-emerald-950 transition text-xs font-semibold cursor-pointer disabled:opacity-50"
+              title="Reload user profiles live from Supabase public.profiles"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
+              <span>{isReloading ? 'Reloading...' : 'Reload Users'}</span>
+            </button>
+          )}
+
           <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
             {users.length} Active Records
           </span>

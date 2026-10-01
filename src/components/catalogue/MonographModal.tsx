@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Download, Sparkles, QrCode } from 'lucide-react';
+import { X, Printer, Download, Sparkles, QrCode, Camera } from 'lucide-react';
 import { Product } from '../../types';
 
 interface MonographModalProps {
@@ -93,6 +93,48 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
               <strong className="text-sm text-emerald-800">{product.status || 'Active'} Published</strong>
             </div>
           </div>
+
+          {/* Standardized Medicine Photo Documentation */}
+          {(() => {
+            const photos = product.images && product.images.length > 0 
+              ? product.images 
+              : (product.imageUrl ? [product.imageUrl] : []);
+            
+            if (photos.length === 0) return null;
+
+            return (
+              <div className="bg-white rounded-xl p-4 border border-[#E2D9CC] font-sans">
+                <div className="flex items-center gap-1.5 border-b border-gray-100 pb-2 mb-3">
+                  <Camera className="w-4 h-4 text-[#1B4D3E]" />
+                  <h3 className="font-serif font-bold text-sm text-[#0F382C]">
+                    Standardized Pharmacopoeial Photo Documentation ({photos.length} {photos.length === 1 ? 'Angle' : 'Angles'})
+                  </h3>
+                </div>
+                <div className={`grid gap-3 ${photos.length === 1 ? 'grid-cols-1 max-w-xs mx-auto' : photos.length === 2 ? 'grid-cols-2' : photos.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                  {photos.map((img, i) => {
+                    const captions = ['Packaging / Bottle', 'Formulation Label', 'Medicine Texture / Decoction', 'Batch Carton'];
+                    return (
+                      <div key={i} className="flex flex-col items-center text-center">
+                        <div className="w-full aspect-square rounded-lg overflow-hidden border border-[#E2D9CC] bg-[#FAF7F2] mb-1">
+                          <img 
+                            src={img} 
+                            alt={`Medicine Angle ${i + 1}`} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
+                            }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-600 font-medium">
+                          {captions[i] || `Angle ${i + 1}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Clinical Therapeutic Overview */}
           <div className="bg-white rounded-xl p-5 border border-[#E2D9CC] space-y-3 font-sans">
