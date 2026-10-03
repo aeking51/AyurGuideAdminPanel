@@ -722,21 +722,48 @@ export class SupabaseService {
         .single();
 
       if (error) {
-        console.warn('Supabase user insert failed, saving locally:', error.message);
-        const users = StorageService.getUsers();
+        console.warn('Supabase user insert failed, checking fallback:', error.message);
+        if (error.message.includes('password')) {
+          try {
+            const fallbackRes = await client
+              .from('profiles')
+              .insert([{
+                id,
+                name: userData.name,
+                email: userData.email,
+                role: userData.role,
+                role_title: userData.roleTitle || '',
+                status: 'Active'
+              }])
+              .select()
+              .single();
+
+            if (!fallbackRes.error && fallbackRes.data) {
+              const created = mapRowToUser(fallbackRes.data);
+              created.password = userData.password || '';
+              const users = StorageService.getUsers().filter(u => String(u.id) !== String(created.id) && u.email !== created.email);
+              users.unshift(created);
+              StorageService.saveUsers(users);
+              this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
+              return created;
+            }
+          } catch {}
+        }
+
+        const users = StorageService.getUsers().filter(u => String(u.id) !== String(newUser.id) && u.email !== newUser.email);
         users.unshift(newUser);
         StorageService.saveUsers(users);
         return newUser;
       }
 
       const created = mapRowToUser(data);
-      const users = StorageService.getUsers();
+      const users = StorageService.getUsers().filter(u => String(u.id) !== String(created.id) && u.email !== created.email);
       users.unshift(created);
       StorageService.saveUsers(users);
       this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
       return created;
     } catch {
-      const users = StorageService.getUsers();
+      const users = StorageService.getUsers().filter(u => String(u.id) !== String(newUser.id) && u.email !== newUser.email);
       users.unshift(newUser);
       StorageService.saveUsers(users);
       return newUser;

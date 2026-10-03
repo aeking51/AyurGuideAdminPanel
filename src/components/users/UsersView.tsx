@@ -7,7 +7,7 @@ interface UsersViewProps {
   users: User[];
   onUpdateRole: (userId: string | number, newRole: 'ADMIN' | 'PRACTITIONER' | 'PATIENT') => void;
   onToggleStatus: (userId: string | number) => void;
-  onAddUser?: (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string; password?: string }) => void;
+  onAddUser?: (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string; password?: string }) => Promise<void> | void;
   onDeleteUser?: (userId: string | number) => void;
   onReload?: () => void;
   isReloading?: boolean;
@@ -31,6 +31,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'ADMIN' | 'PRACTITIONER' | 'PATIENT'>('PRACTITIONER');
   const [roleTitle, setRoleTitle] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleOpenAdd = () => {
     setName('');
@@ -41,27 +43,44 @@ export const UsersView: React.FC<UsersViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
       alert('Name and email are required.');
       return;
     }
-    if (onAddUser) {
-      onAddUser({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-        role,
-        roleTitle: roleTitle.trim() || (role === 'ADMIN' ? 'Clinical Administrator' : role === 'PRACTITIONER' ? 'Ayurvedic Physician' : 'Registered Patient')
-      });
+    setIsSubmitting(true);
+    try {
+      if (onAddUser) {
+        await onAddUser({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password: password.trim(),
+          role,
+          roleTitle: roleTitle.trim() || (role === 'ADMIN' ? 'Clinical Administrator' : role === 'PRACTITIONER' ? 'Ayurvedic Physician' : 'Registered Patient')
+        });
+      }
+      setIsModalOpen(false);
+      setToastMessage(`New user "${name.trim()}" successfully created!`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save new user.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
   };
 
   return (
     <div className="space-y-6">
       
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-950 border border-emerald-500 text-emerald-200 text-xs shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Banner */}
       <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -102,10 +121,10 @@ export const UsersView: React.FC<UsersViewProps> = ({
           )}
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Practitioner</span>
+            <span>New User</span>
           </button>
         </div>
       </div>
@@ -120,10 +139,10 @@ export const UsersView: React.FC<UsersViewProps> = ({
           </p>
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-lg"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-lg cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add First Practitioner</span>
+            <span>New User</span>
           </button>
         </div>
       ) : (
@@ -281,7 +300,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#23493C] mb-4">
               <h3 className="text-base font-serif font-bold text-gray-100 flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-emerald-400" />
-                <span>Register Clinical Personnel</span>
+                <span>Register New User</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -361,9 +380,17 @@ export const UsersView: React.FC<UsersViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  Create User
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Creating User...</span>
+                    </>
+                  ) : (
+                    <span>Create User</span>
+                  )}
                 </button>
               </div>
             </form>

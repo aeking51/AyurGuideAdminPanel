@@ -211,10 +211,14 @@ export const App: React.FC = () => {
   const handleAddUser = async (userData: { name: string; email: string; role: 'ADMIN' | 'PRACTITIONER' | 'PATIENT'; roleTitle?: string; password?: string }) => {
     try {
       const created = await SupabaseService.createUser(userData);
-      setUsers(prev => [created, ...prev]);
+      setUsers(prev => {
+        const filtered = prev.filter(u => String(u.id) !== String(created.id) && u.email.toLowerCase() !== created.email.toLowerCase());
+        return [created, ...filtered];
+      });
       SupabaseService.fetchAuditLogs().then(setAuditLogs);
     } catch (err) {
       console.error('Failed to add user:', err);
+      throw err;
     }
   };
 
