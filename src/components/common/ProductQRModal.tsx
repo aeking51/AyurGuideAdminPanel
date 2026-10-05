@@ -62,7 +62,6 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = shareQrLink;
       document.body.appendChild(textarea);
@@ -104,7 +103,6 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
         downloadUrl = await generatePrintableQrCard(shareQrLink, product.name, product.code);
         filename = `AyurGuide-Printable-Card-${publicSlug}.png`;
       } else {
-        // Pure high-res QR (800x800)
         downloadUrl = await generateQrDataUrl(shareQrLink, 800);
       }
 
@@ -126,210 +124,223 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 qr-modal-overlay">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 qr-modal-overlay">
       
       {/* ======================================================== */}
-      {/* 1. ON-SCREEN INTERACTIVE MODAL DIALOG (HIDDEN ON PRINT)  */}
+      {/* 1. ON-SCREEN INTERACTIVE MODAL DIALOG (OPTIMIZED HEIGHT) */}
       {/* ======================================================== */}
       <div 
-        className="no-print bg-[#081C13] border border-[#23493C] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 qr-modal-dialog"
+        className="no-print bg-[#081C13] border border-[#23493C] rounded-2xl w-full max-w-2xl md:max-w-3xl max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200 qr-modal-dialog overflow-hidden my-auto"
         role="dialog"
         aria-modal="true"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#0D281C] to-[#0A2217] px-6 py-4 border-b border-[#23493C] flex items-center justify-between">
+        {/* Sticky Header - Always Visible */}
+        <div className="bg-gradient-to-r from-[#0D281C] to-[#0A2217] px-4 sm:px-6 py-3 border-b border-[#23493C] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-700/60 flex items-center justify-center text-emerald-400">
-              <QrCode className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-700/60 flex items-center justify-center text-emerald-400">
+              <QrCode className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h3 className="font-serif font-bold text-base text-gray-100 tracking-wide">
+              <h3 className="font-serif font-bold text-sm sm:text-base text-gray-100 tracking-wide leading-tight">
                 SHARE PRODUCT
               </h3>
-              <p className="text-[11px] text-emerald-400/90 font-mono">
+              <p className="text-[10px] sm:text-[11px] text-emerald-400/90 font-mono">
                 Universal Canonical QR & App Link
               </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+            className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-5">
-          
-          {/* Medicine Identity Card */}
-          <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-4 flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold mb-0.5">
-                Medicine Details
-              </div>
-              <h4 className="font-serif font-bold text-lg text-gray-100">
-                {product.name}
-              </h4>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-amber-300 border border-emerald-800/80">
-                  Code: {product.code}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
-                  {product.categoryName || 'Ayurvedic Medicine'}
-                </span>
-              </div>
-            </div>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase ${
-              product.status === 'Active'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
-            }`}>
-              {product.status}
-            </span>
-          </div>
-
-          {/* QR Code Display Canvas */}
-          <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#0D281C]/90 to-[#071710] rounded-2xl border border-emerald-800/40 relative group">
-            {qrDataUrl ? (
-              <div className="relative p-3.5 bg-white rounded-2xl shadow-xl border-4 border-emerald-900/30">
-                <img 
-                  src={qrDataUrl} 
-                  alt={`QR Code for ${product.name}`}
-                  className="w-56 h-56 sm:w-60 sm:h-60 object-contain"
-                />
-                <div className="text-center mt-1 text-[10px] text-gray-700 font-semibold uppercase tracking-wider">
-                  AYURGUIDE CANONICAL QR
+        {/* Scrollable Content Body (Dual-Column on Desktop to Prevent Overflow) */}
+        <div className="overflow-y-auto p-4 sm:p-5 flex-1 min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-start">
+            
+            {/* Left Column: QR Code Display Frame */}
+            <div className="md:col-span-5 flex flex-col items-center justify-center p-4 bg-gradient-to-b from-[#0D281C]/90 to-[#071710] rounded-xl border border-emerald-800/40 text-center">
+              {qrDataUrl ? (
+                <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-emerald-900/30">
+                  <img 
+                    src={qrDataUrl} 
+                    alt={`QR Code for ${product.name}`}
+                    className="w-40 h-40 sm:w-44 sm:h-44 object-contain"
+                  />
+                  <div className="text-center mt-1 text-[9px] text-gray-700 font-bold uppercase tracking-wider">
+                    AYURGUIDE CANONICAL QR
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="w-56 h-56 flex flex-col items-center justify-center text-gray-400">
-                <div className="w-8 h-8 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mb-2" />
-                <span className="text-xs font-mono">Generating universal QR...</span>
-              </div>
-            )}
+              ) : (
+                <div className="w-40 h-40 flex flex-col items-center justify-center text-gray-400">
+                  <div className="w-6 h-6 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mb-2" />
+                  <span className="text-[11px] font-mono">Generating QR...</span>
+                </div>
+              )}
 
-            <div className="flex items-center gap-2 mt-3 text-xs text-gray-300">
-              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Scan to view in AyurGuide</span>
-            </div>
-          </div>
+              <div className="flex items-center gap-1.5 mt-2.5 text-xs text-gray-300">
+                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[11px] font-medium">Scan to view in AyurGuide</span>
+              </div>
 
-          {/* Canonical Share Link Display */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-semibold text-emerald-300">
-              <span>Canonical Share Link:</span>
               <a 
                 href={shareQrLink} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 hover:underline"
+                className="mt-2 text-[11px] text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 hover:underline"
               >
-                <span>Preview Page</span>
+                <span>Preview Public Page</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                readOnly 
-                value={shareQrLink} 
-                className="flex-1 bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none selection:bg-emerald-600 selection:text-white select-all"
-              />
-              <button
-                onClick={handleCopyLink}
-                className="px-3.5 py-2 rounded-xl bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0"
-                title="Copy share link"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied!' : 'Copy'}</span>
-              </button>
+
+            {/* Right Column: Medicine Details, URL & Actions */}
+            <div className="md:col-span-7 space-y-3.5">
+              
+              {/* Medicine Identity Card */}
+              <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-3 sm:p-3.5 flex items-start justify-between gap-2.5">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold mb-0.5">
+                    Medicine Details
+                  </div>
+                  <h4 className="font-serif font-bold text-base text-gray-100 leading-tight">
+                    {product.name}
+                  </h4>
+                  {product.sanskritName && (
+                    <p className="font-serif italic text-xs text-amber-300/90 mt-0.5">
+                      {product.sanskritName}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-amber-300 border border-emerald-800/80">
+                      Code: {product.code}
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
+                      {product.categoryName || 'Ayurvedic Medicine'}
+                    </span>
+                  </div>
+                </div>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase shrink-0 ${
+                  product.status === 'Active'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
+                }`}>
+                  {product.status}
+                </span>
+              </div>
+
+              {/* Canonical Share Link Display */}
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-emerald-300 block">
+                  Canonical Share Link:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={shareQrLink} 
+                    className="flex-1 bg-[#05140D] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-emerald-300 focus:outline-none selection:bg-emerald-600 selection:text-white select-all truncate"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center gap-1 transition cursor-pointer shrink-0"
+                    title="Copy share link"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Download Format Selector */}
+              <div className="bg-[#05140D] border border-[#23493C]/70 rounded-lg px-3 py-2 flex items-center justify-between text-xs">
+                <span className="text-gray-300 text-[11px] font-medium">Download Format:</span>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDownloadMode('card')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                      downloadMode === 'card'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-[#0D281C] text-gray-400 hover:text-white border border-[#23493C]'
+                    }`}
+                  >
+                    Printable Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDownloadMode('qr-only')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                      downloadMode === 'qr-only'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-[#0D281C] text-gray-400 hover:text-white border border-[#23493C]'
+                    }`}
+                  >
+                    QR Only
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons: Print Card, Download, Copy Link, Share */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+                
+                {/* Print Button */}
+                <button
+                  onClick={handlePrint}
+                  disabled={!qrDataUrl}
+                  className="px-2.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md transition disabled:opacity-50 cursor-pointer"
+                  title="Print QR Flyer with AyurGuide Branding"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Card</span>
+                </button>
+
+                {/* Download Button */}
+                <button
+                  onClick={handleDownload}
+                  disabled={!qrDataUrl || isGeneratingDownload}
+                  className="px-2.5 py-2 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1 transition disabled:opacity-50 cursor-pointer"
+                  title="Download PNG image"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{isGeneratingDownload ? 'Saving...' : 'Download'}</span>
+                </button>
+
+                {/* Copy Link Button */}
+                <button
+                  onClick={handleCopyLink}
+                  className="px-2.5 py-2 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+
+                {/* Share Button */}
+                <button
+                  onClick={handleNativeShare}
+                  className="px-2.5 py-2 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                >
+                  {shareSuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                  <span>{shareSuccess ? 'Shared' : 'Share'}</span>
+                </button>
+
+              </div>
+
+              {/* Informational Tip */}
+              <div className="bg-[#05140D]/70 border border-emerald-900/40 rounded-lg p-2.5 flex items-start gap-2 text-[10px] text-gray-400 leading-normal">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <p>
+                  Use <strong>Print Card</strong> to generate crisp product shelf tags or consultation handouts with official AyurGuide branding.
+                </p>
+              </div>
+
             </div>
-          </div>
-
-          {/* Download Format Selector */}
-          <div className="bg-[#05140D] border border-[#23493C]/70 rounded-xl p-3 flex items-center justify-between text-xs">
-            <span className="text-gray-300 font-medium">Download Format:</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDownloadMode('card')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                  downloadMode === 'card'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-[#0D281C] text-gray-400 hover:text-white border border-[#23493C]'
-                }`}
-              >
-                Printable Brand Card
-              </button>
-              <button
-                type="button"
-                onClick={() => setDownloadMode('qr-only')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                  downloadMode === 'qr-only'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-[#0D281C] text-gray-400 hover:text-white border border-[#23493C]'
-                }`}
-              >
-                QR Code Only
-              </button>
-            </div>
-          </div>
-
-          {/* Primary Action Buttons: Print Card, Download QR, Copy Link, Share */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-            
-            {/* CSS Print Action Button */}
-            <button
-              onClick={handlePrint}
-              disabled={!qrDataUrl}
-              className="px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition disabled:opacity-50 cursor-pointer"
-              title="Print QR Flyer with AyurGuide Branding"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Card</span>
-            </button>
-
-            {/* Download Button */}
-            <button
-              onClick={handleDownload}
-              disabled={!qrDataUrl || isGeneratingDownload}
-              className="px-3 py-2.5 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50 cursor-pointer"
-              title="Download PNG image"
-            >
-              <Download className="w-4 h-4" />
-              <span>{isGeneratingDownload ? 'Saving...' : 'Download'}</span>
-            </button>
-
-            {/* Copy Link Button */}
-            <button
-              onClick={handleCopyLink}
-              className="px-3 py-2.5 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-            </button>
-
-            {/* Native Share Button */}
-            <button
-              onClick={handleNativeShare}
-              className="px-3 py-2.5 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-            >
-              {shareSuccess ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
-              <span>{shareSuccess ? 'Shared!' : 'Share'}</span>
-            </button>
 
           </div>
-
-          {/* Canonical Sharing Notice */}
-          <div className="bg-[#05140D]/70 border border-emerald-900/50 rounded-xl p-3 flex items-start gap-2.5 text-[11px] text-gray-400">
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <p>
-              Use <strong>Print Card</strong> to generate crisp product shelf tags or consultation handouts with official AyurGuide branding.
-            </p>
-          </div>
-
         </div>
 
       </div>
@@ -394,7 +405,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
           )}
         </div>
 
-        {/* Clear Call-To-Action (User Requirement: 'Scan to view in AyurGuide') */}
+        {/* Clear Call-To-Action */}
         <div className="space-y-1.5 my-1">
           <div className="text-lg font-serif font-bold text-[#065F46] tracking-wide uppercase">
             Scan to view in AyurGuide

@@ -2,10 +2,10 @@
   {
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
-      "namespace": "android_app",
-      "package_name": "INSERT_ANDROID_PACKAGE_NAME",
+      "namespace": "Ayur Index",
+      "package_name": "com.aistudio.ayurguide.kmpz",
       "sha256_cert_fingerprints": [
-        "INSERT_SHA256_FINGERPRINT_HERE"
+        "8F:53:D1:06:3D:89:06:1A:6D:41:24:F6:71:82:78:3B:F9:AE:36:DC:32:12:AD:8C:32:A6:A1:EF:4C:A8:83:11"
       ]
     }
   }
