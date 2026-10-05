@@ -28,15 +28,24 @@ export function generateProductSlug(name: string, fallbackCode?: string): string
   return 'medicine';
 }
 
+export const PRODUCTION_DOMAIN = 'https://ayur-guide-admin-panel.vercel.app';
+
 /**
  * Returns the canonical base domain for the universal sharing URL.
- * Automatically uses the active window origin in browser environments.
+ * Uses the live production domain for QR generation, Android App Links,
+ * and external sharing so codes remain permanent even when generated in staging.
  */
 export function getBaseShareUrl(): string {
   if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return window.location.origin;
+    const origin = window.location.origin;
+    // When inside local or ephemeral development environments, use the permanent production domain
+    // to guarantee printed QR codes and shared links are permanent.
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('.run.app')) {
+      return PRODUCTION_DOMAIN;
+    }
+    return origin;
   }
-  return 'https://ayurindex.com';
+  return PRODUCTION_DOMAIN;
 }
 
 /**
