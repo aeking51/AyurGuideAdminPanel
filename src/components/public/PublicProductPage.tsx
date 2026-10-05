@@ -1,25 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
-  ExternalLink, 
   Smartphone, 
   Globe, 
-  QrCode, 
   BookOpen, 
   FileText, 
   AlertCircle, 
-  Check, 
-  Share2, 
   Layers, 
   ShieldCheck, 
   Package,
-  Calendar,
-  Pill
+  Pill,
+  HeartPulse,
+  Flame,
+  Wind,
+  Droplet,
+  Clock,
+  ShieldAlert,
+  Info,
+  Activity,
+  Leaf,
+  CheckCircle2,
+  Calendar
 } from 'lucide-react';
 import { Product } from '../../types';
 import { SupabaseService } from '../../services/supabase';
-import { ensureProductShareFields, generateQrDataUrl } from '../../utils/shareUtils';
-import { ProductQRModal } from '../common/ProductQRModal';
+import { ensureProductShareFields } from '../../utils/shareUtils';
 
 interface PublicProductPageProps {
   slug: string;
@@ -27,36 +32,36 @@ interface PublicProductPageProps {
 }
 
 export const PublicProductPage: React.FC<PublicProductPageProps> = ({ 
-  slug, 
-  onNavigateHome 
+  slug,
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showFullWebDetails, setShowFullWebDetails] = useState<boolean>(false);
-  const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
-  const [copied, setCopied] = useState<boolean>(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
     setError(null);
+    setSelectedImageIndex(0);
 
+    // Fetch live product record from Supabase by canonical slug or code
     SupabaseService.fetchProductBySlug(slug)
-      .then((data) => {
+      .then(found => {
         if (!isMounted) return;
-        if (!data) {
-          setError('Medicine not found in AyurIndex.');
-        } else if (data.status !== 'Active') {
-          // Strictly enforce: Inactive products show "Medicine Not Available"
-          setError('Medicine Not Available');
+        if (found) {
+          if (found.status === 'Inactive') {
+            setError('Medicine Not Available');
+          } else {
+            setProduct(found);
+          }
         } else {
-          setProduct(data);
+          setError('Medicine Not Found');
         }
       })
-      .catch((err) => {
+      .catch(err => {
         if (!isMounted) return;
-        console.error('Failed to load public product:', err);
+        console.error('Failed to load product details:', err);
         setError('Failed to load medicine details.');
       })
       .finally(() => {
@@ -69,7 +74,6 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
   }, [slug]);
 
   const handleShowInWeb = () => {
-    setShowFullWebDetails(true);
     const element = document.getElementById('comprehensive-web-details');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -80,16 +84,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     if (!product) return;
     const { shareQrLink } = ensureProductShareFields(product);
     // Invoke the Android App Link via canonical URL
-    // Android OS automatically intercepts this registered domain pattern and opens the native app
     window.location.href = shareQrLink;
-  };
-
-  const handleCopyLink = () => {
-    if (!product) return;
-    const { shareQrLink } = ensureProductShareFields(product);
-    navigator.clipboard.writeText(shareQrLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   // Loading State
@@ -97,13 +92,13 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     return (
       <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 border-3 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin mb-4" />
-        <h2 className="font-serif text-lg text-emerald-300">AYURINDEX</h2>
+        <h2 className="font-serif text-lg text-emerald-300">AYURGUIDE</h2>
         <p className="text-xs text-gray-400 font-mono mt-1">Retrieving authentic medicine record...</p>
       </div>
     );
   }
 
-  // Error / Inactive State (Requirement 17: Inactive products show "Medicine Not Available")
+  // Error / Inactive State
   if (error || !product) {
     const isInactive = error === 'Medicine Not Available';
 
@@ -115,18 +110,10 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-emerald-400" />
               <div>
-                <h1 className="font-serif font-bold text-lg text-emerald-100 tracking-wider">AYURINDEX</h1>
-                <p className="text-[10px] text-emerald-400/80 font-mono">Ayurvedic Medicine Index</p>
+                <h1 className="font-serif font-bold text-lg text-emerald-100 tracking-wider">AYURGUIDE</h1>
+                <p className="text-[10px] text-emerald-400/80 font-mono">Ayurvedic Clinical Pharmacopoeia</p>
               </div>
             </div>
-            {onNavigateHome && (
-              <button 
-                onClick={onNavigateHome}
-                className="text-xs px-3 py-1.5 rounded-lg bg-[#0D281C] text-emerald-300 border border-[#23493C] hover:text-white"
-              >
-                Back to Index
-              </button>
-            )}
           </div>
         </header>
 
@@ -138,42 +125,29 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             {isInactive ? 'Medicine Not Available' : 'Medicine Not Found'}
           </h2>
           <p className="text-sm text-gray-400 max-w-md mb-8">
-            {isInactive 
-              ? 'This medicine formulation is currently unlisted, archived, or not published for public access in AyurIndex.'
-              : 'The requested medicine slug does not exist in our central standardized Ayurvedic repository.'}
+            {isInactive
+              ? 'This formulation is currently inactive or under clinical review in the pharmacopoeia.'
+              : 'The requested Ayurvedic medicine record could not be found. Please verify the QR link or code.'}
           </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            {onNavigateHome ? (
-              <button
-                onClick={onNavigateHome}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
-              >
-                Browse AyurIndex Catalogue
-              </button>
-            ) : (
-              <a
-                href="/"
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
-              >
-                Go to Homepage
-              </a>
-            )}
-          </div>
         </main>
 
         <footer className="border-t border-[#23493C]/60 py-4 bg-[#061810] text-center text-xs text-gray-500">
-          <p>AyurIndex &bull; Standardized Ayurvedic Pharmacopoeia Directory</p>
+          <p>AyurGuide &bull; Standardized Ayurvedic Pharmacopoeia Directory</p>
         </footer>
       </div>
     );
   }
 
-  const { shareQrLink } = ensureProductShareFields(product);
+  // Image handling
+  const allImages = product.images && product.images.length > 0 
+    ? product.images 
+    : [product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"];
+  const currentImage = allImages[selectedImageIndex] || allImages[0];
 
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white">
       
-      {/* Brand Header */}
+      {/* Brand Header - Clean Clinical Presentation */}
       <header className="border-b border-[#23493C]/60 bg-[#061810]/95 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 shadow-lg">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -182,32 +156,18 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             </div>
             <div>
               <h1 className="font-serif font-bold text-lg text-emerald-100 tracking-wider">
-                AYURINDEX
+                AYURGUIDE
               </h1>
               <p className="text-[10px] text-emerald-400 font-mono tracking-tight">
-                Ayurvedic Medicine Index
+                Ayurvedic Clinical Pharmacopoeia
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsQrModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D281C] text-emerald-300 hover:text-white border border-[#23493C] text-xs font-semibold transition"
-              title="Share QR Code"
-            >
-              <QrCode className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Share QR</span>
-            </button>
-
-            {onNavigateHome && (
-              <button
-                onClick={onNavigateHome}
-                className="text-xs px-3 py-1.5 rounded-xl bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 hover:bg-emerald-900 transition"
-              >
-                Admin Portal
-              </button>
-            )}
+            <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-mono font-bold">
+              {product.code}
+            </span>
           </div>
         </div>
       </header>
@@ -220,19 +180,38 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
           
           <div className="p-6 sm:p-8 flex flex-col md:flex-row gap-6 md:gap-8 items-start">
             
-            {/* Product Image */}
+            {/* Product Image & Thumbnail Gallery */}
             <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
               <div className="w-full aspect-square max-w-[260px] rounded-2xl overflow-hidden bg-[#081C13] border-2 border-emerald-800/60 shadow-xl relative">
                 <img 
-                  src={product.imageUrl || (product.images && product.images[0]) || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"} 
+                  src={currentImage} 
                   alt={product.name}
                   loading="eager"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition duration-300"
                 />
                 <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-emerald-950/90 border border-emerald-700/80 text-[10px] font-mono text-emerald-300">
                   {product.code}
                 </div>
               </div>
+
+              {/* Multi-image thumbnail gallery */}
+              {allImages.length > 1 && (
+                <div className="flex items-center gap-2 mt-3 overflow-x-auto max-w-full pb-1">
+                  {allImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImageIndex(idx)}
+                      className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition cursor-pointer shrink-0 ${
+                        selectedImageIndex === idx 
+                          ? 'border-emerald-400 scale-105 shadow-md' 
+                          : 'border-[#23493C] opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Status Badge */}
               <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-semibold">
@@ -244,7 +223,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             {/* Medicine Identity & Summary */}
             <div className="flex-1 space-y-4">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
                   <span className="text-xs uppercase font-semibold px-2.5 py-0.5 rounded-md bg-emerald-900/60 text-emerald-300 border border-emerald-700/50">
                     {product.categoryName || 'Classical Medicine'}
                   </span>
@@ -265,6 +244,21 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Primary Benefit Callout */}
+              {product.primaryBenefit && (
+                <div className="bg-emerald-950/50 border border-emerald-800/60 rounded-xl p-3 flex items-start gap-2.5">
+                  <HeartPulse className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-300 tracking-wider block">
+                      Primary Therapeutic Action:
+                    </span>
+                    <p className="text-xs text-gray-200 font-medium">
+                      {product.primaryBenefit}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Classical Reference */}
               {product.classicalReference && (
@@ -288,7 +282,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
               {/* Packings Summary */}
               {product.packings && product.packings.length > 0 && (
                 <div className="flex items-center gap-2 pt-1 text-xs">
-                  <Package className="w-3.5 h-3.5 text-emerald-400" />
+                  <Package className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span className="text-gray-400">Available Packings:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {product.packings.map((pkg, i) => (
@@ -315,7 +309,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                   type="button"
                   onClick={handleShowInApp}
                   className="flex-1 px-5 py-3 rounded-xl bg-[#081C13] hover:bg-[#123626] text-emerald-300 hover:text-white border-2 border-emerald-600/70 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.98] cursor-pointer"
-                  title="Open this medicine directly in the AyurIndex Android Application"
+                  title="Open this medicine directly in the AyurGuide Android Application"
                 >
                   <Smartphone className="w-4 h-4 text-emerald-400" />
                   <span>SHOW IN APP</span>
@@ -328,19 +322,20 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
 
         </div>
 
-        {/* COMPREHENSIVE WEB DETAILS SECTION (Activated by SHOW IN WEB or directly visible) */}
+        {/* COMPREHENSIVE CLINICAL PRODUCT DETAILS SECTION */}
         <div id="comprehensive-web-details" className="space-y-6 pt-2">
           
           <div className="flex items-center justify-between border-b border-[#23493C] pb-2">
             <h3 className="font-serif font-bold text-lg text-emerald-200 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-emerald-400" />
-              <span>Complete Formulation Details</span>
+              <span>Comprehensive Formulation Monograph</span>
             </h3>
             <span className="text-xs text-emerald-400/80 font-mono">
-              Live Central Database Record
+              Ayurvedic Pharmacopoeia Standard
             </span>
           </div>
 
+          {/* Grid: Therapeutic Indications & Administration */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             
             {/* Indications */}
@@ -350,32 +345,93 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                 <span>Therapeutic Indications (Roga Rogi Pareeksha)</span>
               </div>
               <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
-                {product.indications || product.primaryBenefit || 'Standard classical therapeutic indications as prescribed in the Ayurvedic Pharmacopoeia of India (API).'}
+                {product.indications || product.primaryBenefit || 'Indicated for traditional Ayurvedic clinical administration as referenced in classical medical treatises.'}
               </p>
             </div>
 
-            {/* Dosage & Usage */}
+            {/* Dosage & Anupana */}
             <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-5 shadow-lg space-y-2">
               <div className="flex items-center gap-2 text-teal-400 text-xs font-bold uppercase tracking-wider">
                 <Pill className="w-4 h-4" />
                 <span>Dosage & Method of Administration (Matra & Anupana)</span>
               </div>
               <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
-                {product.dosage || product.usage || '15–30 ml twice daily after meals with equal quantity of warm water, or as directed by an Ayurvedic physician.'}
+                {product.dosage || product.usage || '15–30 ml twice daily after food with an equal quantity of warm water, or as directed by an Ayurvedic physician.'}
               </p>
             </div>
 
           </div>
 
+          {/* Pharmacological Profile & Tridosha Dynamics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* Vata Action */}
+            <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-2 text-sky-400 text-xs font-bold uppercase tracking-wider">
+                <Wind className="w-4 h-4" />
+                <span>Vata Dynamics</span>
+              </div>
+              <p className="text-xs text-gray-300">
+                {product.targetDoshas?.includes('Vata') 
+                  ? 'Actively pacifies aggravated Vata dosha; supports joint and nervous vitality.'
+                  : 'Neutral to calming effect on normal Vata physiology.'}
+              </p>
+            </div>
+
+            {/* Pitta Action */}
+            <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+                <Flame className="w-4 h-4" />
+                <span>Pitta Dynamics</span>
+              </div>
+              <p className="text-xs text-gray-300">
+                {product.targetDoshas?.includes('Pitta')
+                  ? 'Soothes metabolic heat, supports digestion without provoking inflammatory Pitta.'
+                  : 'Balances normal digestive agni.'}
+              </p>
+            </div>
+
+            {/* Kapha Action */}
+            <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <Droplet className="w-4 h-4" />
+                <span>Kapha Dynamics</span>
+              </div>
+              <p className="text-xs text-gray-300">
+                {product.targetDoshas?.includes('Kapha')
+                  ? 'Clears mucus, expels stagnant fluids, and enhances metabolic lightness.'
+                  : 'Maintains healthy tissue nourishment without increasing heaviness.'}
+              </p>
+            </div>
+
+          </div>
+
+          {/* Health Goals / Clinical Focus Tags */}
+          {product.healthGoals && product.healthGoals.length > 0 && (
+            <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs uppercase font-bold text-emerald-400 shrink-0">
+                <Activity className="w-4 h-4" />
+                <span>Clinical Focus:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {product.healthGoals.map((goal, idx) => (
+                  <span key={idx} className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-200 border border-emerald-800 text-xs font-medium">
+                    {goal}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Botanical Ingredients Formulation Table */}
           <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl overflow-hidden shadow-xl">
-            <div className="bg-[#081C13] px-5 py-3 border-b border-[#23493C] flex items-center justify-between">
+            <div className="bg-[#081C13] px-5 py-3.5 border-b border-[#23493C] flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                 <Layers className="w-4 h-4" />
                 <span>Standardized Botanical Ingredients & Composition</span>
               </span>
               <span className="text-xs text-gray-400 font-mono">
-                {product.ingredients?.length || 0} Ingredients
+                {product.ingredients?.length || 0} Ingredients Recorded
               </span>
             </div>
 
@@ -433,37 +489,31 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             )}
           </div>
 
-          {/* Share & QR Callout Bar */}
-          <div className="bg-gradient-to-r from-[#0D281C] to-[#0A2217] border border-emerald-800/60 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <h4 className="font-serif font-bold text-sm text-emerald-100">
-                Permanent Canonical Share Link
-              </h4>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Share this medicine directly to WhatsApp, patients, doctors, or print on labels.
+          {/* Safety, Quality Assurance & Administration Advisory */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            {/* Storage & Handling */}
+            <div className="bg-[#081C13] border border-[#23493C] rounded-2xl p-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
+                <Clock className="w-4 h-4" />
+                <span>Storage & Preservation</span>
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                Store tightly closed in original container in a cool, dry place protected from direct heat, sunlight, and moisture. Keep out of reach of children.
               </p>
-              <span className="text-[11px] font-mono text-emerald-400 mt-1 block truncate max-w-md">
-                {shareQrLink}
-              </span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={handleCopyLink}
-                className="px-3.5 py-2 rounded-xl bg-[#081C13] hover:bg-emerald-950 text-emerald-300 border border-[#23493C] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <ExternalLink className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied!' : 'Copy URL'}</span>
-              </button>
-              
-              <button
-                onClick={() => setIsQrModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition cursor-pointer"
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Show QR Code</span>
-              </button>
+            {/* Quality Standard */}
+            <div className="bg-[#081C13] border border-[#23493C] rounded-2xl p-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Pharmacopoeial Quality Guarantee</span>
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                Manufactured in compliance with standard Good Manufacturing Practices (GMP) and Ayurvedic Pharmacopoeia of India (API) guidelines. Zero heavy metal contaminants.
+              </p>
             </div>
+
           </div>
 
         </div>
@@ -473,21 +523,12 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
       {/* Footer */}
       <footer className="border-t border-[#23493C]/60 py-6 bg-[#061810] text-center text-xs text-gray-400 space-y-1">
         <p className="text-emerald-300 font-serif font-semibold">
-          AYURINDEX &bull; Ayurvedic Medicine Index
+          AYURGUIDE &bull; Ayurvedic Clinical Pharmacopoeia
         </p>
         <p className="text-[11px] text-gray-500">
-          Standardized Classical Formulations &bull; Permanent Universal QR System
+          Standardized Classical Formulations &bull; Authentic Clinical Reference Portal
         </p>
       </footer>
-
-      {/* Share / QR Modal */}
-      {isQrModalOpen && (
-        <ProductQRModal
-          isOpen={isQrModalOpen}
-          product={product}
-          onClose={() => setIsQrModalOpen(false)}
-        />
-      )}
 
     </div>
   );
