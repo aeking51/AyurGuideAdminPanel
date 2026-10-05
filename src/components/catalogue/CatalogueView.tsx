@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Plus, 
   Download, 
@@ -23,6 +23,7 @@ interface CatalogueViewProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onViewMonograph: (product: Product) => void;
+  onShareProduct?: (product: Product) => void;
   onReload?: () => void;
   isReloading?: boolean;
 }
@@ -36,6 +37,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   onEditProduct,
   onDeleteProduct,
   onViewMonograph,
+  onShareProduct,
   onReload,
   isReloading = false,
 }) => {
@@ -44,48 +46,50 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Filter products
-  const filteredProducts = products.filter(product => {
-    // 1. Search Query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = product.name.toLowerCase().includes(q);
-      const matchSanskrit = (product.sanskritName || '').toLowerCase().includes(q);
-      const matchCode = (product.code || '').toLowerCase().includes(q);
-      const matchIndications = (product.indications || '').toLowerCase().includes(q);
-      const matchIngredients = (product.ingredients || []).some(item => {
-        const str = typeof item === 'string' ? item : `${item.name} ${item.botanicalName || ''}`;
-        return str.toLowerCase().includes(q);
-      });
+  // Filter products memoized
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = product.name.toLowerCase().includes(q);
+        const matchSanskrit = (product.sanskritName || '').toLowerCase().includes(q);
+        const matchCode = (product.code || '').toLowerCase().includes(q);
+        const matchIndications = (product.indications || '').toLowerCase().includes(q);
+        const matchIngredients = (product.ingredients || []).some(item => {
+          const str = typeof item === 'string' ? item : `${item.name} ${item.botanicalName || ''}`;
+          return str.toLowerCase().includes(q);
+        });
 
-      if (!matchName && !matchSanskrit && !matchCode && !matchIndications && !matchIngredients) {
-        return false;
+        if (!matchName && !matchSanskrit && !matchCode && !matchIndications && !matchIngredients) {
+          return false;
+        }
       }
-    }
 
-    // 2. Category
-    if (selectedCategory !== 'ALL') {
-      if (String(product.categoryId) !== String(selectedCategory)) {
-        return false;
+      // 2. Category
+      if (selectedCategory !== 'ALL') {
+        if (String(product.categoryId) !== String(selectedCategory)) {
+          return false;
+        }
       }
-    }
 
-    // 3. Dosha
-    if (selectedDosha !== 'ALL') {
-      if (!product.targetDoshas?.includes(selectedDosha) && product.doshaImpact?.indexOf(selectedDosha) === -1) {
-        return false;
+      // 3. Dosha
+      if (selectedDosha !== 'ALL') {
+        if (!product.targetDoshas?.includes(selectedDosha) && product.doshaImpact?.indexOf(selectedDosha) === -1) {
+          return false;
+        }
       }
-    }
 
-    // 4. Status
-    if (selectedStatus !== 'ALL') {
-      if (product.status !== selectedStatus) {
-        return false;
+      // 4. Status
+      if (selectedStatus !== 'ALL') {
+        if (product.status !== selectedStatus) {
+          return false;
+        }
       }
-    }
 
-    return true;
-  });
+      return true;
+    });
+  }, [products, searchQuery, selectedCategory, selectedDosha, selectedStatus]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -265,6 +269,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           onViewMonograph={onViewMonograph}
           onEditProduct={onEditProduct}
           onDeleteProduct={onDeleteProduct}
+          onShareProduct={onShareProduct}
           onOpenNewProduct={onOpenNewProduct}
         />
       ) : (
@@ -273,6 +278,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           onViewMonograph={onViewMonograph}
           onEditProduct={onEditProduct}
           onDeleteProduct={onDeleteProduct}
+          onShareProduct={onShareProduct}
         />
       )}
 

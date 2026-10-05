@@ -6,7 +6,8 @@ import {
   Trash2, 
   Sparkles, 
   Check,
-  Camera
+  Camera,
+  QrCode
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -15,6 +16,7 @@ interface ProductCardsViewProps {
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct?: (product: Product) => void;
+  onShareProduct?: (product: Product) => void;
 }
 
 export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
@@ -22,6 +24,7 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   onViewMonograph,
   onEditProduct,
   onDeleteProduct,
+  onShareProduct,
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
   const [activePhotoIndices, setActivePhotoIndices] = useState<Record<string | number, number>>({});
@@ -88,6 +91,8 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                             <img 
                               src={activeImg} 
                               alt={product.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover transition duration-300"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
@@ -176,7 +181,16 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                     {product.status || 'Active'}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {onShareProduct && (
+                      <button
+                        onClick={() => onShareProduct(product)}
+                        className="p-1.5 rounded-lg bg-[#081C13] text-teal-300 hover:text-white border border-teal-800/60 transition cursor-pointer"
+                        title="QR / Share Link"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onViewMonograph(product)}
                       className="p-1.5 rounded-lg bg-[#081C13] text-emerald-400 hover:text-white border border-[#23493C] transition"
@@ -271,7 +285,16 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    {onShareProduct && (
+                      <button
+                        onClick={() => onShareProduct(product)}
+                        className="p-1.5 rounded-lg bg-[#0D281C] text-teal-300 hover:text-white border border-[#23493C] transition cursor-pointer"
+                        title="QR / Share Link"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onViewMonograph(product)}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"

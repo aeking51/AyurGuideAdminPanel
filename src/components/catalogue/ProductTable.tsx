@@ -5,7 +5,8 @@ import {
   Trash2, 
   AlertCircle,
   Sparkles,
-  Camera
+  Camera,
+  QrCode
 } from 'lucide-react';
 import { Product } from '../../types';
 
@@ -14,6 +15,7 @@ interface ProductTableProps {
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
+  onShareProduct?: (product: Product) => void;
   onOpenNewProduct?: () => void;
 }
 
@@ -22,6 +24,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   onViewMonograph,
   onEditProduct,
   onDeleteProduct,
+  onShareProduct,
   onOpenNewProduct,
 }) => {
   if (products.length === 0) {
@@ -70,6 +73,8 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                         <img 
                           src={product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"} 
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
@@ -160,6 +165,15 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   {/* Actions */}
                   <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1.5">
+                      {onShareProduct && (
+                        <button
+                          onClick={() => onShareProduct(product)}
+                          className="p-1.5 rounded-lg bg-[#081C13] text-teal-300 hover:text-white hover:bg-teal-900/60 border border-teal-800/60 transition cursor-pointer"
+                          title="QR / Share Universal Link"
+                        >
+                          <QrCode className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onViewMonograph(product)}
                         className="p-1.5 rounded-lg bg-[#081C13] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/60 border border-[#23493C] transition"

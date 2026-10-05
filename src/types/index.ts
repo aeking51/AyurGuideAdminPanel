@@ -42,6 +42,8 @@ export interface Product {
   images?: string[];
   status: 'Active' | 'Inactive' | 'Draft';
   featured: boolean;
+  publicSlug?: string;
+  shareQrLink?: string;
   stockUnits?: number;
   batchNumber?: string;
   createdAt: string;

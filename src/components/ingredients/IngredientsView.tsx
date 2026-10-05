@@ -106,10 +106,10 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-emerald-400" />
-            <h2 className="font-serif font-bold text-xl text-gray-100">Dravyaguna Botanical Pharmacopoeia</h2>
+            <h2 className="font-serif font-bold text-xl text-gray-100">Medicinal Herbs & Botanical Directory</h2>
           </div>
           <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-            Central repository of standardized Ayurvedic botanical herbs and minerals from the <code>public.ingredients</code> table in Supabase.
+            Central repository of standardized Ayurvedic herbs, medicinal plants, and ingredients synchronized with Supabase.
           </p>
         </div>
 
@@ -122,19 +122,19 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
               title="Reload botanicals live from Supabase public.ingredients"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
-              <span>{isReloading ? 'Reloading...' : 'Reload Botanicals'}</span>
+              <span>{isReloading ? 'Reloading...' : 'Reload Herbs'}</span>
             </button>
           )}
 
           <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
-            {ingredients.length} Indexed Botanicals
+            {ingredients.length} Registered Herbs
           </span>
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Botanical</span>
+            <span>Add Herb / Botanical</span>
           </button>
         </div>
       </div>
@@ -161,18 +161,18 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
         <div className="bg-[#0D281C]/70 rounded-2xl border border-[#23493C] p-12 text-center">
           <Flower2 className="w-12 h-12 text-emerald-400/70 mx-auto mb-3" />
           <h3 className="text-lg font-serif font-bold text-gray-200">
-            {searchQuery ? 'No Matching Botanicals Found' : 'No Botanical Ingredients Cataloged Yet'}
+            {searchQuery ? 'No Matching Herbs Found' : 'No Medicinal Herbs Cataloged Yet'}
           </h3>
           <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto mb-5">
-            {searchQuery ? 'Try clearing your search query.' : 'Populate your pharmacopoeia with authentic herbs, parts used, therapeutic actions, and research reference URLs.'}
+            {searchQuery ? 'Try clearing your search query.' : 'Populate your repository with authentic Ayurvedic herbs, parts used, therapeutic actions, and research reference URLs.'}
           </p>
           {!searchQuery && (
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Add First Botanical</span>
+              <span>Add First Herb</span>
             </button>
           )}
         </div>
@@ -277,8 +277,8 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             <div className="flex items-center justify-between pb-3 border-b border-[#23493C] mb-4">
               <h3 className="text-base font-serif font-bold text-gray-100 flex items-center gap-2">
                 <Flower2 className="w-5 h-5 text-emerald-400" />
-                <span className="tracking-wide uppercase text-sm font-semibold text-emerald-100">
-                  {editingItem ? `Edit Botanical Ingredient` : 'Catalog Botanical Ingredient'}
+                <span className="tracking-wide text-sm font-semibold text-emerald-100">
+                  {editingItem ? `Edit Medicinal Herb` : 'Register Medicinal Herb'}
                 </span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">

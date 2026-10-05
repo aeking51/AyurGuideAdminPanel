@@ -2,6 +2,7 @@ import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabas
 import { Product, Category, User, AuditLog, BotanicalIngredient } from '../types';
 import { StorageService } from './storage';
 import { initialCategories } from '../data/initialData';
+import { generateProductSlug, getProductShareUrl, ensureProductShareFields } from '../utils/shareUtils';
 
 let supabaseInstance: SupabaseClient | null = null;
 let realtimeChannel: RealtimeChannel | null = null;
@@ -29,6 +30,17 @@ export function mapRowToProduct(row: any): Product {
     ? parsedImages 
     : (row.image_url ? [row.image_url] : []);
 
+  // Stable canonical public_slug and share_qr_link
+  const rawSlug = row.public_slug || row.publicSlug;
+  const publicSlug = rawSlug && String(rawSlug).trim()
+    ? String(rawSlug).trim().toLowerCase()
+    : generateProductSlug(row.name || '', row.code || '');
+
+  const rawShareLink = row.share_qr_link || row.shareQrLink;
+  const shareQrLink = rawShareLink && String(rawShareLink).trim()
+    ? String(rawShareLink).trim()
+    : getProductShareUrl(publicSlug);
+
   return {
     id: row.id,
     code: row.code || `SA-${row.id}`,
@@ -45,6 +57,8 @@ export function mapRowToProduct(row: any): Product {
     images: images,
     status: (row.status === 'Active' || row.status === 'Inactive' || row.status === 'Draft') ? row.status : 'Active',
     featured: Boolean(row.featured),
+    publicSlug,
+    shareQrLink,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString(),
   };
@@ -72,6 +86,12 @@ export function mapProductToRow(prod: Partial<Product>): Record<string, any> {
   }
   if (prod.status !== undefined) row.status = prod.status;
   if (prod.featured !== undefined) row.featured = Boolean(prod.featured);
+
+  // Permanent Universal Sharing Fields
+  const { publicSlug, shareQrLink } = ensureProductShareFields(prod);
+  row.public_slug = publicSlug;
+  row.share_qr_link = shareQrLink;
+
   row.updated_at = new Date().toISOString();
 
   return row;
@@ -305,6 +325,17 @@ export class SupabaseService {
         }
       }
 
+      if (error && (error.message.toLowerCase().includes('public_slug') || error.message.toLowerCase().includes('share_qr_link'))) {
+        const altRow = { ...row };
+        delete altRow.public_slug;
+        delete altRow.share_qr_link;
+        const retry = await client.from('products').insert([altRow]).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
+
       if (error) {
         console.warn('Supabase insert failed, saving locally:', error.message);
         return StorageService.upsertProduct(fullProd);
@@ -346,6 +377,17 @@ export class SupabaseService {
         }
       }
 
+      if (error && (error.message.toLowerCase().includes('public_slug') || error.message.toLowerCase().includes('share_qr_link'))) {
+        const altRow = { ...row };
+        delete altRow.public_slug;
+        delete altRow.share_qr_link;
+        const retry = await client.from('products').update(altRow).eq('id', id).select().single();
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
+
       if (error) {
         console.warn('Supabase update failed, falling back to local:', error.message);
         return StorageService.upsertProduct({ ...productData, id, name: productData.name || 'Medicine' });
@@ -359,6 +401,53 @@ export class SupabaseService {
       console.error('Error updating product in Supabase:', err);
       return StorageService.upsertProduct({ ...productData, id, name: productData.name || 'Medicine' });
     }
+  }
+
+  // ==========================================
+  // PUBLIC CANONICAL PRODUCT QUERY
+  // ==========================================
+  static async fetchProductBySlug(slug: string): Promise<Product | null> {
+    const cleanSlug = (slug || '').toLowerCase().trim();
+    if (!cleanSlug) return null;
+
+    const client = this.getClient();
+    if (client) {
+      try {
+        // Query by public_slug
+        const { data, error } = await client
+          .from('products')
+          .select('*')
+          .eq('public_slug', cleanSlug)
+          .maybeSingle();
+
+        if (!error && data) {
+          return mapRowToProduct(data);
+        }
+
+        // Secondary fallback: query products to match computed slug (handles un-migrated tables)
+        const { data: allData, error: allError } = await client
+          .from('products')
+          .select('*')
+          .order('id', { ascending: false });
+
+        if (!allError && allData && allData.length > 0) {
+          const matched = allData
+            .map(mapRowToProduct)
+            .find(p => p.publicSlug?.toLowerCase() === cleanSlug || generateProductSlug(p.name, p.code) === cleanSlug);
+          if (matched) return matched;
+        }
+      } catch (err) {
+        console.error('Error fetching product by slug from Supabase:', err);
+      }
+    }
+
+    // Local Storage Fallback
+    const local = StorageService.getProducts();
+    const foundLocal = local.find(p => 
+      p.publicSlug?.toLowerCase() === cleanSlug || 
+      generateProductSlug(p.name, p.code) === cleanSlug
+    );
+    return foundLocal || null;
   }
 
   static async deleteProduct(id: number | string): Promise<boolean> {

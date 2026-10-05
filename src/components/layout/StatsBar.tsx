@@ -13,10 +13,13 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   categories,
   users,
 }) => {
-  const totalCount = products.length;
-  const activeCount = products.filter(p => p.status === 'Active').length;
-  const practitionerCount = users.filter(u => u.role === 'PRACTITIONER' || u.role === 'ADMIN').length;
-  const totalBotanicals = products.reduce((acc, p) => acc + (p.ingredients?.length || 0), 0);
+  const { totalCount, activeCount, practitionerCount, totalBotanicals } = React.useMemo(() => {
+    const total = products.length;
+    const active = products.filter(p => p.status === 'Active').length;
+    const practitioners = users.filter(u => u.role === 'PRACTITIONER' || u.role === 'ADMIN').length;
+    const botanicals = products.reduce((acc, p) => acc + (p.ingredients?.length || 0), 0);
+    return { totalCount: total, activeCount: active, practitionerCount: practitioners, totalBotanicals: botanicals };
+  }, [products, users]);
 
   const stats = [
     {

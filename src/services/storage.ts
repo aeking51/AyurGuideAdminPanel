@@ -1,10 +1,12 @@
-import { Product, Category, User, AuditLog, SupabaseConfig } from '../types';
+import { Product, Category, User, AuditLog, SupabaseConfig, BotanicalIngredient } from '../types';
 import { initialProducts, initialCategories, initialUsers, initialAuditLogs } from '../data/initialData';
+import { ensureProductShareFields } from '../utils/shareUtils';
 
 const PRODUCTS_KEY = 'ayurguide_products';
 const CATEGORIES_KEY = 'ayurguide_categories';
 const USERS_KEY = 'ayurguide_users';
 const AUDIT_KEY = 'ayurguide_audit_logs';
+const BOTANICALS_KEY = 'ayurguide_botanicals_cache';
 const SUPABASE_KEY = 'ayurguide_supabase_config';
 const ACTIVE_USER_KEY = 'ayurguide_active_user';
 const CLEANED_FLAG = 'ayurguide_v3_clean_central_db';
@@ -54,15 +56,26 @@ export class StorageService {
     if (product.id) {
       const index = products.findIndex(p => String(p.id) === String(product.id));
       if (index !== -1) {
-        updatedProduct = {
-          ...products[index],
+        const existing = products[index];
+        const { publicSlug, shareQrLink } = ensureProductShareFields({
+          ...existing,
           ...product,
-          categoryName: category ? category.name : products[index].categoryName,
+          publicSlug: product.publicSlug || existing.publicSlug,
+          shareQrLink: product.shareQrLink || existing.shareQrLink,
+        });
+
+        updatedProduct = {
+          ...existing,
+          ...product,
+          categoryName: category ? category.name : existing.categoryName,
+          publicSlug,
+          shareQrLink,
           updatedAt: now
         } as Product;
         products[index] = updatedProduct;
         this.logAudit('MEDICINE_UPDATE', updatedProduct.code || String(updatedProduct.id), `Updated medicine "${updatedProduct.name}" (${updatedProduct.code})`);
       } else {
+        const { publicSlug, shareQrLink } = ensureProductShareFields(product);
         updatedProduct = {
           ...product,
           id: product.id,
@@ -73,6 +86,8 @@ export class StorageService {
           status: product.status || 'Active',
           batchNumber: product.batchNumber || `SIT-2026-${Math.floor(100 + Math.random() * 900)}`,
           featured: !!product.featured,
+          publicSlug,
+          shareQrLink,
           createdAt: now,
           updatedAt: now
         } as Product;
@@ -81,16 +96,20 @@ export class StorageService {
       }
     } else {
       const newId = Date.now();
+      const code = product.code || `SA-${Math.floor(10000 + Math.random() * 90000)}`;
+      const { publicSlug, shareQrLink } = ensureProductShareFields({ ...product, code });
       updatedProduct = {
         ...product,
         id: newId,
-        code: product.code || `SA-${Math.floor(10000 + Math.random() * 90000)}`,
+        code,
         categoryName: category ? category.name : 'General',
         packings: product.packings || ['450 ml'],
         ingredients: product.ingredients || [],
         status: product.status || 'Active',
         batchNumber: product.batchNumber || `SIT-2026-${Math.floor(100 + Math.random() * 900)}`,
         featured: !!product.featured,
+        publicSlug,
+        shareQrLink,
         createdAt: now,
         updatedAt: now
       } as Product;
@@ -160,6 +179,24 @@ export class StorageService {
     this.saveCategories(categories);
     this.logAudit('CATEGORY_UPDATE', updated.code || updated.name, `Saved category "${updated.name}" (${updated.code})`);
     return updated;
+  }
+
+  // Botanical Ingredients Cache
+  static getBotanicalIngredients(): BotanicalIngredient[] {
+    try {
+      const data = localStorage.getItem(BOTANICALS_KEY);
+      if (!data) return [];
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveBotanicalIngredients(items: BotanicalIngredient[]): void {
+    try {
+      localStorage.setItem(BOTANICALS_KEY, JSON.stringify(items));
+    } catch {}
   }
 
   // Users

@@ -91,20 +91,69 @@ body {
 
 /* Print Styles for Monograph & Clinical Reports */
 @media print {
+  @page {
+    margin: 10mm;
+    size: auto;
+  }
+
   body {
     background: #ffffff !important;
     color: #111827 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
+
   .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
+
   .glass-panel, .glass-card {
     background: #ffffff !important;
     border: 1px solid #e5e7eb !important;
     box-shadow: none !important;
     color: #111827 !important;
+  }
+
+  /* Universal QR Modal Print Layout */
+  .qr-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    inset: auto !important;
+  }
+
+  .qr-modal-dialog {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .qr-print-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    background: #ffffff !important;
+    color: #061810 !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin: 15px auto !important;
+    padding: 24px 20px !important;
+    border: 3px double #065F46 !important;
+    border-radius: 16px !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
   }
 }

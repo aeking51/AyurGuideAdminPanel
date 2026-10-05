@@ -1,31 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { StorageService } from './services/storage';
 import { SupabaseService } from './services/supabase';
 import { Product, Category, User, AuditLog, SupabaseConfig, BotanicalIngredient } from './types';
 import { Navbar } from './components/layout/Navbar';
 import { StatsBar } from './components/layout/StatsBar';
 import { CatalogueView } from './components/catalogue/CatalogueView';
-import { IngredientsView } from './components/ingredients/IngredientsView';
-import { CategoriesView } from './components/categories/CategoriesView';
-import { UsersView } from './components/users/UsersView';
-import { AuditView } from './components/audit/AuditView';
-import { DatabaseView } from './components/database/DatabaseView';
-import { ProductModal } from './components/catalogue/ProductModal';
-import { MonographModal } from './components/catalogue/MonographModal';
 import { DeleteConfirmModal } from './components/common/DeleteConfirmModal';
-import { ChangePasswordModal } from './components/common/ChangePasswordModal';
 import { LoginView } from './components/auth/LoginView';
+import { PublicProductPage } from './components/public/PublicProductPage';
+import { ProductQRModal } from './components/common/ProductQRModal';
+
+// Code-split secondary views & modals for faster initial load
+const IngredientsView = lazy(() => import('./components/ingredients/IngredientsView').then(m => ({ default: m.IngredientsView })));
+const CategoriesView = lazy(() => import('./components/categories/CategoriesView').then(m => ({ default: m.CategoriesView })));
+const UsersView = lazy(() => import('./components/users/UsersView').then(m => ({ default: m.UsersView })));
+const AuditView = lazy(() => import('./components/audit/AuditView').then(m => ({ default: m.AuditView })));
+const DatabaseView = lazy(() => import('./components/database/DatabaseView').then(m => ({ default: m.DatabaseView })));
+const ProductModal = lazy(() => import('./components/catalogue/ProductModal').then(m => ({ default: m.ProductModal })));
+const MonographModal = lazy(() => import('./components/catalogue/MonographModal').then(m => ({ default: m.MonographModal })));
+const ChangePasswordModal = lazy(() => import('./components/common/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
+
+const TabSuspenseFallback: React.FC = () => (
+  <div className="bg-[#0D281C]/60 rounded-2xl border border-[#23493C] p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+    <div className="w-7 h-7 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mb-3" />
+    <span className="text-xs font-mono text-emerald-300">Loading module...</span>
+  </div>
+);
+
+/**
+ * Extracts the product public_slug from the current browser URL.
+ * Supports /product/:slug and hash fallback #/product/:slug.
+ */
+function getPublicProductSlugFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  // 1. Direct path /product/{slug}
+  const pathname = window.location.pathname;
+  const matchPath = pathname.match(/^\/product\/([^/?#]+)/i);
+  if (matchPath && matchPath[1]) {
+    return decodeURIComponent(matchPath[1]);
+  }
+
+  // 2. Hash fallback #/product/{slug}
+  const hash = window.location.hash;
+  const matchHash = hash.match(/^#\/?product\/([^/?#]+)/i);
+  if (matchHash && matchHash[1]) {
+    return decodeURIComponent(matchHash[1]);
+  }
+
+  return null;
+}
 
 export const App: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [botanicalIngredients, setBotanicalIngredients] = useState<BotanicalIngredient[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(StorageService.getSupabaseConfig());
+  // Public Route State: Accessible without login
+  const [publicProductSlug, setPublicProductSlug] = useState<string | null>(() => getPublicProductSlugFromUrl());
+
+  // Cache-first instant hydration (zero initial delay)
+  const [products, setProducts] = useState<Product[]>(() => StorageService.getProducts());
+  const [categories, setCategories] = useState<Category[]>(() => StorageService.getCategories());
+  const [botanicalIngredients, setBotanicalIngredients] = useState<BotanicalIngredient[]>(() => StorageService.getBotanicalIngredients());
+  const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => StorageService.getAuditLogs());
+  const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => StorageService.getSupabaseConfig());
   const [activeUser, setActiveUser] = useState<User | null>(() => StorageService.getActiveUser());
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [, setLoading] = useState<boolean>(false);
 
   const [currentTab, setCurrentTab] = useState<string>('catalogue');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -34,31 +73,38 @@ export const App: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [monographProduct, setMonographProduct] = useState<Product | null>(null);
+  const [sharingProduct, setSharingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+
+  // Listen to popstate and hashchange to support browser back/forward and link navigation
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setPublicProductSlug(getPublicProductSlugFromUrl());
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
   const handleOpenChangePassword = (user?: User | null) => {
     setPasswordTargetUser(user || activeUser);
     setIsPasswordModalOpen(true);
   };
 
-  // Fetch all central data from Supabase
+  // Fetch all central data from Supabase progressively without blocking
   const loadCentralData = useCallback(async () => {
     try {
-      const [fetchedProducts, fetchedCategories, fetchedIngredients, fetchedUsers, fetchedLogs] = await Promise.all([
-        SupabaseService.fetchProducts(),
-        SupabaseService.fetchCategories(),
-        SupabaseService.fetchBotanicalIngredients(),
-        SupabaseService.fetchUsers(),
-        SupabaseService.fetchAuditLogs()
-      ]);
-
-      setProducts(fetchedProducts);
-      setCategories(fetchedCategories);
-      setBotanicalIngredients(fetchedIngredients);
-      setUsers(fetchedUsers);
-      setAuditLogs(fetchedLogs);
+      // Fire requests in parallel; update each state immediately as soon as each returns
+      SupabaseService.fetchProducts().then(setProducts).catch(() => {});
+      SupabaseService.fetchCategories().then(setCategories).catch(() => {});
+      SupabaseService.fetchBotanicalIngredients().then(setBotanicalIngredients).catch(() => {});
+      SupabaseService.fetchUsers().then(setUsers).catch(() => {});
+      SupabaseService.fetchAuditLogs().then(setAuditLogs).catch(() => {});
       setSupabaseConfig(StorageService.getSupabaseConfig());
     } catch (err) {
       console.error('Failed to load central data:', err);
@@ -355,36 +401,55 @@ export const App: React.FC = () => {
     else await loadCentralData();
   };
 
+  // Public Canonical Route: /product/:slug (Permits public user access without admin login)
+  if (publicProductSlug) {
+    return (
+      <PublicProductPage
+        slug={publicProductSlug}
+        onNavigateHome={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/');
+          }
+          setPublicProductSlug(null);
+        }}
+      />
+    );
+  }
+
   // Authentication Guard: Require authentication to access the admin panel
   if (!activeUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
+  const isModalActive = Boolean(sharingProduct || monographProduct);
+
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
       
       {/* Header & Navigation */}
-      <Navbar
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onOpenNewProduct={handleOpenNewProduct}
-        syncStatus={{ 
-          connected: supabaseConfig.connected || isRealtimeActive, 
-          lastSync: supabaseConfig.lastSyncTime 
-        }}
-        activeUser={activeUser}
-        users={users}
-        onSelectUser={handleSelectUser}
-        onReloadCurrentTab={handleReloadCurrentTab}
-        isReloading={reloadingSection !== null}
-        onChangePassword={handleOpenChangePassword}
-        onSignOut={handleSignOut}
-      />
+      <div className={isModalActive ? "no-print" : ""}>
+        <Navbar
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          onOpenNewProduct={handleOpenNewProduct}
+          syncStatus={{ 
+            connected: supabaseConfig.connected || isRealtimeActive, 
+            lastSync: supabaseConfig.lastSyncTime 
+          }}
+          activeUser={activeUser}
+          users={users}
+          onSelectUser={handleSelectUser}
+          onReloadCurrentTab={handleReloadCurrentTab}
+          isReloading={reloadingSection !== null}
+          onChangePassword={handleOpenChangePassword}
+          onSignOut={handleSignOut}
+        />
+      </div>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 ${isModalActive ? "no-print" : ""}`}>
         
         {/* KPI Stats Bar */}
         <StatsBar
@@ -404,60 +469,63 @@ export const App: React.FC = () => {
             onEditProduct={handleEditProduct}
             onDeleteProduct={handleDeleteProduct}
             onViewMonograph={(p) => setMonographProduct(p)}
+            onShareProduct={(p) => setSharingProduct(p)}
             onReload={handleReloadProducts}
             isReloading={reloadingSection === 'catalogue'}
           />
         )}
 
-        {currentTab === 'ingredients' && (
-          <IngredientsView
-            ingredients={botanicalIngredients}
-            onSaveIngredient={handleSaveIngredient}
-            onDeleteIngredient={handleDeleteIngredient}
-            onReload={handleReloadBotanicals}
-            isReloading={reloadingSection === 'ingredients'}
-          />
-        )}
+        <Suspense fallback={<TabSuspenseFallback />}>
+          {currentTab === 'ingredients' && (
+            <IngredientsView
+              ingredients={botanicalIngredients}
+              onSaveIngredient={handleSaveIngredient}
+              onDeleteIngredient={handleDeleteIngredient}
+              onReload={handleReloadBotanicals}
+              isReloading={reloadingSection === 'ingredients'}
+            />
+          )}
 
-        {currentTab === 'categories' && (
-          <CategoriesView
-            categories={categories}
-            products={products}
-            onSaveCategory={handleSaveCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onReload={handleReloadCategories}
-            isReloading={reloadingSection === 'categories'}
-          />
-        )}
+          {currentTab === 'categories' && (
+            <CategoriesView
+              categories={categories}
+              products={products}
+              onSaveCategory={handleSaveCategory}
+              onDeleteCategory={handleDeleteCategory}
+              onReload={handleReloadCategories}
+              isReloading={reloadingSection === 'categories'}
+            />
+          )}
 
-        {currentTab === 'users' && (
-          <UsersView
-            users={users}
-            onUpdateRole={handleUpdateUserRole}
-            onToggleStatus={handleToggleUserStatus}
-            onAddUser={handleAddUser}
-            onDeleteUser={handleDeleteUser}
-            onReload={handleReloadUsers}
-            isReloading={reloadingSection === 'users'}
-            onChangePassword={handleOpenChangePassword}
-          />
-        )}
+          {currentTab === 'users' && (
+            <UsersView
+              users={users}
+              onUpdateRole={handleUpdateUserRole}
+              onToggleStatus={handleToggleUserStatus}
+              onAddUser={handleAddUser}
+              onDeleteUser={handleDeleteUser}
+              onReload={handleReloadUsers}
+              isReloading={reloadingSection === 'users'}
+              onChangePassword={handleOpenChangePassword}
+            />
+          )}
 
-        {currentTab === 'audit' && (
-          <AuditView 
-            logs={auditLogs} 
-            onReload={handleReloadAuditLogs}
-            isReloading={reloadingSection === 'audit'}
-          />
-        )}
+          {currentTab === 'audit' && (
+            <AuditView 
+              logs={auditLogs} 
+              onReload={handleReloadAuditLogs}
+              isReloading={reloadingSection === 'audit'}
+            />
+          )}
 
-        {currentTab === 'database' && (
-          <DatabaseView
-            config={supabaseConfig}
-            onSaveConfig={handleSaveSupabaseConfig}
-            onReloadAllData={loadCentralData}
-          />
-        )}
+          {currentTab === 'database' && (
+            <DatabaseView
+              config={supabaseConfig}
+              onSaveConfig={handleSaveSupabaseConfig}
+              onReloadAllData={loadCentralData}
+            />
+          )}
+        </Suspense>
 
       </main>
 
@@ -466,21 +534,38 @@ export const App: React.FC = () => {
         <p>AyurGuide Clinical Administration Portal &bull; Central Supabase Database &bull; Realtime CRUD Engine</p>
       </footer>
 
-      {/* Product Add/Edit Modal */}
-      <ProductModal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        onSave={handleSaveProduct}
-        product={editingProduct}
-        categories={categories}
-        availableIngredients={botanicalIngredients}
-      />
+      {/* Modals with Lazy Loading */}
+      <Suspense fallback={null}>
+        {isProductModalOpen && (
+          <ProductModal
+            isOpen={isProductModalOpen}
+            onClose={() => setIsProductModalOpen(false)}
+            onSave={handleSaveProduct}
+            product={editingProduct}
+            categories={categories}
+            availableIngredients={botanicalIngredients}
+          />
+        )}
 
-      {/* Monograph Printable Modal */}
-      <MonographModal
-        product={monographProduct}
-        onClose={() => setMonographProduct(null)}
-      />
+        {monographProduct && (
+          <MonographModal
+            product={monographProduct}
+            onClose={() => setMonographProduct(null)}
+          />
+        )}
+
+        {isPasswordModalOpen && (
+          <ChangePasswordModal
+            isOpen={isPasswordModalOpen}
+            onClose={() => {
+              setIsPasswordModalOpen(false);
+              setPasswordTargetUser(null);
+            }}
+            targetUser={passwordTargetUser || activeUser}
+            onPasswordChanged={loadCentralData}
+          />
+        )}
+      </Suspense>
 
       {/* Product Deletion Confirmation Modal */}
       {deletingProduct && (
@@ -496,16 +581,14 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Change Password Modal (Direct Admin Bypass - No Current Password) */}
-      <ChangePasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => {
-          setIsPasswordModalOpen(false);
-          setPasswordTargetUser(null);
-        }}
-        targetUser={passwordTargetUser || activeUser}
-        onPasswordChanged={loadCentralData}
-      />
+      {/* Universal Product QR & Sharing Modal */}
+      {sharingProduct && (
+        <ProductQRModal
+          isOpen={!!sharingProduct}
+          product={sharingProduct}
+          onClose={() => setSharingProduct(null)}
+        />
+      )}
 
     </div>
   );
