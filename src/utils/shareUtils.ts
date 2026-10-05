@@ -50,7 +50,7 @@ export function getBaseShareUrl(): string {
 
 /**
  * Returns the permanent canonical public share URL for a product slug.
- * Example: https://DOMAIN/product/dashamoolarishtam
+ * Example: https://ayur-guide-admin-panel.vercel.app/product/dashamoolarishtam
  */
 export function getProductShareUrl(slug: string): string {
   const base = getBaseShareUrl();
@@ -59,17 +59,57 @@ export function getProductShareUrl(slug: string): string {
 }
 
 /**
+ * Normalizes and sanitizes any share QR link string.
+ * Automatically purges placeholder strings like "YOUR-DOMAIN", "ayurindex.com",
+ * or ephemeral localhost/cloud-run URLs, replacing them with the production domain.
+ */
+export function normalizeShareQrLink(rawLink: string | undefined | null, slug: string): string {
+  const cleanSlug = encodeURIComponent(slug.trim().toLowerCase());
+  const expectedUrl = `${PRODUCTION_DOMAIN}/product/${cleanSlug}`;
+
+  if (!rawLink || !rawLink.trim()) {
+    return expectedUrl;
+  }
+
+  const trimmed = rawLink.trim();
+
+  // If the link has placeholder strings or dev container hosts, replace with canonical production URL
+  if (
+    trimmed.includes('YOUR-DOMAIN') ||
+    trimmed.includes('YOUR_DOMAIN') ||
+    trimmed.includes('your-domain') ||
+    trimmed.includes('ayurindex.com') ||
+    trimmed.includes('localhost') ||
+    trimmed.includes('127.0.0.1') ||
+    trimmed.includes('.run.app') ||
+    trimmed.includes('example.com')
+  ) {
+    return expectedUrl;
+  }
+
+  // If it's a valid product URL with another origin, ensure it uses the verified production domain
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.pathname.startsWith('/product/')) {
+      return `${PRODUCTION_DOMAIN}${parsed.pathname}`;
+    }
+  } catch {
+    return expectedUrl;
+  }
+
+  return trimmed;
+}
+
+/**
  * Ensures a product has stable publicSlug and shareQrLink properties.
- * If they already exist, they are preserved strictly to maintain QR code longevity.
+ * Cleanses any placeholder URLs (such as YOUR-DOMAIN) and enforces the verified production domain.
  */
 export function ensureProductShareFields(product: Partial<Product>): { publicSlug: string; shareQrLink: string } {
   const publicSlug = product.publicSlug && product.publicSlug.trim()
-    ? product.publicSlug.trim()
+    ? product.publicSlug.trim().toLowerCase()
     : generateProductSlug(product.name || '', product.code || '');
 
-  const shareQrLink = product.shareQrLink && product.shareQrLink.trim()
-    ? product.shareQrLink.trim()
-    : getProductShareUrl(publicSlug);
+  const shareQrLink = normalizeShareQrLink(product.shareQrLink, publicSlug);
 
   return { publicSlug, shareQrLink };
 }

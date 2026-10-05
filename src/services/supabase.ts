@@ -2,7 +2,7 @@ import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabas
 import { Product, Category, User, AuditLog, BotanicalIngredient } from '../types';
 import { StorageService } from './storage';
 import { initialCategories } from '../data/initialData';
-import { generateProductSlug, getProductShareUrl, ensureProductShareFields } from '../utils/shareUtils';
+import { generateProductSlug, getProductShareUrl, ensureProductShareFields, normalizeShareQrLink } from '../utils/shareUtils';
 
 let supabaseInstance: SupabaseClient | null = null;
 let realtimeChannel: RealtimeChannel | null = null;
@@ -37,9 +37,7 @@ export function mapRowToProduct(row: any): Product {
     : generateProductSlug(row.name || '', row.code || '');
 
   const rawShareLink = row.share_qr_link || row.shareQrLink;
-  const shareQrLink = rawShareLink && String(rawShareLink).trim()
-    ? String(rawShareLink).trim()
-    : getProductShareUrl(publicSlug);
+  const shareQrLink = normalizeShareQrLink(rawShareLink, publicSlug);
 
   return {
     id: row.id,

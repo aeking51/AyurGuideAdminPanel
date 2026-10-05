@@ -31,7 +31,20 @@ export class StorageService {
         localStorage.setItem(PRODUCTS_KEY, JSON.stringify(initialProducts));
         return initialProducts;
       }
-      return JSON.parse(data);
+      const parsed: Product[] = JSON.parse(data);
+      let needsResave = false;
+      const sanitized = parsed.map(p => {
+        const { publicSlug, shareQrLink } = ensureProductShareFields(p);
+        if (p.publicSlug !== publicSlug || p.shareQrLink !== shareQrLink) {
+          needsResave = true;
+          return { ...p, publicSlug, shareQrLink };
+        }
+        return p;
+      });
+      if (needsResave) {
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(sanitized));
+      }
+      return sanitized;
     } catch {
       return initialProducts;
     }
