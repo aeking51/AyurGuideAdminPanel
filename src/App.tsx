@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { StorageService } from './services/storage';
 import { SupabaseService } from './services/supabase';
 import { Product, Category, User, AuditLog, SupabaseConfig, BotanicalIngredient } from './types';
@@ -593,6 +594,8 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 };
