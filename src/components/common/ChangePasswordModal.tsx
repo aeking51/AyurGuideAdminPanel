@@ -25,7 +25,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen) return null;
 
-  const targetEmail = targetUser?.email || 'admin@ayurguide.internal';
+  const targetEmail = targetUser?.email || 'admin@ayurindex.internal';
   const targetName = targetUser?.name || 'Administrator';
   const targetId = targetUser?.id || 'admin_session';
 

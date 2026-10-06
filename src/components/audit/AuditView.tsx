@@ -108,7 +108,7 @@ export const AuditView: React.FC<AuditViewProps> = ({
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const link = document.createElement('a');
     link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `ayurguide_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `ayur_index_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

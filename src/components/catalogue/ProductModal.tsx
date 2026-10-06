@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Sparkles, Check, Camera, Image as ImageIcon, Star, Leaf, BookOpen } from 'lucide-react';
 import { Product, Category, IngredientItem, BotanicalIngredient } from '../../types';
 import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
+import { getClassicalFormulationIngredients } from '../../data/classicalFormulations';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -113,9 +114,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setUsage('15 to 25 ml twice daily after food with warm water.');
       setIndications('');
       setPackings(['450 ml', '200 ml']);
-      setIngredients([
-        { name: 'Triphala Complex', botanicalName: 'Terminalia chebula et al.', partUsed: 'Fruit pericarp', classicalRole: 'Synergistic detoxifier' }
-      ]);
+      setIngredients([]);
       setStatus('Active');
       setFeatured(false);
       setBatchNumber(`SIT-2026-B${Math.floor(10 + Math.random() * 90)}`);
@@ -646,7 +645,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
               {/* Ingredients Builder */}
               <div className="pt-2 border-t border-[#23493C]">
-                <label className="block text-xs font-medium text-emerald-300 mb-2">Botanical Ingredients & Dravyaguna</label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <label className="block text-xs font-medium text-emerald-300">Botanical Ingredients & Dravyaguna ({ingredients.length})</label>
+                  {name && getClassicalFormulationIngredients(name) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const rec = getClassicalFormulationIngredients(name);
+                        if (rec) setIngredients(rec);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900 text-[11px] font-semibold cursor-pointer shadow-xs"
+                      title="Load authentic pharmacopoeial formulation recipe to save to database"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Populate Classical Recipe ({getClassicalFormulationIngredients(name)?.length} Herbs)</span>
+                    </button>
+                  )}
+                </div>
                 
                 {/* List */}
                 <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">

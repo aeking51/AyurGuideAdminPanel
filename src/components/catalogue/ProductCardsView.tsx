@@ -5,14 +5,22 @@ import {
   Edit3, 
   Trash2, 
   Sparkles, 
-  Check,
+  Check, 
   Camera,
-  QrCode
+  QrCode,
+  ChevronDown,
+  Layers
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 
 interface ProductCardsViewProps {
   products: Product[];
+  categories?: Category[];
+  selectedProductIds?: Set<string | number>;
+  onToggleSelect?: (productId: string | number) => void;
+  onToggleSelectAll?: () => void;
+  onSelectGroup?: (type: 'all' | 'active' | 'inactive' | 'invert' | 'none') => void;
+  onSelectCategoryGroup?: (categoryIdOrName: string | number) => void;
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct?: (product: Product) => void;
@@ -21,6 +29,12 @@ interface ProductCardsViewProps {
 
 export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   products,
+  categories = [],
+  selectedProductIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
+  onSelectGroup,
+  onSelectCategoryGroup,
   onViewMonograph,
   onEditProduct,
   onDeleteProduct,
@@ -28,6 +42,10 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
 }) => {
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
   const [activePhotoIndices, setActivePhotoIndices] = useState<Record<string | number, number>>({});
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+
+  const selectedCount = selectedProductIds.size;
+  const isAllSelected = products.length > 0 && selectedCount === products.length;
 
   const toggleFlip = (id: string | number) => {
     setFlippedCards(prev => ({
@@ -56,7 +74,152 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-4">
+      
+      {/* Cards View Quick Selection Bar */}
+      {(onToggleSelectAll || onSelectGroup) && (
+        <div className="bg-[#0D281C]/80 border border-[#23493C] rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            {onToggleSelectAll && (
+              <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={() => onToggleSelectAll()}
+                  className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
+                />
+                <span className="font-semibold text-gray-200">
+                  {isAllSelected ? 'Deselect All Cards' : `Select All (${products.length})`}
+                </span>
+              </label>
+            )}
+
+            {/* Quick Group Selection Dropdown */}
+            {onSelectGroup && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#081C13] hover:bg-[#133829] text-emerald-300 border border-[#23493C] transition cursor-pointer"
+                >
+                  <span>Select Group</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+
+                {isGroupDropdownOpen && (
+                  <div 
+                    className="absolute left-0 top-full mt-1 w-52 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 divide-y divide-[#23493C]/40 text-left"
+                    onMouseLeave={() => setIsGroupDropdownOpen(false)}
+                  >
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('all');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span>Select All</span>
+                        <span className="text-[10px] text-gray-400 font-mono">({products.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('active');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-emerald-300 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span>Select Active Only</span>
+                        <span className="text-[10px] text-emerald-400/80 font-mono">
+                          ({products.filter(p => p.status === 'Active').length})
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('inactive');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-amber-300 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span>Select Inactive / Draft</span>
+                        <span className="text-[10px] text-amber-400/80 font-mono">
+                          ({products.filter(p => p.status !== 'Active').length})
+                        </span>
+                      </button>
+                    </div>
+
+                    {categories.length > 0 && onSelectCategoryGroup && (
+                      <div className="py-1">
+                        <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                          Select by Category
+                        </div>
+                        {categories.map(cat => {
+                          const count = products.filter(p => 
+                            String(p.categoryId) === String(cat.id) || 
+                            (p.categoryName && p.categoryName.toLowerCase() === cat.name.toLowerCase())
+                          ).length;
+                          if (count === 0) return null;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectCategoryGroup(cat.id);
+                                setIsGroupDropdownOpen(false);
+                              }}
+                              className="w-full px-3 py-1.5 text-xs text-gray-300 hover:bg-[#133829] flex items-center justify-between truncate"
+                            >
+                              <span className="truncate">{cat.name}</span>
+                              <span className="text-[10px] font-mono text-gray-400 ml-1.5 shrink-0">({count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('invert');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-teal-300 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span>Invert Selection</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('none');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-red-300 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span>Clear Selection</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="text-[11px] text-gray-400 font-mono">
+            {selectedCount > 0 ? (
+              <span className="text-emerald-300 font-semibold">{selectedCount} of {products.length} Selected</span>
+            ) : (
+              <span>Tap checkboxes on cards to select</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {products.map((product) => {
         const isFlipped = !!flippedCards[product.id];
 
@@ -65,13 +228,28 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
             <div className={`flip-card-inner ${isFlipped ? 'flipped' : ''}`}>
               
               {/* FRONT OF CARD */}
-              <div className="flip-card-front bg-[#0D281C] border border-[#23493C] rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+              <div className={`flip-card-front bg-[#0D281C] rounded-2xl p-5 flex flex-col justify-between shadow-xl transition border ${
+                selectedProductIds.has(product.id)
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/50 shadow-emerald-950/50'
+                  : 'border-[#23493C]'
+              }`}>
                 <div>
-                  {/* Top Bar with Code & Category */}
+                  {/* Top Bar with Selection Checkbox, Code & Category */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#081C13] text-emerald-400 border border-[#23493C]">
-                      {product.code}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {onToggleSelect && (
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.has(product.id)}
+                          onChange={() => onToggleSelect(product.id)}
+                          className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
+                          title="Select formulation"
+                        />
+                      )}
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#081C13] text-emerald-400 border border-[#23493C]">
+                        {product.code}
+                      </span>
+                    </div>
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/80">
                       {product.categoryName || 'Formulation'}
                     </span>
@@ -229,19 +407,25 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                   {/* Ingredients */}
                   <div className="mb-3">
                     <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider block mb-1">
-                      Key Botanical Ingredients
+                      Key Botanical Ingredients ({product.ingredients?.length || 0})
                     </span>
                     <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
-                      {product.ingredients?.map((item, i) => {
-                        const name = typeof item === 'string' ? item : item.name;
-                        const role = typeof item === 'object' ? item.classicalRole : '';
-                        return (
-                          <div key={i} className="text-xs text-gray-300 flex items-start justify-between bg-[#0D281C]/70 px-2 py-1 rounded border border-[#23493C]/40">
-                            <span className="font-medium text-emerald-300">{name}</span>
-                            {role && <span className="text-[10px] text-gray-400 truncate max-w-[120px]">{role}</span>}
-                          </div>
-                        );
-                      })}
+                      {product.ingredients && product.ingredients.length > 0 ? (
+                        product.ingredients.map((item, i) => {
+                          const name = typeof item === 'string' ? item : item.name;
+                          const role = typeof item === 'object' ? item.classicalRole : '';
+                          return (
+                            <div key={i} className="text-xs text-gray-300 flex items-start justify-between bg-[#0D281C]/70 px-2 py-1 rounded border border-[#23493C]/40">
+                              <span className="font-medium text-emerald-300 truncate">{name}</span>
+                              {role && <span className="text-[10px] text-gray-400 truncate max-w-[120px] ml-1">{role}</span>}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-[11px] text-gray-500 italic py-1">
+                          No ingredients stored in database
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -249,7 +433,7 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                   <div className="bg-[#0D281C] p-2.5 rounded-xl border border-[#23493C] text-xs space-y-1 mb-2">
                     <span className="text-[10px] uppercase font-bold text-emerald-400 block">Dosage & Vehicle (Anupana)</span>
                     <p className="text-gray-300 text-[11px] leading-relaxed">
-                      {product.usage || "15-25 ml twice daily after meals with equal quantity of warm water."}
+                      {product.usage || "As directed by physician."}
                     </p>
                   </div>
 
@@ -310,6 +494,7 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
           </div>
         );
       })}
+      </div>
     </div>
   );
 };

@@ -107,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-serif font-bold text-lg text-emerald-100 tracking-wide">AyurGuide</span>
+                <span className="font-serif font-bold text-lg text-emerald-100 tracking-wide">Ayur Index</span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">Clinical Admin</span>
               </div>
               <p className="text-[11px] text-emerald-400/70 font-sans">Sitaram Classical Apothecary</p>

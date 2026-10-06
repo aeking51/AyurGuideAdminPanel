@@ -1,20 +1,39 @@
 import React from 'react';
 import { X, Printer, Download, Sparkles, QrCode, Camera } from 'lucide-react';
-import { Product, BotanicalIngredient } from '../../types';
+import { Product, IngredientItem } from '../../types';
 import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
 
 interface MonographModalProps {
   product: Product | null;
   onClose: () => void;
-  availableBotanicals?: BotanicalIngredient[];
 }
 
-export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose, availableBotanicals = [] }) => {
+export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose }) => {
   if (!product) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  // Strictly display ingredients stored in Supabase record - no placeholder fallback
+  const effectiveIngredients: IngredientItem[] = React.useMemo(() => {
+    if (product.ingredients && product.ingredients.length > 0) {
+      return product.ingredients.map(item => {
+        if (typeof item === 'string') {
+          const resolved = resolveHerbDetails(item);
+          return {
+            name: resolved.name,
+            botanicalName: resolved.botanicalName,
+            sanskritName: resolved.sanskritName,
+            partUsed: resolved.partUsed,
+            classicalRole: resolved.therapeuticAction
+          };
+        }
+        return item;
+      });
+    }
+    return [];
+  }, [product]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -172,33 +191,29 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {product.ingredients?.map((item, idx) => {
-                  const rawName = typeof item === 'string' ? item : (item.name || '');
-                  const resolved = resolveHerbDetails(rawName, availableBotanicals);
-                  
-                  const displayName = typeof item === 'object' && item.name ? item.name : resolved.name;
-                  const botanical = (typeof item === 'object' && item.botanicalName) ? item.botanicalName : (resolved.botanicalName || '—');
-                  const part = (typeof item === 'object' && item.partUsed) ? item.partUsed : (resolved.partUsed || 'Standardized Part');
-                  const role = (typeof item === 'object' && (item.classicalRole || item.therapeuticAction)) 
-                    ? (item.classicalRole || item.therapeuticAction) 
-                    : (resolved.therapeuticAction || 'Classical active');
-
-                  return (
+                {effectiveIngredients.length > 0 ? (
+                  effectiveIngredients.map((item, idx) => (
                     <tr key={idx}>
                       <td className="py-2.5 font-bold text-[#0F382C]">
-                        {displayName}
-                        {resolved.sanskritName && (
-                          <span className="block text-[10px] text-amber-800/80 font-serif font-normal italic">
-                            {resolved.sanskritName}
+                        {item.name}
+                        {item.sanskritName && (
+                          <span className="block text-[10px] text-amber-800 font-serif font-normal italic">
+                            {item.sanskritName}
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 italic text-emerald-800 font-medium">{botanical}</td>
-                      <td className="py-2.5 text-gray-700">{part}</td>
-                      <td className="py-2.5 text-gray-700">{role}</td>
+                      <td className="py-2.5 italic text-gray-600">{item.botanicalName || '—'}</td>
+                      <td className="py-2.5 text-gray-600">{item.partUsed || 'Standardized Part'}</td>
+                      <td className="py-2.5 text-gray-700">{item.classicalRole || item.therapeuticAction || 'Classical active'}</td>
                     </tr>
-                  );
-                })}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-gray-500 italic">
+                      No botanical ingredients are currently registered in Supabase for this formulation.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

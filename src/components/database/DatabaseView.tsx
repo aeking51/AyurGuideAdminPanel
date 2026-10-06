@@ -58,7 +58,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `ayurguide_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `ayur_index_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

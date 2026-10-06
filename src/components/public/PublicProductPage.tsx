@@ -28,7 +28,7 @@ import {
   Check,
   QrCode
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, IngredientItem } from '../../types';
 import { SupabaseService } from '../../services/supabase';
 import { ensureProductShareFields, generateQrDataUrl } from '../../utils/shareUtils';
 
@@ -142,7 +142,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     return (
       <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 sm:w-12 sm:h-12 border-3 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin mb-4" />
-        <h2 className="font-serif text-base sm:text-lg text-emerald-300">AYURGUIDE</h2>
+        <h2 className="font-serif text-base sm:text-lg text-emerald-300">AYUR INDEX</h2>
         <p className="text-xs text-gray-400 font-mono mt-1 text-center">Retrieving authentic medicine record...</p>
       </div>
     );
@@ -160,7 +160,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
               <div>
-                <h1 className="font-serif font-bold text-base sm:text-lg text-emerald-100 tracking-wider">AYURGUIDE</h1>
+                <h1 className="font-serif font-bold text-base sm:text-lg text-emerald-100 tracking-wider">AYUR INDEX</h1>
                 <p className="text-[9px] sm:text-[10px] text-emerald-400/80 font-mono">Ayurvedic Clinical Pharmacopoeia</p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
         </main>
 
         <footer className="border-t border-[#23493C]/60 py-4 bg-[#061810] text-center text-xs text-gray-500 px-4">
-          <p>AyurGuide &bull; Standardized Ayurvedic Pharmacopoeia Directory</p>
+          <p>Ayur Index &bull; Standardized Ayurvedic Pharmacopoeia Directory</p>
         </footer>
       </div>
     );
@@ -193,6 +193,24 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     ? product.images 
     : [product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"];
   const currentImage = allImages[selectedImageIndex] || allImages[0];
+
+  // Ingredients strictly from Supabase record
+  const effectiveIngredients: IngredientItem[] = React.useMemo(() => {
+    if (!product?.ingredients || product.ingredients.length === 0) {
+      return [];
+    }
+    return product.ingredients.map(item => {
+      if (typeof item === 'string') {
+        const clean = item.trim();
+        const parenMatch = clean.match(/^([^(]+)\s*\(([^)]+)\)$/);
+        return {
+          name: parenMatch ? parenMatch[1].trim() : clean,
+          botanicalName: parenMatch ? parenMatch[2].trim() : '',
+        };
+      }
+      return item;
+    });
+  }, [product]);
 
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white">
@@ -206,7 +224,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             </div>
             <div className="min-w-0">
               <h1 className="font-serif font-bold text-base sm:text-lg text-emerald-100 tracking-wider truncate leading-tight">
-                AYURGUIDE
+                AYUR INDEX
               </h1>
               <p className="text-[9px] sm:text-[10px] text-emerald-400 font-mono tracking-tight truncate">
                 Ayurvedic Clinical Pharmacopoeia
@@ -359,7 +377,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                   type="button"
                   onClick={handleShowInApp}
                   className="flex-1 min-h-[48px] px-4 py-3 rounded-xl bg-[#081C13] hover:bg-[#123626] text-emerald-300 hover:text-white border-2 border-emerald-600/70 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-[0.98] cursor-pointer"
-                  title="Open this medicine directly in the AyurGuide Android Application"
+                  title="Open this medicine directly in the Ayur Index Android Application"
                 >
                   <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>SHOW IN APP</span>
@@ -481,57 +499,48 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                 <span>Standardized Botanical Ingredients & Composition</span>
               </span>
               <span className="text-[11px] sm:text-xs text-gray-400 font-mono">
-                {product.ingredients?.length || 0} Herbs
+                {effectiveIngredients.length} Herbs
               </span>
             </div>
 
-            {product.ingredients && product.ingredients.length > 0 ? (
+            {effectiveIngredients.length > 0 ? (
               <>
                 {/* 1. Mobile Card Layout (Visible only on screens < md) - Eliminates clunky horizontal scrolling */}
                 <div className="md:hidden divide-y divide-[#23493C]/50">
-                  {product.ingredients.map((item, idx) => {
-                    if (typeof item === 'string') {
-                      return (
-                        <div key={idx} className="p-3.5 bg-[#0D281C]/50">
-                          <span className="font-semibold text-gray-100 text-xs sm:text-sm">{item}</span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div key={idx} className="p-3.5 space-y-1.5 bg-[#0D281C]/40 hover:bg-[#133829]/30 transition">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="font-semibold text-gray-100 text-xs sm:text-sm block">
-                              {item.name}
-                            </span>
-                            {item.sanskritName && (
-                              <span className="text-[11px] text-amber-300 font-serif italic block mt-0.5">
-                                {item.sanskritName}
-                              </span>
-                            )}
-                          </div>
-                          {item.partUsed && (
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono shrink-0">
-                              {item.partUsed}
+                  {effectiveIngredients.map((item, idx) => (
+                    <div key={idx} className="p-3.5 space-y-1.5 bg-[#0D281C]/40 hover:bg-[#133829]/30 transition">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-gray-100 text-xs sm:text-sm block">
+                            {item.name}
+                          </span>
+                          {item.sanskritName && (
+                            <span className="text-[11px] text-amber-300 font-serif italic block mt-0.5">
+                              {item.sanskritName}
                             </span>
                           )}
                         </div>
-
-                        {item.botanicalName && (
-                          <div className="text-xs italic text-emerald-300">
-                            {item.botanicalName}
-                          </div>
-                        )}
-
-                        {(item.therapeuticAction || item.classicalRole) && (
-                          <div className="text-[11px] text-gray-300 flex items-center gap-1.5 pt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                            <span>{item.therapeuticAction || item.classicalRole}</span>
-                          </div>
+                        {item.partUsed && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono shrink-0">
+                            {item.partUsed}
+                          </span>
                         )}
                       </div>
-                    );
-                  })}
+
+                      {item.botanicalName && (
+                        <div className="text-xs italic text-emerald-300">
+                          {item.botanicalName}
+                        </div>
+                      )}
+
+                      {(item.therapeuticAction || item.classicalRole) && (
+                        <div className="text-[11px] text-gray-300 flex items-center gap-1.5 pt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          <span>{item.therapeuticAction || item.classicalRole}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* 2. Tablet & Desktop Classical Table (Visible on md and larger screens) */}
@@ -546,45 +555,34 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#23493C]/50">
-                      {product.ingredients.map((item, idx) => {
-                        if (typeof item === 'string') {
-                          return (
-                            <tr key={idx} className="hover:bg-[#133829]/40">
-                              <td className="py-2.5 px-4 font-semibold text-gray-100" colSpan={4}>
-                                {item}
-                              </td>
-                            </tr>
-                          );
-                        }
-                        return (
-                          <tr key={idx} className="hover:bg-[#133829]/40">
-                            <td className="py-2.5 px-4 font-semibold text-gray-100">
-                              {item.name}
-                              {item.sanskritName && (
-                                <span className="block text-[10px] text-amber-300 font-serif">
-                                  {item.sanskritName}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-4 italic text-emerald-300">
-                              {item.botanicalName || '—'}
-                            </td>
-                            <td className="py-2.5 px-4 text-gray-400">
-                              {item.partUsed || 'Standardized'}
-                            </td>
-                            <td className="py-2.5 px-4 text-gray-300">
-                              {item.classicalRole || item.therapeuticAction || 'Active Therapeutic'}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {effectiveIngredients.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-[#133829]/40">
+                          <td className="py-2.5 px-4 font-semibold text-gray-100">
+                            {item.name}
+                            {item.sanskritName && (
+                              <span className="block text-[10px] text-amber-300 font-serif">
+                                {item.sanskritName}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 italic text-emerald-300">
+                            {item.botanicalName || '—'}
+                          </td>
+                          <td className="py-2.5 px-4 text-gray-400">
+                            {item.partUsed || '—'}
+                          </td>
+                          <td className="py-2.5 px-4 text-gray-300">
+                            {item.classicalRole || item.therapeuticAction || '—'}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </>
             ) : (
               <div className="p-5 sm:p-6 text-center text-xs text-gray-400">
-                Ingredients formulation details are maintained according to standard classical reference.
+                No botanical ingredients are currently registered in the Supabase database for this formulation.
               </div>
             )}
           </div>
@@ -705,7 +703,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
       {/* Footer - Extra Bottom Clearance for Mobile Gestures / Tab Bars */}
       <footer className="border-t border-[#23493C]/60 py-5 sm:py-6 pb-8 sm:pb-6 bg-[#061810] text-center text-xs text-gray-400 space-y-1 px-4">
         <p className="text-emerald-300 font-serif font-semibold">
-          AYURGUIDE &bull; Ayurvedic Clinical Pharmacopoeia
+          AYUR INDEX &bull; Ayurvedic Clinical Pharmacopoeia
         </p>
         <p className="text-[10px] sm:text-[11px] text-gray-500">
           Standardized Classical Formulations &bull; Authentic Clinical Reference Portal
@@ -728,7 +726,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                 </div>
                 <div>
                   <h3 className="font-serif font-bold text-sm sm:text-base text-gray-100 leading-tight">
-                    OPEN IN AYURGUIDE APP
+                    OPEN IN AYUR INDEX APP
                   </h3>
                   <p className="text-[10px] text-emerald-400/90 font-mono">
                     com.aistudio.ayurguide.kmpz
@@ -767,7 +765,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                   </div>
                 )}
                 <p className="text-xs text-gray-300 mt-2.5 leading-relaxed max-w-xs">
-                  Scan this QR code with your Android phone's camera or QR reader to launch this formulation in AyurGuide.
+                  Scan this QR code with your Android phone's camera or QR reader to launch this formulation in Ayur Index.
                 </p>
               </div>
 

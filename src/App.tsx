@@ -191,6 +191,14 @@ export const App: React.FC = () => {
     SupabaseService.fetchAuditLogs().then(setAuditLogs);
   };
 
+  const handleBulkDeleteProducts = async (ids: (number | string)[]) => {
+    if (!ids || ids.length === 0) return;
+    const strIds = ids.map(String);
+    setProducts(prev => prev.filter(p => !strIds.includes(String(p.id))));
+    await SupabaseService.deleteProducts(ids);
+    SupabaseService.fetchAuditLogs().then(setAuditLogs);
+  };
+
   // ==========================================
   // BOTANICAL INGREDIENTS CRUD HANDLERS
   // ==========================================
@@ -473,6 +481,7 @@ export const App: React.FC = () => {
             onDeleteProduct={handleDeleteProduct}
             onViewMonograph={(p) => setMonographProduct(p)}
             onShareProduct={(p) => setSharingProduct(p)}
+            onBulkDelete={handleBulkDeleteProducts}
             onReload={handleReloadProducts}
             isReloading={reloadingSection === 'catalogue'}
           />
@@ -534,7 +543,7 @@ export const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="no-print border-t border-[#23493C]/60 py-4 bg-[#061810] text-center text-xs text-emerald-400/60">
-        <p>AyurGuide Clinical Administration Portal &bull; Central Supabase Database &bull; Realtime CRUD Engine</p>
+        <p>Ayur Index Clinical Administration Portal &bull; Central Supabase Database &bull; Realtime CRUD Engine</p>
       </footer>
 
       {/* Modals with Lazy Loading */}

@@ -52,7 +52,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <Shield className="w-8 h-8" />
         </div>
         <h1 className="font-serif text-2xl font-bold tracking-tight text-gray-100">
-          AyurGuide Administration
+          Ayur Index Administration
         </h1>
         <p className="mt-1 text-xs text-emerald-400/90 font-mono tracking-wide uppercase">
           Sitaram Ayurveda &bull; Central Clinical Portal

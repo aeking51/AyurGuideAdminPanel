@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { 
   FileText, 
   Edit3, 
@@ -6,12 +6,20 @@ import {
   AlertCircle,
   Sparkles,
   Camera,
-  QrCode
+  QrCode,
+  Check,
+  ChevronDown
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 
 interface ProductTableProps {
   products: Product[];
+  categories?: Category[];
+  selectedProductIds?: Set<string | number>;
+  onToggleSelect?: (productId: string | number, isShiftKey?: boolean, index?: number) => void;
+  onToggleSelectAll?: () => void;
+  onSelectGroup?: (type: 'all' | 'active' | 'inactive' | 'invert' | 'none') => void;
+  onSelectCategoryGroup?: (categoryIdOrName: string | number) => void;
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
@@ -21,12 +29,32 @@ interface ProductTableProps {
 
 export const ProductTable: React.FC<ProductTableProps> = ({
   products,
+  categories = [],
+  selectedProductIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
+  onSelectGroup,
+  onSelectCategoryGroup,
   onViewMonograph,
   onEditProduct,
   onDeleteProduct,
   onShareProduct,
   onOpenNewProduct,
 }) => {
+  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
+  const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
+
+  const selectedCount = selectedProductIds.size;
+  const totalCount = products.length;
+  const isAllSelected = totalCount > 0 && selectedCount === totalCount;
+  const isSomeSelected = selectedCount > 0 && selectedCount < totalCount;
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = isSomeSelected;
+    }
+  }, [isSomeSelected]);
+
   if (products.length === 0) {
     return (
       <div className="bg-[#0D281C]/70 rounded-2xl border border-[#23493C] p-12 text-center">
@@ -38,7 +66,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
         {onOpenNewProduct && (
           <button
             onClick={onOpenNewProduct}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition cursor-pointer"
           >
             <span>+ Add First Medicine</span>
           </button>
@@ -53,7 +81,136 @@ export const ProductTable: React.FC<ProductTableProps> = ({
         <table className="w-full text-left text-sm text-gray-300">
           <thead className="bg-[#081C13]/90 text-[11px] uppercase font-semibold text-emerald-300/80 tracking-wider border-b border-[#23493C]">
             <tr>
-              <th className="py-3 px-4">Medicine & Sanskrit</th>
+              
+              {/* Select All Checkbox Column */}
+              <th className="py-3 px-3 w-12 text-center">
+                <div className="relative inline-flex items-center justify-center">
+                  <input
+                    ref={selectAllCheckboxRef}
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={() => onToggleSelectAll && onToggleSelectAll()}
+                    className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
+                    title={isAllSelected ? "Deselect All" : "Select All Filtered Formulations"}
+                  />
+                  {onSelectGroup && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsGroupMenuOpen(!isGroupMenuOpen);
+                      }}
+                      className="ml-1 p-0.5 rounded text-gray-400 hover:text-emerald-300 transition cursor-pointer"
+                      title="Group Selection Options"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  )}
+
+                  {/* Group Selection Dropdown */}
+                  {isGroupMenuOpen && onSelectGroup && (
+                    <div 
+                      className="absolute left-0 top-full mt-1.5 w-56 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 text-left normal-case tracking-normal divide-y divide-[#23493C]/40"
+                      onMouseLeave={() => setIsGroupMenuOpen(false)}
+                    >
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('all');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span className="font-semibold">Select All</span>
+                          <span className="text-[10px] text-gray-400 font-mono">({totalCount})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('active');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-emerald-300 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span>Select Active Only</span>
+                          <span className="text-[10px] text-emerald-400/80 font-mono">
+                            ({products.filter(p => p.status === 'Active').length})
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('inactive');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-amber-300 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span>Select Inactive / Draft</span>
+                          <span className="text-[10px] text-amber-400/80 font-mono">
+                            ({products.filter(p => p.status !== 'Active').length})
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Select by Category if provided */}
+                      {categories.length > 0 && onSelectCategoryGroup && (
+                        <div className="py-1">
+                          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                            Select by Category
+                          </div>
+                          {categories.map(cat => {
+                            const count = products.filter(p => 
+                              String(p.categoryId) === String(cat.id) || 
+                              (p.categoryName && p.categoryName.toLowerCase() === cat.name.toLowerCase())
+                            ).length;
+                            if (count === 0) return null;
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => {
+                                  onSelectCategoryGroup(cat.id);
+                                  setIsGroupMenuOpen(false);
+                                }}
+                                className="w-full px-3 py-1.5 text-xs text-gray-300 hover:bg-[#133829] flex items-center justify-between truncate"
+                              >
+                                <span className="truncate">{cat.name}</span>
+                                <span className="text-[10px] font-mono text-gray-400 ml-1.5 shrink-0">({count})</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('invert');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-teal-300 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span>Invert Selection</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('none');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-red-300 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span>Clear Selection</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </th>
+
+              <th className="py-3 px-3">Medicine & Sanskrit</th>
               <th className="py-3 px-3">Category</th>
               <th className="py-3 px-3">Dosha & Clinical Target</th>
               <th className="py-3 px-3">Packaging</th>
@@ -62,12 +219,37 @@ export const ProductTable: React.FC<ProductTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#23493C]/50">
-            {products.map((product) => {
+            {products.map((product, index) => {
+              const isSelected = selectedProductIds.has(product.id);
+
               return (
-                <tr key={product.id} className="hover:bg-[#133829]/50 transition duration-150 group">
+                <tr 
+                  key={product.id} 
+                  className={`transition duration-150 group ${
+                    isSelected 
+                      ? 'bg-[#133829]/70 border-l-2 border-emerald-500' 
+                      : 'hover:bg-[#133829]/40'
+                  }`}
+                >
                   
+                  {/* Row Checkbox Column */}
+                  <td className="py-3 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const nativeEvent = e.nativeEvent as MouseEvent;
+                        if (onToggleSelect) {
+                          onToggleSelect(product.id, nativeEvent.shiftKey, index);
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
+                      title="Select formulation (Shift+Click to select group)"
+                    />
+                  </td>
+
                   {/* Medicine Identity */}
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-3">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl overflow-hidden bg-emerald-950 border border-emerald-800/80 shrink-0 relative">
                         <img 
@@ -98,7 +280,10 @@ export const ProductTable: React.FC<ProductTableProps> = ({
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-serif font-bold text-gray-100 text-sm hover:text-emerald-300 cursor-pointer" onClick={() => onViewMonograph(product)}>
+                          <span 
+                            className="font-serif font-bold text-gray-100 text-sm hover:text-emerald-300 cursor-pointer" 
+                            onClick={() => onViewMonograph(product)}
+                          >
                             {product.name}
                           </span>
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
@@ -140,61 +325,76 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Packaging */}
+                  {/* Packings */}
                   <td className="py-3 px-3">
-                    <div className="flex flex-wrap gap-1 max-w-[140px]">
-                      {product.packings && product.packings.map((pkg, i) => (
-                        <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-[#081C13] text-gray-300 border border-[#23493C]">
-                          {pkg}
-                        </span>
-                      ))}
+                    <div className="flex flex-wrap gap-1">
+                      {product.packings && product.packings.length > 0 ? (
+                        product.packings.map((pkg, i) => (
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[#081C13] text-gray-300 border border-[#23493C]">
+                            {pkg}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-500">—</span>
+                      )}
                     </div>
                   </td>
 
                   {/* Status */}
                   <td className="py-3 px-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                       product.status === 'Active'
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-gray-800 text-gray-400 border border-gray-700'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        : product.status === 'Draft'
+                        ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                        : 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
                     }`}>
                       {product.status || 'Active'}
                     </span>
                   </td>
 
                   {/* Actions */}
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
+                  <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      
+                      {/* Share QR Dialog Trigger */}
                       {onShareProduct && (
                         <button
                           onClick={() => onShareProduct(product)}
-                          className="p-1.5 rounded-lg bg-[#081C13] text-teal-300 hover:text-white hover:bg-teal-900/60 border border-teal-800/60 transition cursor-pointer"
-                          title="QR / Share Universal Link"
+                          className="p-1.5 rounded-lg text-emerald-400 hover:text-white hover:bg-emerald-900/60 transition cursor-pointer"
+                          title="Generate QR code and sharing card"
                         >
-                          <QrCode className="w-3.5 h-3.5" />
+                          <QrCode className="w-4 h-4" />
                         </button>
                       )}
+
+                      {/* Clinical Monograph Button */}
                       <button
                         onClick={() => onViewMonograph(product)}
-                        className="p-1.5 rounded-lg bg-[#081C13] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/60 border border-[#23493C] transition"
-                        title="Printable Monograph & Certificate"
+                        className="p-1.5 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+                        title="View Full Pharmacopoeial Monograph"
                       >
-                        <FileText className="w-3.5 h-3.5" />
+                        <FileText className="w-4 h-4" />
                       </button>
+
+                      {/* Edit Button */}
                       <button
                         onClick={() => onEditProduct(product)}
-                        className="p-1.5 rounded-lg bg-[#081C13] text-gray-300 hover:text-white hover:bg-emerald-900/60 border border-[#23493C] transition"
-                        title="Edit Medicine Details"
+                        className="p-1.5 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+                        title="Edit Formulation"
                       >
-                        <Edit3 className="w-3.5 h-3.5" />
+                        <Edit3 className="w-4 h-4" />
                       </button>
+
+                      {/* Delete Single Button */}
                       <button
                         onClick={() => onDeleteProduct(product)}
-                        className="p-1.5 rounded-lg bg-[#081C13] text-red-400 hover:text-red-300 hover:bg-red-950/60 border border-[#23493C] transition"
-                        title="Delete Product"
+                        className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/40 transition cursor-pointer"
+                        title="Delete Formulation"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
+
                     </div>
                   </td>
 

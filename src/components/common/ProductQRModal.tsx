@@ -77,8 +77,8 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${product.name} | AyurGuide`,
-          text: `${product.name} (${product.code})\nView authentic Ayurvedic medicine details in AyurGuide:`,
+          title: `${product.name} | Ayur Index`,
+          text: `${product.name} (${product.code})\nView authentic Ayurvedic medicine details in Ayur Index:`,
           url: shareQrLink,
         });
         setShareSuccess(true);
@@ -97,11 +97,11 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
     setIsGeneratingDownload(true);
     try {
       let downloadUrl = qrDataUrl;
-      let filename = `AyurGuide-QR-${publicSlug}.png`;
+      let filename = `AyurIndex-QR-${publicSlug}.png`;
 
       if (downloadMode === 'card') {
         downloadUrl = await generatePrintableQrCard(shareQrLink, product.name, product.code);
-        filename = `AyurGuide-Printable-Card-${publicSlug}.png`;
+        filename = `AyurIndex-Printable-Card-${publicSlug}.png`;
       } else {
         downloadUrl = await generateQrDataUrl(shareQrLink, 800);
       }
@@ -172,7 +172,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
                     className="w-40 h-40 sm:w-44 sm:h-44 object-contain"
                   />
                   <div className="text-center mt-1 text-[9px] text-gray-700 font-bold uppercase tracking-wider">
-                    AYURGUIDE CANONICAL QR
+                    AYUR INDEX CANONICAL QR
                   </div>
                 </div>
               ) : (
@@ -184,7 +184,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
 
               <div className="flex items-center gap-1.5 mt-2.5 text-xs text-gray-300">
                 <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[11px] font-medium">Scan to view in AyurGuide</span>
+                <span className="text-[11px] font-medium">Scan to view in Ayur Index</span>
               </div>
 
               <a 
@@ -293,7 +293,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
                   onClick={handlePrint}
                   disabled={!qrDataUrl}
                   className="px-2.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-md transition disabled:opacity-50 cursor-pointer"
-                  title="Print QR Flyer with AyurGuide Branding"
+                  title="Print QR Flyer with Ayur Index Branding"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Card</span>
@@ -334,7 +334,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
               <div className="bg-[#05140D]/70 border border-emerald-900/40 rounded-lg p-2.5 flex items-start gap-2 text-[10px] text-gray-400 leading-normal">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                 <p>
-                  Use <strong>Print Card</strong> to generate crisp product shelf tags or consultation handouts with official AyurGuide branding.
+                  Use <strong>Print Card</strong> to generate crisp product shelf tags or consultation handouts with official Ayur Index branding.
                 </p>
               </div>
 
@@ -359,7 +359,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
             </div>
             <div className="text-left">
               <div className="font-serif font-bold text-xl tracking-wider text-[#065F46] leading-none">
-                AYURGUIDE
+                AYUR INDEX
               </div>
               <div className="text-[9px] uppercase tracking-widest text-[#047857] font-semibold font-sans mt-0.5">
                 Ayurvedic Clinical Pharmacopoeia
@@ -408,10 +408,10 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
         {/* Clear Call-To-Action */}
         <div className="space-y-1.5 my-1">
           <div className="text-lg font-serif font-bold text-[#065F46] tracking-wide uppercase">
-            Scan to view in AyurGuide
+            Scan to view in Ayur Index
           </div>
           <p className="text-xs text-gray-700 max-w-xs mx-auto leading-relaxed font-sans">
-            Scan this QR code with your smartphone camera or the AyurGuide app to access complete clinical formulation monographs, botanical ingredients, dosage, and classical references.
+            Scan this QR code with your smartphone camera or the Ayur Index app to access complete clinical formulation monographs, botanical ingredients, dosage, and classical references.
           </p>
         </div>
 
@@ -425,7 +425,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
         {/* Bottom Verification Seal */}
         <div className="mt-3 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-wider text-[#065F46] font-semibold">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Official AyurGuide Standardized Formulary Record</span>
+          <span>Official Ayur Index Standardized Formulary Record</span>
         </div>
 
       </div>

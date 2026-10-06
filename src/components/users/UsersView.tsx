@@ -327,7 +327,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="physician@ayurguide.org"
+                  placeholder="physician@ayurindex.org"
                   className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
                 />
               </div>
