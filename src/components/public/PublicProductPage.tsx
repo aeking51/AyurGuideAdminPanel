@@ -22,11 +22,15 @@ import {
   CheckCircle2,
   Calendar,
   ExternalLink,
-  Compass
+  Compass,
+  X,
+  Copy,
+  Check,
+  QrCode
 } from 'lucide-react';
 import { Product } from '../../types';
 import { SupabaseService } from '../../services/supabase';
-import { ensureProductShareFields } from '../../utils/shareUtils';
+import { ensureProductShareFields, generateQrDataUrl } from '../../utils/shareUtils';
 
 interface PublicProductPageProps {
   slug: string;
@@ -40,12 +44,16 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [isAppModalOpen, setIsAppModalOpen] = useState<boolean>(false);
+  const [appQrUrl, setAppQrUrl] = useState<string>('');
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
     setError(null);
     setSelectedImageIndex(0);
+    setAppQrUrl('');
 
     // Fetch live product record from Supabase by canonical slug or code
     SupabaseService.fetchProductBySlug(slug)
@@ -56,6 +64,12 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             setError('Medicine Not Available');
           } else {
             setProduct(found);
+            const { shareQrLink } = ensureProductShareFields(found);
+            generateQrDataUrl(shareQrLink, 320)
+              .then(url => {
+                if (isMounted) setAppQrUrl(url);
+              })
+              .catch(err => console.error('Failed to generate App QR:', err));
           }
         } else {
           setError('Medicine Not Found');
@@ -84,9 +98,43 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
 
   const handleShowInApp = () => {
     if (!product) return;
+    const { shareQrLink, publicSlug } = ensureProductShareFields(product);
+    const cleanSlug = encodeURIComponent(publicSlug.trim().toLowerCase());
+    const packageName = 'com.aistudio.ayurguide.kmpz';
+
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isAndroid = /android/i.test(userAgent);
+
+    if (isAndroid) {
+      // 1. Android Chrome Intent URI (Direct Package Intent)
+      // This tells Android OS to directly query Package Manager for com.aistudio.ayurguide.kmpz and launch it
+      const intentUrl = `intent://ayur-guide-admin-panel.vercel.app/product/${cleanSlug}#Intent;scheme=https;package=${packageName};S.browser_fallback_url=${encodeURIComponent(shareQrLink)};end`;
+      
+      // Attempt to launch
+      window.location.href = intentUrl;
+
+      // In case the app is not installed or user needs options, open modal after a short delay:
+      setTimeout(() => {
+        setIsAppModalOpen(true);
+      }, 1500);
+    } else {
+      // 2. Desktop / Laptop / iOS:
+      // Open the App modal with QR code to scan with their Android phone:
+      setIsAppModalOpen(true);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!product) return;
     const { shareQrLink } = ensureProductShareFields(product);
-    // Invoke the Android App Link via canonical URL
-    window.location.href = shareQrLink;
+    try {
+      await navigator.clipboard.writeText(shareQrLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   // Loading State
@@ -663,6 +711,115 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
           Standardized Classical Formulations &bull; Authentic Clinical Reference Portal
         </p>
       </footer>
+
+      {/* App Launch & Connection Modal */}
+      {isAppModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+          <div 
+            className="bg-[#081C13] border border-[#23493C] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col my-auto"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#0D281C] to-[#0A2217] px-5 py-3.5 border-b border-[#23493C] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-700/60 flex items-center justify-center text-emerald-400">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-sm sm:text-base text-gray-100 leading-tight">
+                    OPEN IN AYURGUIDE APP
+                  </h3>
+                  <p className="text-[10px] text-emerald-400/90 font-mono">
+                    com.aistudio.ayurguide.kmpz
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAppModalOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 text-center">
+              
+              {/* QR Code Canvas */}
+              <div className="flex flex-col items-center justify-center p-3.5 bg-gradient-to-b from-[#0D281C] to-[#071710] rounded-xl border border-emerald-800/40">
+                {appQrUrl ? (
+                  <div className="relative p-2.5 bg-white rounded-xl shadow-lg border-2 border-emerald-900/30">
+                    <img 
+                      src={appQrUrl} 
+                      alt={`Scan to open ${product.name} in App`}
+                      className="w-40 h-40 object-contain mx-auto"
+                    />
+                    <div className="text-center mt-1 text-[9px] text-gray-700 font-bold uppercase tracking-wider">
+                      SCAN WITH PHONE CAMERA
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-40 h-40 flex flex-col items-center justify-center text-gray-400">
+                    <div className="w-6 h-6 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mb-2" />
+                    <span className="text-[11px] font-mono">Generating App Link...</span>
+                  </div>
+                )}
+                <p className="text-xs text-gray-300 mt-2.5 leading-relaxed max-w-xs">
+                  Scan this QR code with your Android phone's camera or QR reader to launch this formulation in AyurGuide.
+                </p>
+              </div>
+
+              {/* Direct Launch Buttons for Mobile Browsers */}
+              <div className="space-y-2">
+                <a
+                  href={`intent://ayur-guide-admin-panel.vercel.app/product/${encodeURIComponent((product.publicSlug || product.code || '').toLowerCase())}#Intent;scheme=https;package=com.aistudio.ayurguide.kmpz;S.browser_fallback_url=${encodeURIComponent(ensureProductShareFields(product).shareQrLink)};end`}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>Launch Android App Directly</span>
+                </a>
+
+                <a
+                  href={`ayurguide://product/${encodeURIComponent((product.publicSlug || product.code || '').toLowerCase())}`}
+                  className="w-full py-2 px-3 rounded-xl bg-[#0D281C] hover:bg-[#123626] text-emerald-300 border border-emerald-700/60 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Try Custom Deep Link (ayurguide://)</span>
+                </a>
+              </div>
+
+              {/* Copy Universal URL */}
+              <div className="pt-2 border-t border-[#23493C]/60 text-left space-y-1.5">
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">
+                  Universal Verified App Link:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={ensureProductShareFields(product).shareQrLink} 
+                    className="flex-1 bg-[#05140D] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-[11px] font-mono text-emerald-300 focus:outline-none selection:bg-emerald-600 selection:text-white select-all truncate"
+                  />
+                  <button
+                    onClick={handleCopyShareLink}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 border border-emerald-700/60 text-xs font-semibold flex items-center gap-1 transition cursor-pointer shrink-0"
+                  >
+                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-[#05140D]/60 rounded-lg p-2.5 text-[10px] text-gray-400 text-left leading-relaxed">
+                <strong>Tip for Android Developers:</strong> Android App Links verification is handled automatically by Digital Asset Links (<span className="font-mono text-emerald-400">/.well-known/assetlinks.json</span>) when the app is installed with autoVerify enabled.
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
