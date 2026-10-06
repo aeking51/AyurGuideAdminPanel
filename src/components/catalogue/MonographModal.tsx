@@ -1,13 +1,15 @@
 import React from 'react';
 import { X, Printer, Download, Sparkles, QrCode, Camera } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, BotanicalIngredient } from '../../types';
+import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
 
 interface MonographModalProps {
   product: Product | null;
   onClose: () => void;
+  availableBotanicals?: BotanicalIngredient[];
 }
 
-export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose }) => {
+export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose, availableBotanicals = [] }) => {
   if (!product) return null;
 
   const handlePrint = () => {
@@ -171,15 +173,28 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {product.ingredients?.map((item, idx) => {
-                  const name = typeof item === 'string' ? item : item.name;
-                  const botanical = typeof item === 'object' ? item.botanicalName : '—';
-                  const part = typeof item === 'object' ? item.partUsed : '—';
-                  const role = typeof item === 'object' ? item.classicalRole : 'Classical active';
+                  const rawName = typeof item === 'string' ? item : (item.name || '');
+                  const resolved = resolveHerbDetails(rawName, availableBotanicals);
+                  
+                  const displayName = typeof item === 'object' && item.name ? item.name : resolved.name;
+                  const botanical = (typeof item === 'object' && item.botanicalName) ? item.botanicalName : (resolved.botanicalName || '—');
+                  const part = (typeof item === 'object' && item.partUsed) ? item.partUsed : (resolved.partUsed || 'Standardized Part');
+                  const role = (typeof item === 'object' && (item.classicalRole || item.therapeuticAction)) 
+                    ? (item.classicalRole || item.therapeuticAction) 
+                    : (resolved.therapeuticAction || 'Classical active');
+
                   return (
                     <tr key={idx}>
-                      <td className="py-2.5 font-bold text-[#0F382C]">{name}</td>
-                      <td className="py-2.5 italic text-gray-600">{botanical}</td>
-                      <td className="py-2.5 text-gray-600">{part}</td>
+                      <td className="py-2.5 font-bold text-[#0F382C]">
+                        {displayName}
+                        {resolved.sanskritName && (
+                          <span className="block text-[10px] text-amber-800/80 font-serif font-normal italic">
+                            {resolved.sanskritName}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 italic text-emerald-800 font-medium">{botanical}</td>
+                      <td className="py-2.5 text-gray-700">{part}</td>
                       <td className="py-2.5 text-gray-700">{role}</td>
                     </tr>
                   );

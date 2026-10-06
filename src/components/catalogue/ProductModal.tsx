@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Sparkles, Check, Camera, Image as ImageIcon, Star, Leaf, BookOpen } from 'lucide-react';
 import { Product, Category, IngredientItem, BotanicalIngredient } from '../../types';
+import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -76,7 +77,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       
       const parsedIngredients: IngredientItem[] = (product.ingredients || []).map(item => {
         if (typeof item === 'string') {
-          return { name: item };
+          const resolved = resolveHerbDetails(item, availableIngredients);
+          return {
+            name: resolved.name,
+            botanicalName: resolved.botanicalName,
+            sanskritName: resolved.sanskritName,
+            partUsed: resolved.partUsed,
+            classicalRole: resolved.therapeuticAction
+          };
         }
         return item;
       });

@@ -196,11 +196,14 @@ export const App: React.FC = () => {
   // ==========================================
   const handleSaveIngredient = async (item: Partial<BotanicalIngredient> & { name: string }) => {
     try {
-      if (item.id) {
-        const updated = await SupabaseService.updateBotanicalIngredient(item.id, item);
+      const isExistingDbId = item.id && !String(item.id).startsWith('derived-');
+      if (isExistingDbId) {
+        const updated = await SupabaseService.updateBotanicalIngredient(item.id!, item);
         setBotanicalIngredients(prev => prev.map(x => String(x.id) === String(updated.id) ? updated : x));
       } else {
-        const created = await SupabaseService.createBotanicalIngredient(item);
+        const cleanPayload = { ...item };
+        delete cleanPayload.id;
+        const created = await SupabaseService.createBotanicalIngredient(cleanPayload);
         setBotanicalIngredients(prev => [created, ...prev]);
       }
       SupabaseService.fetchAuditLogs().then(setAuditLogs);

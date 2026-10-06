@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Sparkles, 
   Plus, 
@@ -10,13 +10,18 @@ import {
   BookOpen, 
   Link2, 
   ExternalLink,
-  RefreshCw 
+  RefreshCw,
+  Database,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
-import { BotanicalIngredient } from '../../types';
+import { BotanicalIngredient, Product } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
+import { buildUnifiedBotanicalDirectory } from '../../utils/dravyagunaDirectory';
 
 interface IngredientsViewProps {
   ingredients: BotanicalIngredient[];
+  products?: Product[];
   onSaveIngredient: (item: Partial<BotanicalIngredient> & { name: string }) => void;
   onDeleteIngredient: (id: number | string) => void;
   onReload?: () => void;
@@ -25,15 +30,19 @@ interface IngredientsViewProps {
 
 export const IngredientsView: React.FC<IngredientsViewProps> = ({
   ingredients,
+  products = [],
   onSaveIngredient,
   onDeleteIngredient,
   onReload,
   isReloading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | 'registered' | 'derived'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BotanicalIngredient | null>(null);
   const [deletingItem, setDeletingItem] = useState<BotanicalIngredient | null>(null);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
 
   // Form State
   const [name, setName] = useState('');
@@ -43,18 +52,44 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
   const [therapeuticAction, setTherapeuticAction] = useState('');
   const [referenceLink, setReferenceLink] = useState('');
 
-  const filtered = ingredients.filter(item => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(q) ||
-      (item.botanicalName || '').toLowerCase().includes(q) ||
-      (item.sanskritName || '').toLowerCase().includes(q) ||
-      (item.therapeuticAction || '').toLowerCase().includes(q) ||
-      (item.partUsed || '').toLowerCase().includes(q) ||
-      (item.referenceLink || '').toLowerCase().includes(q)
-    );
-  });
+  // 1. Build unified directory merging registered public.ingredients with all medicine formularies
+  const unifiedIngredients = useMemo(() => {
+    return buildUnifiedBotanicalDirectory(ingredients, products);
+  }, [ingredients, products]);
+
+  // Set of registered herb names for quick lookup
+  const registeredNameSet = useMemo(() => {
+    return new Set(ingredients.map(i => (i.name || '').trim().toLowerCase()));
+  }, [ingredients]);
+
+  // Total formulary ingredient references
+  const totalFormularyOccurrences = useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.ingredients?.length || 0), 0);
+  }, [products]);
+
+  // Filter based on filterMode and searchQuery
+  const filtered = useMemo(() => {
+    return unifiedIngredients.filter(item => {
+      const isRegistered = registeredNameSet.has((item.name || '').trim().toLowerCase());
+      if (filterMode === 'registered' && !isRegistered) return false;
+      if (filterMode === 'derived' && isRegistered) return false;
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.name.toLowerCase().includes(q) ||
+        (item.botanicalName || '').toLowerCase().includes(q) ||
+        (item.sanskritName || '').toLowerCase().includes(q) ||
+        (item.therapeuticAction || '').toLowerCase().includes(q) ||
+        (item.partUsed || '').toLowerCase().includes(q) ||
+        (item.referenceLink || '').toLowerCase().includes(q)
+      );
+    });
+  }, [unifiedIngredients, registeredNameSet, filterMode, searchQuery]);
+
+  const unsyncedCount = useMemo(() => {
+    return unifiedIngredients.filter(u => !registeredNameSet.has((u.name || '').trim().toLowerCase())).length;
+  }, [unifiedIngredients, registeredNameSet]);
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -86,7 +121,9 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
     }
 
     onSaveIngredient({
-      id: editingItem?.id,
+      id: typeof editingItem?.id === 'number' || (typeof editingItem?.id === 'string' && !editingItem.id.startsWith('derived-')) 
+        ? editingItem.id 
+        : undefined,
       name: name.trim(),
       botanicalName: botanicalName.trim(),
       sanskritName: sanskritName.trim(),
@@ -96,6 +133,33 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
     });
 
     setIsModalOpen(false);
+  };
+
+  // Sync / bulk-register all derived ingredients into public.ingredients in Supabase
+  const handleSyncAllToSupabase = async () => {
+    if (unsyncedCount === 0) return;
+    setIsSyncingAll(true);
+    setSyncSuccessMsg('');
+
+    try {
+      const itemsToSync = unifiedIngredients.filter(u => !registeredNameSet.has((u.name || '').trim().toLowerCase()));
+      for (const item of itemsToSync) {
+        await onSaveIngredient({
+          name: item.name,
+          botanicalName: item.botanicalName,
+          sanskritName: item.sanskritName,
+          partUsed: item.partUsed,
+          therapeuticAction: item.therapeuticAction,
+          referenceLink: item.referenceLink
+        });
+      }
+      setSyncSuccessMsg(`Successfully synchronized all ${itemsToSync.length} herbs into the central database!`);
+      setTimeout(() => setSyncSuccessMsg(''), 5000);
+    } catch (err) {
+      console.error('Failed to sync ingredients:', err);
+    } finally {
+      setIsSyncingAll(false);
+    }
   };
 
   return (
@@ -108,12 +172,29 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             <Sparkles className="w-5 h-5 text-emerald-400" />
             <h2 className="font-serif font-bold text-xl text-gray-100">Medicinal Herbs & Botanical Directory</h2>
           </div>
-          <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-            Central repository of standardized Ayurvedic herbs, medicinal plants, and ingredients synchronized with Supabase.
+          <p className="text-xs text-gray-400 mt-1 max-w-2xl leading-relaxed">
+            Central repository of standardized Ayurvedic herbs, medicinal plants, and active ingredients indexed across all {products.length} medicines and synchronized with Supabase.
           </p>
+          <div className="flex items-center gap-3 mt-2 text-xs font-mono text-emerald-400/90">
+            <span>{unifiedIngredients.length} Unique Botanicals</span>
+            <span>&bull;</span>
+            <span>{totalFormularyOccurrences} Formulary References</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {unsyncedCount > 0 && (
+            <button
+              onClick={handleSyncAllToSupabase}
+              disabled={isSyncingAll}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 border border-amber-700/70 text-amber-300 text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50"
+              title="Save all uncatalogued medicine ingredients permanently into Supabase"
+            >
+              <Database className={`w-3.5 h-3.5 ${isSyncingAll ? 'animate-spin' : ''}`} />
+              <span>{isSyncingAll ? 'Syncing...' : `Sync ${unsyncedCount} to Database`}</span>
+            </button>
+          )}
+
           {onReload && (
             <button
               onClick={onReload}
@@ -126,9 +207,6 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             </button>
           )}
 
-          <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
-            {ingredients.length} Registered Herbs
-          </span>
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition cursor-pointer"
@@ -139,21 +217,73 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
         </div>
       </div>
 
-      {/* Search Toolbar */}
-      <div className="bg-[#0D281C]/90 rounded-2xl border border-[#23493C] p-4 shadow-lg flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      {syncSuccessMsg && (
+        <div className="bg-emerald-950/80 border border-emerald-700 rounded-xl p-3 flex items-center gap-2 text-xs text-emerald-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{syncSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* Filter Tabs & Search Toolbar */}
+      <div className="bg-[#0D281C]/90 rounded-2xl border border-[#23493C] p-4 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        {/* Search */}
+        <div className="relative w-full md:max-w-md">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by common name, Latin binomial, Sanskrit, or URL..."
+            placeholder="Search by common name, Latin binomial, Sanskrit, or therapeutic action..."
             className="w-full bg-[#081C13] border border-[#23493C] rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
-        <span className="text-xs text-gray-400 font-mono">
-          Showing {filtered.length} of {ingredients.length} botanicals
-        </span>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+              filterMode === 'all'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-[#081C13] text-gray-400 hover:text-white border border-[#23493C]'
+            }`}
+          >
+            All Botanicals ({unifiedIngredients.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('registered')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+              filterMode === 'registered'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-[#081C13] text-gray-400 hover:text-white border border-[#23493C]'
+            }`}
+          >
+            Registered in Database ({ingredients.length})
+          </button>
+
+          {unsyncedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilterMode('derived')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap ${
+                filterMode === 'derived'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-[#081C13] text-amber-300 hover:text-white border border-amber-900/60'
+              }`}
+            >
+              From Formularies ({unsyncedCount})
+            </button>
+          )}
+
+          <span className="text-xs text-gray-400 font-mono pl-2 hidden lg:inline">
+            Showing {filtered.length} of {unifiedIngredients.length} botanicals
+          </span>
+        </div>
+
       </div>
 
       {/* Table or Empty State */}
@@ -178,217 +308,241 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
         </div>
       ) : (
         <div className="bg-[#0D281C]/90 rounded-2xl border border-[#23493C] overflow-hidden shadow-xl">
-          <table className="w-full text-left text-sm text-gray-300">
-            <thead className="bg-[#081C13]/90 text-[11px] uppercase font-semibold text-emerald-300/80 tracking-wider border-b border-[#23493C]">
-              <tr>
-                <th className="py-3 px-4">Herb Common Name</th>
-                <th className="py-3 px-3">Botanical Binomial</th>
-                <th className="py-3 px-3">Sanskrit Name</th>
-                <th className="py-3 px-3">Part Used</th>
-                <th className="py-3 px-3">Therapeutic Action</th>
-                <th className="py-3 px-3">Reference Link</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#23493C]/50">
-              {filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-[#133829]/40 transition group">
-                  
-                  {/* Herb Name */}
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-serif font-bold text-gray-100 text-sm">{item.name}</span>
-                    </div>
-                  </td>
-
-                  {/* Botanical Binomial */}
-                  <td className="py-3 px-3 font-serif italic text-emerald-300 text-xs">
-                    {item.botanicalName || '—'}
-                  </td>
-
-                  {/* Sanskrit Name */}
-                  <td className="py-3 px-3 font-serif text-amber-200 text-xs">
-                    {item.sanskritName || '—'}
-                  </td>
-
-                  {/* Part Used */}
-                  <td className="py-3 px-3">
-                    <span className="inline-block px-2 py-0.5 rounded bg-[#081C13] border border-[#23493C] text-[11px] text-gray-300">
-                      {item.partUsed || 'Whole Plant'}
-                    </span>
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-3 px-3 text-xs text-gray-300 max-w-xs truncate" title={item.therapeuticAction}>
-                    {item.therapeuticAction || '—'}
-                  </td>
-
-                  {/* Reference Link */}
-                  <td className="py-3 px-3">
-                    {item.referenceLink ? (
-                      <a
-                        href={item.referenceLink.startsWith('http') ? item.referenceLink : `https://${item.referenceLink}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#081C13] border border-[#23493C] text-[11px] text-emerald-400 hover:text-emerald-300 hover:border-emerald-600 transition max-w-[160px] truncate"
-                        title={item.referenceLink}
-                      >
-                        <ExternalLink className="w-3 h-3 shrink-0 text-emerald-400" />
-                        <span className="truncate">
-                          {item.referenceLink.replace(/^https?:\/\/(www\.)?/, '')}
-                        </span>
-                      </a>
-                    ) : (
-                      <span className="text-gray-600 text-xs">—</span>
-                    )}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenEdit(item)}
-                        className="p-1 rounded text-emerald-400 hover:text-emerald-300 transition"
-                        title="Edit Ingredient"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeletingItem(item)}
-                        className="p-1 rounded text-red-400 hover:text-red-300 transition"
-                        title="Delete Ingredient"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-gray-300">
+              <thead className="bg-[#081C13]/90 text-[11px] uppercase font-semibold text-emerald-300/80 tracking-wider border-b border-[#23493C]">
+                <tr>
+                  <th className="py-3 px-4">Herb Common Name</th>
+                  <th className="py-3 px-3">Botanical Binomial</th>
+                  <th className="py-3 px-3">Sanskrit Name</th>
+                  <th className="py-3 px-3">Part Used</th>
+                  <th className="py-3 px-3">Therapeutic Action</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3">Reference Link</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#23493C]/50">
+                {filtered.map((item) => {
+                  const isRegistered = registeredNameSet.has((item.name || '').trim().toLowerCase());
+
+                  return (
+                    <tr key={item.id} className="hover:bg-[#133829]/40 transition group">
+                      
+                      {/* Herb Name */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-serif font-bold text-gray-100 text-sm">{item.name}</span>
+                        </div>
+                      </td>
+
+                      {/* Botanical Binomial */}
+                      <td className="py-3 px-3 font-serif italic text-emerald-300 text-xs">
+                        {item.botanicalName || '—'}
+                      </td>
+
+                      {/* Sanskrit Name */}
+                      <td className="py-3 px-3 font-serif text-amber-200 text-xs">
+                        {item.sanskritName || '—'}
+                      </td>
+
+                      {/* Part Used */}
+                      <td className="py-3 px-3">
+                        <span className="inline-block px-2 py-0.5 rounded bg-[#081C13] border border-[#23493C] text-[11px] text-gray-300">
+                          {item.partUsed || 'Standardized Part'}
+                        </span>
+                      </td>
+
+                      {/* Therapeutic Action */}
+                      <td className="py-3 px-3 text-xs text-gray-300 max-w-xs">
+                        <span className="line-clamp-2">{item.therapeuticAction || 'Classical active'}</span>
+                      </td>
+
+                      {/* Origin Status */}
+                      <td className="py-3 px-3">
+                        {isRegistered ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            <span>Database</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onSaveIngredient(item)}
+                            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-800 transition cursor-pointer"
+                            title="Click to save permanently to Supabase"
+                          >
+                            <span>+ Save to DB</span>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* Reference Link */}
+                      <td className="py-3 px-3 text-xs">
+                        {item.referenceLink ? (
+                          <a
+                            href={item.referenceLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 truncate max-w-[140px] hover:underline"
+                            title={item.referenceLink}
+                          >
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                            <span className="truncate">
+                              {item.referenceLink.replace(/^https?:\/\/(www\.)?/, '')}
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-500 font-mono text-[11px]">—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="p-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+                            title="Edit Botanical details"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          {isRegistered && (
+                            <button
+                              onClick={() => setDeletingItem(item)}
+                              className="p-1 rounded-lg text-red-400 hover:text-red-200 hover:bg-red-950/40 transition cursor-pointer"
+                              title="Delete from database"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Add / Edit Ingredient Modal */}
+      {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-3 border-b border-[#23493C] mb-4">
-              <h3 className="text-base font-serif font-bold text-gray-100 flex items-center gap-2">
-                <Flower2 className="w-5 h-5 text-emerald-400" />
-                <span className="tracking-wide text-sm font-semibold text-emerald-100">
-                  {editingItem ? `Edit Medicinal Herb` : 'Register Medicinal Herb'}
-                </span>
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#081C13] border border-[#23493C] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="bg-gradient-to-r from-[#0D281C] to-[#0A2217] px-6 py-4 border-b border-[#23493C] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Flower2 className="w-4 h-4 text-emerald-400" />
+                <h3 className="font-serif font-bold text-base text-gray-100">
+                  {editingItem ? 'Edit Botanical Herb' : 'Register New Botanical Herb'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-emerald-950 transition cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1">Common / Formulation Name *</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Herb Common Name *
+                </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Ashwagandha, Guduchi, Haritaki"
-                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. Ashwagandha, Rasna, Bala"
+                  className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1">Botanical Binomial (Latin)</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Botanical Latin Binomial
+                </label>
                 <input
                   type="text"
                   value={botanicalName}
                   onChange={(e) => setBotanicalName(e.target.value)}
-                  placeholder="e.g. Withania somnifera, Tinospora cordifolia"
-                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 italic focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. Withania somnifera, Pluchea lanceolata"
+                  className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 italic focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1">Sanskrit Name (Devanagari / IAST)</label>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Sanskrit Name (Devanagari / IAST)
+                </label>
                 <input
                   type="text"
                   value={sanskritName}
                   onChange={(e) => setSanskritName(e.target.value)}
-                  placeholder="e.g. अश्वगन्धा (Aśvagandhā)"
-                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g. अश्वगन्धा, रास्ना, बला"
+                  className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1">Part Used</label>
-                <input
-                  type="text"
-                  value={partUsed}
-                  onChange={(e) => setPartUsed(e.target.value)}
-                  placeholder="e.g. Root, Fruit rind, Leaf, Bark, Whole plant"
-                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1">Therapeutic Action (Karma)</label>
-                <textarea
-                  rows={2}
-                  value={therapeuticAction}
-                  onChange={(e) => setTherapeuticAction(e.target.value)}
-                  placeholder="e.g. Rasayana, Balya, Vata-hara, Medhya, Deepana"
-                  className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              {/* Reference Link Field */}
-              <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Link2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Reference Link</span>
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-normal">URL (monograph, research, pharmacopoeia)</span>
-                </label>
-                <div className="relative">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">
+                    Part Used
+                  </label>
                   <input
-                    type="url"
-                    value={referenceLink}
-                    onChange={(e) => setReferenceLink(e.target.value)}
-                    placeholder="https://en.wikipedia.org/wiki/Withania_somnifera"
-                    className="w-full bg-[#081C13] border border-[#23493C] rounded-xl px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 font-mono text-xs"
+                    type="text"
+                    value={partUsed}
+                    onChange={(e) => setPartUsed(e.target.value)}
+                    placeholder="e.g. Root, Bark, Leaf, Fruit"
+                    className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-                {referenceLink.trim() && (
-                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-emerald-400">
-                    <ExternalLink className="w-3 h-3 shrink-0" />
-                    <a
-                      href={referenceLink.startsWith('http') ? referenceLink : `https://${referenceLink}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:underline truncate"
-                    >
-                      Preview link ↗
-                    </a>
-                  </div>
-                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">
+                    Therapeutic Action
+                  </label>
+                  <input
+                    type="text"
+                    value={therapeuticAction}
+                    onChange={(e) => setTherapeuticAction(e.target.value)}
+                    placeholder="e.g. Rasayana, Balya, Deepana"
+                    className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
 
-              <div className="pt-3 border-t border-[#23493C] flex items-center justify-end gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Pharmacopoeial / Reference URL
+                </label>
+                <input
+                  type="url"
+                  value={referenceLink}
+                  onChange={(e) => setReferenceLink(e.target.value)}
+                  placeholder="https://en.wikipedia.org/wiki/..."
+                  className="w-full bg-[#05140D] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#23493C] text-gray-300 hover:text-white text-xs font-medium"
+                  className="px-4 py-2 rounded-xl bg-[#0D281C] text-gray-400 hover:text-white border border-[#23493C] text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition cursor-pointer"
                 >
-                  Save Ingredient
+                  {editingItem ? 'Save Changes' : 'Register Botanical'}
                 </button>
               </div>
             </form>
@@ -400,15 +554,15 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
       {deletingItem && (
         <DeleteConfirmModal
           isOpen={!!deletingItem}
-          onClose={() => setDeletingItem(null)}
+          title="Delete Botanical Herb"
+          itemName={deletingItem.name}
+          itemSubtitle={deletingItem.botanicalName}
+          itemType="Botanical Ingredient"
           onConfirm={() => {
             onDeleteIngredient(deletingItem.id);
+            setDeletingItem(null);
           }}
-          title="Delete Botanical Ingredient"
-          itemType="Botanical Ingredient"
-          itemName={deletingItem.name}
-          itemSubtitle={deletingItem.botanicalName ? `Binomial: ${deletingItem.botanicalName}` : undefined}
-          warningMessage="This botanical herb will be permanently deleted from public.ingredients in Supabase."
+          onClose={() => setDeletingItem(null)}
         />
       )}
 
