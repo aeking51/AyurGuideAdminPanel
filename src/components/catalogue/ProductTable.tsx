@@ -16,10 +16,11 @@ import { AyurCheckbox } from '../common/AyurCheckbox';
 interface ProductTableProps {
   products: Product[];
   categories?: Category[];
+  totalFilteredCount?: number;
   selectedProductIds?: Set<string | number>;
   onToggleSelect?: (productId: string | number, isShiftKey?: boolean, index?: number) => void;
   onToggleSelectAll?: () => void;
-  onSelectGroup?: (type: 'all' | 'active' | 'inactive' | 'invert' | 'none') => void;
+  onSelectGroup?: (type: 'all' | 'page' | 'active' | 'inactive' | 'invert' | 'none') => void;
   onSelectCategoryGroup?: (categoryIdOrName: string | number) => void;
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
@@ -31,6 +32,7 @@ interface ProductTableProps {
 export const ProductTable: React.FC<ProductTableProps> = ({
   products,
   categories = [],
+  totalFilteredCount,
   selectedProductIds = new Set(),
   onToggleSelect,
   onToggleSelectAll,
@@ -45,10 +47,10 @@ export const ProductTable: React.FC<ProductTableProps> = ({
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
   const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
 
-  const selectedCount = selectedProductIds.size;
+  const selectedOnCurrentPageCount = products.filter(p => selectedProductIds.has(p.id)).length;
   const totalCount = products.length;
-  const isAllSelected = totalCount > 0 && selectedCount === totalCount;
-  const isSomeSelected = selectedCount > 0 && selectedCount < totalCount;
+  const isAllSelected = totalCount > 0 && selectedOnCurrentPageCount === totalCount;
+  const isSomeSelected = selectedOnCurrentPageCount > 0 && selectedOnCurrentPageCount < totalCount;
 
   useEffect(() => {
     if (selectAllCheckboxRef.current) {
@@ -93,7 +95,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                     checked={isAllSelected}
                     indeterminate={isSomeSelected}
                     onChange={() => onToggleSelectAll && onToggleSelectAll()}
-                    title={isAllSelected ? "Deselect All Formulations" : "Select All Filtered Formulations"}
+                    title={isAllSelected ? "Deselect Current Page Formulations" : "Select Current Page Formulations"}
                   />
                   {onSelectGroup && (
                     <button
@@ -112,20 +114,31 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   {/* Group Selection Dropdown */}
                   {isGroupMenuOpen && onSelectGroup && (
                     <div 
-                      className="absolute left-0 top-full mt-1.5 w-56 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 text-left normal-case tracking-normal divide-y divide-[#23493C]/40"
+                      className="absolute left-0 top-full mt-1.5 w-60 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 text-left normal-case tracking-normal divide-y divide-[#23493C]/40"
                       onMouseLeave={() => setIsGroupMenuOpen(false)}
                     >
                       <div className="py-1">
                         <button
                           type="button"
                           onClick={() => {
-                            onSelectGroup('all');
+                            onSelectGroup('page');
                             setIsGroupMenuOpen(false);
                           }}
                           className="w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-[#133829] flex items-center justify-between"
                         >
-                          <span className="font-semibold">Select All</span>
+                          <span className="font-semibold">Select Current Page</span>
                           <span className="text-[10px] text-gray-400 font-mono">({totalCount})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSelectGroup('all');
+                            setIsGroupMenuOpen(false);
+                          }}
+                          className="w-full px-3 py-1.5 text-xs text-emerald-300 hover:bg-[#133829] flex items-center justify-between"
+                        >
+                          <span className="font-semibold">Select All Filtered</span>
+                          <span className="text-[10px] text-emerald-400/80 font-mono">({totalFilteredCount ?? totalCount})</span>
                         </button>
                         <button
                           type="button"
@@ -205,6 +218,9 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                           className="w-full px-3 py-1.5 text-xs text-red-300 hover:bg-[#133829] flex items-center justify-between"
                         >
                           <span>Clear Selection</span>
+                          {selectedProductIds.size > 0 && (
+                            <span className="text-[10px] text-red-400 font-mono">({selectedProductIds.size})</span>
+                          )}
                         </button>
                       </div>
                     </div>

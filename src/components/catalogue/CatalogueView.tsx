@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Plus, 
   Download, 
@@ -16,12 +16,76 @@ import {
   AlertCircle,
   CheckSquare,
   ChevronDown,
-  UploadCloud
+  UploadCloud,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { ProductTable } from './ProductTable';
 import { ProductCardsView } from './ProductCardsView';
 import { SupabaseService } from '../../services/supabase';
+
+export type SortOption =
+  | 'default'
+  | 'name_asc'
+  | 'name_desc'
+  | 'code_asc'
+  | 'code_desc'
+  | 'category_asc'
+  | 'category_desc'
+  | 'created_desc'
+  | 'created_asc'
+  | 'updated_desc'
+  | 'status_active'
+  | 'status_inactive';
+
+export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'default', label: 'Default Order' },
+  { value: 'name_asc', label: 'Product Name — A to Z' },
+  { value: 'name_desc', label: 'Product Name — Z to A' },
+  { value: 'code_asc', label: 'Product Code — Ascending' },
+  { value: 'code_desc', label: 'Product Code — Descending' },
+  { value: 'category_asc', label: 'Category — A to Z' },
+  { value: 'category_desc', label: 'Category — Z to A' },
+  { value: 'created_desc', label: 'Recently Added — Newest First' },
+  { value: 'created_asc', label: 'Oldest Added — First' },
+  { value: 'updated_desc', label: 'Recently Updated — Newest First' },
+  { value: 'status_active', label: 'Status — Active First' },
+  { value: 'status_inactive', label: 'Status — Inactive First' },
+];
+
+function getPaginationItems(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const items: (number | 'ellipsis')[] = [];
+
+  if (currentPage <= 4) {
+    for (let i = 1; i <= 5; i++) {
+      items.push(i);
+    }
+    items.push('ellipsis');
+    items.push(totalPages);
+  } else if (currentPage >= totalPages - 3) {
+    items.push(1);
+    items.push('ellipsis');
+    for (let i = totalPages - 4; i <= totalPages; i++) {
+      items.push(i);
+    }
+  } else {
+    items.push(1);
+    items.push('ellipsis');
+    items.push(currentPage - 1);
+    items.push(currentPage);
+    items.push(currentPage + 1);
+    items.push('ellipsis');
+    items.push(totalPages);
+  }
+
+  return items;
+}
 
 interface CatalogueViewProps {
   products: Product[];
@@ -55,6 +119,9 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedDosha, setSelectedDosha] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<SortOption>('default');
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Multi-Selection State
@@ -65,10 +132,10 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   const [isSyncingHerbs, setIsSyncingHerbs] = useState(false);
   const [syncHerbsNotice, setSyncHerbsNotice] = useState<string | null>(null);
 
-  // Filter products memoized
+  // 1. Filter products by search query, category, Dosha, and status
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      // 1. Search Query
+      // 1. Search Query (operates on the entire product collection)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = product.name.toLowerCase().includes(q);
@@ -110,12 +177,126 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     });
   }, [products, searchQuery, selectedCategory, selectedDosha, selectedStatus]);
 
+  // 2. Sort filtered products (12 sorting options)
+  const filteredSortedProducts = useMemo(() => {
+    if (sortBy === 'default') {
+      return filteredProducts;
+    }
+
+    return [...filteredProducts].sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc': {
+          const nameA = (a.name || '').trim();
+          const nameB = (b.name || '').trim();
+          return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+        }
+        case 'name_desc': {
+          const nameA = (a.name || '').trim();
+          const nameB = (b.name || '').trim();
+          return nameB.localeCompare(nameA, undefined, { sensitivity: 'base', numeric: true });
+        }
+        case 'code_asc': {
+          const codeA = (a.code || '').trim();
+          const codeB = (b.code || '').trim();
+          return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        case 'code_desc': {
+          const codeA = (a.code || '').trim();
+          const codeB = (b.code || '').trim();
+          return codeB.localeCompare(codeA, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        case 'category_asc': {
+          const catA = (a.categoryName || '').trim();
+          const catB = (b.categoryName || '').trim();
+          const cmp = catA.localeCompare(catB, undefined, { sensitivity: 'base' });
+          if (cmp !== 0) return cmp;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        }
+        case 'category_desc': {
+          const catA = (a.categoryName || '').trim();
+          const catB = (b.categoryName || '').trim();
+          const cmp = catB.localeCompare(catA, undefined, { sensitivity: 'base' });
+          if (cmp !== 0) return cmp;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        }
+        case 'created_desc': {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (timeB !== timeA) return timeB - timeA;
+          return Number(b.id || 0) - Number(a.id || 0);
+        }
+        case 'created_asc': {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (timeA !== timeB) return timeA - timeB;
+          return Number(a.id || 0) - Number(b.id || 0);
+        }
+        case 'updated_desc': {
+          const timeA = (a.updatedAt || a.createdAt) ? new Date(a.updatedAt || a.createdAt).getTime() : 0;
+          const timeB = (b.updatedAt || b.createdAt) ? new Date(b.updatedAt || b.createdAt).getTime() : 0;
+          if (timeB !== timeA) return timeB - timeA;
+          return Number(b.id || 0) - Number(a.id || 0);
+        }
+        case 'status_active': {
+          const getWeight = (status?: string) => {
+            if (status === 'Active') return 0;
+            if (status === 'Draft') return 1;
+            return 2;
+          };
+          const diff = getWeight(a.status) - getWeight(b.status);
+          if (diff !== 0) return diff;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        }
+        case 'status_inactive': {
+          const getWeight = (status?: string) => {
+            if (status === 'Inactive') return 0;
+            if (status === 'Draft') return 1;
+            return 2;
+          };
+          const diff = getWeight(a.status) - getWeight(b.status);
+          if (diff !== 0) return diff;
+          return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [filteredProducts, sortBy]);
+
+  // 3. Pagination calculations
+  const totalFilteredCount = filteredSortedProducts.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalFilteredCount);
+  const startDisplay = totalFilteredCount === 0 ? 0 : startIndex + 1;
+  const endDisplay = endIndex;
+
+  // 4. Paginated product slice for the active page
+  const currentPageProducts = useMemo(() => {
+    return filteredSortedProducts.slice(startIndex, endIndex);
+  }, [filteredSortedProducts, startIndex, endIndex]);
+
+  // Reset pagination to Page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+    setLastSelectedIndex(null);
+  }, [searchQuery]);
+
+  // Ensure current page is valid when total pages changes (e.g. after adding/deleting products)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   // Selected products array
   const selectedProductsList = useMemo(() => {
     return products.filter(p => selectedProductIds.has(p.id));
   }, [products, selectedProductIds]);
 
-  // Toggle single item or Shift+Click range
+  // Toggle single item or Shift+Click range (scoped to current visible page to avoid cross-page confusion)
   const handleToggleSelect = (productId: string | number, isShiftKey = false, index?: number) => {
     const next = new Set(selectedProductIds);
 
@@ -123,8 +304,8 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
       const start = Math.min(lastSelectedIndex, index);
       const end = Math.max(lastSelectedIndex, index);
       for (let i = start; i <= end; i++) {
-        if (filteredProducts[i]) {
-          next.add(filteredProducts[i].id);
+        if (currentPageProducts[i]) {
+          next.add(currentPageProducts[i].id);
         }
       }
     } else {
@@ -141,38 +322,40 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     setSelectedProductIds(next);
   };
 
-  // Toggle select all filtered products
-  const handleToggleSelectAll = () => {
-    const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedProductIds.has(p.id));
+  // Toggle select all products on current page
+  const handleToggleSelectPage = () => {
     const next = new Set(selectedProductIds);
+    const allPageSelected = currentPageProducts.length > 0 && currentPageProducts.every(p => next.has(p.id));
 
-    if (allFilteredSelected) {
-      filteredProducts.forEach(p => next.delete(p.id));
+    if (allPageSelected) {
+      currentPageProducts.forEach(p => next.delete(p.id));
     } else {
-      filteredProducts.forEach(p => next.add(p.id));
+      currentPageProducts.forEach(p => next.add(p.id));
     }
 
     setSelectedProductIds(next);
   };
 
-  // Select groups (Active, Inactive, Invert, Clear)
-  const handleSelectGroup = (type: 'all' | 'active' | 'inactive' | 'invert' | 'none') => {
+  // Select groups (All filtered, Current Page, Active, Inactive, Invert, Clear)
+  const handleSelectGroup = (type: 'all' | 'page' | 'active' | 'inactive' | 'invert' | 'none') => {
     const next = new Set(selectedProductIds);
 
     if (type === 'all') {
-      filteredProducts.forEach(p => next.add(p.id));
+      filteredSortedProducts.forEach(p => next.add(p.id));
+    } else if (type === 'page') {
+      currentPageProducts.forEach(p => next.add(p.id));
     } else if (type === 'active') {
-      filteredProducts.forEach(p => {
+      filteredSortedProducts.forEach(p => {
         if (p.status === 'Active') next.add(p.id);
         else next.delete(p.id);
       });
     } else if (type === 'inactive') {
-      filteredProducts.forEach(p => {
+      filteredSortedProducts.forEach(p => {
         if (p.status !== 'Active') next.add(p.id);
         else next.delete(p.id);
       });
     } else if (type === 'invert') {
-      filteredProducts.forEach(p => {
+      currentPageProducts.forEach(p => {
         if (next.has(p.id)) next.delete(p.id);
         else next.add(p.id);
       });
@@ -186,7 +369,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   // Select all products belonging to a specific category
   const handleSelectCategoryGroup = (catIdentifier: string | number) => {
     const next = new Set(selectedProductIds);
-    filteredProducts.forEach(p => {
+    filteredSortedProducts.forEach(p => {
       const match = String(p.categoryId) === String(catIdentifier) || 
                     (p.categoryName && p.categoryName.toLowerCase() === String(catIdentifier).toLowerCase());
       if (match) {
@@ -199,7 +382,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   // Select all products by Dosha
   const handleSelectDoshaGroup = (dosha: string) => {
     const next = new Set(selectedProductIds);
-    filteredProducts.forEach(p => {
+    filteredSortedProducts.forEach(p => {
       if (p.targetDoshas?.includes(dosha) || p.doshaImpact?.includes(dosha)) {
         next.add(p.id);
       }
@@ -232,12 +415,12 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     document.body.removeChild(link);
   };
 
-  // Export all filtered
+  // Export all filtered (exports all matching records across all pages)
   const handleExportAllFiltered = () => {
-    exportItemsToCSV(filteredProducts, `ayur_index_catalogue_${new Date().toISOString().slice(0, 10)}.csv`);
+    exportItemsToCSV(filteredSortedProducts, `ayur_index_catalogue_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
-  // Export only selected
+  // Export only selected (preserves selected records across pages)
   const handleExportSelected = () => {
     if (selectedProductsList.length === 0) return;
     exportItemsToCSV(selectedProductsList, `ayur_index_selected_${selectedProductsList.length}_formulations_${new Date().toISOString().slice(0, 10)}.csv`);
@@ -258,15 +441,36 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     setSelectedCategory('ALL');
     setSelectedDosha('ALL');
     setSelectedStatus('ALL');
+    setSortBy('default');
+    setPageSize(20);
+    setCurrentPage(1);
+    setLastSelectedIndex(null);
   };
 
   const activeFilteredCount = useMemo(() => {
-    return filteredProducts.filter(p => p.status === 'Active').length;
-  }, [filteredProducts]);
+    return filteredSortedProducts.filter(p => p.status === 'Active').length;
+  }, [filteredSortedProducts]);
 
   const inactiveFilteredCount = useMemo(() => {
-    return filteredProducts.filter(p => p.status !== 'Active').length;
-  }, [filteredProducts]);
+    return filteredSortedProducts.filter(p => p.status !== 'Active').length;
+  }, [filteredSortedProducts]);
+
+  const selectedOnCurrentPageCount = useMemo(() => {
+    return currentPageProducts.filter(p => selectedProductIds.has(p.id)).length;
+  }, [currentPageProducts, selectedProductIds]);
+
+  const isFiltered = Boolean(
+    selectedCategory !== 'ALL' || 
+    selectedDosha !== 'ALL' || 
+    selectedStatus !== 'ALL' || 
+    searchQuery.trim().length > 0
+  );
+
+  const handlePageChange = (newPage: number) => {
+    const targetPage = Math.min(Math.max(1, newPage), totalPages);
+    setCurrentPage(targetPage);
+    setLastSelectedIndex(null);
+  };
 
   const handleStoreHerbsToSupabase = async () => {
     setIsSyncingHerbs(true);
@@ -306,14 +510,18 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           
-          {/* Controls on Left */}
+          {/* Controls on Left: Category | Dosha | Status | Sort By | Show */}
           <div className="flex flex-wrap items-center gap-2">
             
             {/* Category Select */}
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setCurrentPage(1);
+                setLastSelectedIndex(null);
+              }}
+              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="ALL">All Categories ({categories.length})</option>
               {categories.map(c => (
@@ -326,8 +534,12 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
             {/* Dosha Select */}
             <select
               value={selectedDosha}
-              onChange={(e) => setSelectedDosha(e.target.value)}
-              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"
+              onChange={(e) => {
+                setSelectedDosha(e.target.value);
+                setCurrentPage(1);
+                setLastSelectedIndex(null);
+              }}
+              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="ALL">All Doshas</option>
               <option value="Vata">Vata Pacifying</option>
@@ -339,8 +551,12 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
             {/* Status Select */}
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500"
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setCurrentPage(1);
+                setLastSelectedIndex(null);
+              }}
+              className="bg-[#081C13] border border-[#23493C] text-xs text-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="Active">Active (Published)</option>
@@ -348,11 +564,56 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
               <option value="Inactive">Inactive</option>
             </select>
 
-            {/* Clear All */}
-            {(searchQuery || selectedCategory !== 'ALL' || selectedDosha !== 'ALL' || selectedStatus !== 'ALL') && (
+            {/* Sort By Select */}
+            <div className="flex items-center gap-1.5 bg-[#081C13] border border-[#23493C] rounded-xl px-2.5 py-1 focus-within:border-emerald-500">
+              <label htmlFor="sort-by-select" className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                Sort By:
+              </label>
+              <select
+                id="sort-by-select"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as SortOption);
+                  setCurrentPage(1);
+                  setLastSelectedIndex(null);
+                }}
+                className="bg-transparent text-xs text-gray-200 focus:outline-none cursor-pointer py-1"
+              >
+                {SORT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value} className="bg-[#081C13] text-gray-200">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Show / Products Per Page Select */}
+            <div className="flex items-center gap-1.5 bg-[#081C13] border border-[#23493C] rounded-xl px-2.5 py-1 focus-within:border-emerald-500">
+              <label htmlFor="page-size-select" className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                Show:
+              </label>
+              <select
+                id="page-size-select"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                  setLastSelectedIndex(null);
+                }}
+                className="bg-transparent text-xs text-gray-200 focus:outline-none cursor-pointer py-1 font-medium"
+              >
+                <option value={20} className="bg-[#081C13] text-gray-200">20 products</option>
+                <option value={50} className="bg-[#081C13] text-gray-200">50 products</option>
+                <option value={100} className="bg-[#081C13] text-gray-200">100 products</option>
+              </select>
+            </div>
+
+            {/* Reset All */}
+            {(searchQuery || selectedCategory !== 'ALL' || selectedDosha !== 'ALL' || selectedStatus !== 'ALL' || sortBy !== 'default' || pageSize !== 20) && (
               <button
                 onClick={resetAllFilters}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-emerald-950/60"
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-emerald-950/60 transition cursor-pointer"
+                title="Reset all filters, sorting, and page size"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset</span>
@@ -580,17 +841,42 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
 
         {/* Results Counter and Active Filter Tags */}
         <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 pt-2 border-t border-[#23493C]/60 gap-2">
-          <div className="flex items-center gap-2">
-            <span>Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> formulations</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span>
+              {totalFilteredCount === 0 ? (
+                <span>Showing <strong className="text-emerald-400 font-bold">0</strong> {isFiltered ? 'matching ' : ''}products</span>
+              ) : isFiltered ? (
+                <span>Showing <strong className="text-emerald-400 font-bold">{startDisplay}–{endDisplay}</strong> of <strong className="text-white font-bold">{totalFilteredCount}</strong> matching products</span>
+              ) : (
+                <span>Showing <strong className="text-emerald-400 font-bold">{startDisplay}–{endDisplay}</strong> of <strong className="text-white font-bold">{totalFilteredCount}</strong> products</span>
+              )}
+              {isFiltered && totalFilteredCount > 0 && (
+                <span className="text-gray-500 text-[11px] ml-1.5 font-mono">
+                  (filtered from {products.length} total)
+                </span>
+              )}
+            </span>
             {searchQuery && (
               <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
                 Keyword: "{searchQuery}"
               </span>
             )}
+            {sortBy !== 'default' && (
+              <span className="px-2 py-0.5 rounded bg-[#133829] text-teal-300 border border-[#23493C] text-[11px] font-mono">
+                Sorted: {SORT_OPTIONS.find(o => o.value === sortBy)?.label}
+              </span>
+            )}
           </div>
-          <span className="text-[11px] text-emerald-400/80 font-mono">
-            {viewMode === 'table' ? 'Interactive High-Density Table with Multi-Selection' : 'Tactile 3D Cards View'}
-          </span>
+          <div className="flex items-center gap-3 text-[11px] font-mono">
+            {totalPages > 1 && (
+              <span className="text-emerald-400 font-semibold">
+                Page {safeCurrentPage} of {totalPages}
+              </span>
+            )}
+            <span className="text-emerald-400/80">
+              {viewMode === 'table' ? 'Interactive High-Density Table with Multi-Selection' : 'Tactile 3D Cards View'}
+            </span>
+          </div>
         </div>
 
       </div>
@@ -603,7 +889,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-950 text-emerald-300 border border-emerald-700/80 font-bold text-xs shadow-inner">
               <Check className="w-3.5 h-3.5" />
-              <span>{selectedProductIds.size} of {filteredProducts.length} Selected</span>
+              <span>{selectedProductIds.size} of {totalFilteredCount} Selected ({selectedOnCurrentPageCount} on this page)</span>
             </span>
 
             {/* Quick Group Selection Buttons */}
@@ -612,11 +898,20 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
               
               <button
                 type="button"
+                onClick={() => handleSelectGroup('page')}
+                className="px-2 py-0.5 rounded-lg bg-[#081C13] hover:bg-[#133829] text-emerald-300 hover:text-white border border-[#23493C] transition cursor-pointer"
+                title="Select all medicines on this page"
+              >
+                Page ({currentPageProducts.length})
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleSelectGroup('all')}
                 className="px-2 py-0.5 rounded-lg bg-[#081C13] hover:bg-[#133829] text-gray-200 hover:text-white border border-[#23493C] transition cursor-pointer"
-                title="Select all filtered medicines"
+                title="Select all filtered medicines across all pages"
               >
-                All ({filteredProducts.length})
+                All ({totalFilteredCount})
               </button>
 
               <button
@@ -641,7 +936,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
                 type="button"
                 onClick={() => handleSelectGroup('invert')}
                 className="px-2 py-0.5 rounded-lg bg-[#081C13] hover:bg-[#133829] text-teal-300 hover:text-white border border-[#23493C] transition cursor-pointer"
-                title="Invert current selection"
+                title="Invert current page selection"
               >
                 Invert
               </button>
@@ -691,11 +986,12 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
       {/* Main Content: Table or Cards */}
       {viewMode === 'table' ? (
         <ProductTable
-          products={filteredProducts}
+          products={currentPageProducts}
           categories={categories}
+          totalFilteredCount={totalFilteredCount}
           selectedProductIds={selectedProductIds}
           onToggleSelect={handleToggleSelect}
-          onToggleSelectAll={handleToggleSelectAll}
+          onToggleSelectAll={handleToggleSelectPage}
           onSelectGroup={handleSelectGroup}
           onSelectCategoryGroup={handleSelectCategoryGroup}
           onViewMonograph={onViewMonograph}
@@ -706,11 +1002,12 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
         />
       ) : (
         <ProductCardsView
-          products={filteredProducts}
+          products={currentPageProducts}
           categories={categories}
+          totalFilteredCount={totalFilteredCount}
           selectedProductIds={selectedProductIds}
           onToggleSelect={(id) => handleToggleSelect(id)}
-          onToggleSelectAll={handleToggleSelectAll}
+          onToggleSelectAll={handleToggleSelectPage}
           onSelectGroup={handleSelectGroup}
           onSelectCategoryGroup={handleSelectCategoryGroup}
           onViewMonograph={onViewMonograph}
@@ -719,6 +1016,100 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
           onShareProduct={onShareProduct}
         />
       )}
+
+      {/* Pagination Controls */}
+      <div className="bg-[#0D281C]/90 rounded-2xl border border-[#23493C] p-3.5 sm:p-4 shadow-lg flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+        
+        {/* Left: Product Range & Total Count */}
+        <div className="flex items-center gap-2 text-gray-300 font-medium">
+          <span>
+            {totalFilteredCount === 0 ? (
+              <span>Showing <strong className="text-emerald-400 font-bold">0</strong> {isFiltered ? 'matching ' : ''}products</span>
+            ) : isFiltered ? (
+              <span>
+                Showing <strong className="text-emerald-400 font-bold">{startDisplay}–{endDisplay}</strong> of{' '}
+                <strong className="text-white font-bold">{totalFilteredCount}</strong> matching products
+              </span>
+            ) : (
+              <span>
+                Showing <strong className="text-emerald-400 font-bold">{startDisplay}–{endDisplay}</strong> of{' '}
+                <strong className="text-white font-bold">{totalFilteredCount}</strong> products
+              </span>
+            )}
+          </span>
+          {isFiltered && totalFilteredCount > 0 && (
+            <span className="text-gray-500 text-[11px] font-mono hidden sm:inline">
+              (out of {products.length} total)
+            </span>
+          )}
+        </div>
+
+        {/* Right: Pagination Navigation Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
+            
+            {/* Previous Button */}
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage <= 1}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#23493C] bg-[#081C13] text-gray-200 font-semibold hover:bg-emerald-950/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              title="Previous Page"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </button>
+
+            {/* Numbered Page Buttons with Ellipses */}
+            {getPaginationItems(safeCurrentPage, totalPages).map((item, idx) => {
+              if (item === 'ellipsis') {
+                return (
+                  <span 
+                    key={`ellipsis-${idx}`} 
+                    className="px-2 py-1 text-gray-500 font-mono select-none"
+                  >
+                    ...
+                  </span>
+                );
+              }
+
+              const pageNum = item as number;
+              const isActive = pageNum === safeCurrentPage;
+
+              return (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => handlePageChange(pageNum)}
+                  className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center ${
+                    isActive
+                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md border border-emerald-500/50'
+                      : 'bg-[#081C13] border border-[#23493C] text-gray-300 hover:text-white hover:bg-emerald-950/80'
+                  }`}
+                  title={`Page ${pageNum}`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            {/* Next Button */}
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage >= totalPages}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#23493C] bg-[#081C13] text-gray-200 font-semibold hover:bg-emerald-950/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+              title="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+          </div>
+        )}
+
+      </div>
 
       {/* Bulk Deletion Confirmation Modal */}
       {isBulkDeleteModalOpen && (

@@ -17,10 +17,11 @@ import { AyurCheckbox } from '../common/AyurCheckbox';
 interface ProductCardsViewProps {
   products: Product[];
   categories?: Category[];
+  totalFilteredCount?: number;
   selectedProductIds?: Set<string | number>;
   onToggleSelect?: (productId: string | number) => void;
   onToggleSelectAll?: () => void;
-  onSelectGroup?: (type: 'all' | 'active' | 'inactive' | 'invert' | 'none') => void;
+  onSelectGroup?: (type: 'all' | 'page' | 'active' | 'inactive' | 'invert' | 'none') => void;
   onSelectCategoryGroup?: (categoryIdOrName: string | number) => void;
   onViewMonograph: (product: Product) => void;
   onEditProduct: (product: Product) => void;
@@ -31,6 +32,7 @@ interface ProductCardsViewProps {
 export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   products,
   categories = [],
+  totalFilteredCount,
   selectedProductIds = new Set(),
   onToggleSelect,
   onToggleSelectAll,
@@ -45,8 +47,9 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   const [activePhotoIndices, setActivePhotoIndices] = useState<Record<string | number, number>>({});
   const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
 
-  const selectedCount = selectedProductIds.size;
-  const isAllSelected = products.length > 0 && selectedCount === products.length;
+  const selectedOnCurrentPageCount = products.filter(p => selectedProductIds.has(p.id)).length;
+  const isAllSelected = products.length > 0 && selectedOnCurrentPageCount === products.length;
+  const isSomeSelected = selectedOnCurrentPageCount > 0 && selectedOnCurrentPageCount < products.length;
 
   const toggleFlip = (id: string | number) => {
     setFlippedCards(prev => ({
@@ -87,12 +90,12 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                   size="sm"
                   variant="botanical"
                   checked={isAllSelected}
-                  indeterminate={selectedCount > 0 && selectedCount < products.length}
+                  indeterminate={isSomeSelected}
                   onChange={() => onToggleSelectAll()}
-                  title={isAllSelected ? 'Deselect All Cards' : `Select All (${products.length})`}
+                  title={isAllSelected ? 'Deselect Page Cards' : `Select Page (${products.length})`}
                 />
                 <span className="font-semibold text-gray-200">
-                  {isAllSelected ? 'Deselect All Cards' : `Select All (${products.length})`}
+                  {isAllSelected ? 'Deselect Page' : `Select Page (${products.length})`}
                 </span>
               </label>
             )}
@@ -111,20 +114,31 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
 
                 {isGroupDropdownOpen && (
                   <div 
-                    className="absolute left-0 top-full mt-1 w-52 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 divide-y divide-[#23493C]/40 text-left"
+                    className="absolute left-0 top-full mt-1 w-56 max-h-72 overflow-y-auto rounded-xl bg-[#081C13] border border-[#23493C] shadow-2xl py-1 z-30 divide-y divide-[#23493C]/40 text-left"
                     onMouseLeave={() => setIsGroupDropdownOpen(false)}
                   >
                     <div className="py-1">
                       <button
                         type="button"
                         onClick={() => {
-                          onSelectGroup('all');
+                          onSelectGroup('page');
                           setIsGroupDropdownOpen(false);
                         }}
                         className="w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-[#133829] flex items-center justify-between"
                       >
-                        <span>Select All</span>
+                        <span className="font-semibold">Select Current Page</span>
                         <span className="text-[10px] text-gray-400 font-mono">({products.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectGroup('all');
+                          setIsGroupDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-1.5 text-xs text-emerald-300 hover:bg-[#133829] flex items-center justify-between"
+                      >
+                        <span className="font-semibold">Select All Filtered</span>
+                        <span className="text-[10px] text-emerald-400/80 font-mono">({totalFilteredCount ?? products.length})</span>
                       </button>
                       <button
                         type="button"
@@ -203,6 +217,9 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                         className="w-full px-3 py-1.5 text-xs text-red-300 hover:bg-[#133829] flex items-center justify-between"
                       >
                         <span>Clear Selection</span>
+                        {selectedProductIds.size > 0 && (
+                          <span className="text-[10px] text-red-400 font-mono">({selectedProductIds.size})</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -212,8 +229,10 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
           </div>
 
           <div className="text-[11px] text-gray-400 font-mono">
-            {selectedCount > 0 ? (
-              <span className="text-emerald-300 font-semibold">{selectedCount} of {products.length} Selected</span>
+            {selectedProductIds.size > 0 ? (
+              <span className="text-emerald-300 font-semibold">
+                {selectedProductIds.size} of {totalFilteredCount ?? products.length} Selected ({selectedOnCurrentPageCount} on this page)
+              </span>
             ) : (
               <span>Tap checkboxes on cards to select</span>
             )}
