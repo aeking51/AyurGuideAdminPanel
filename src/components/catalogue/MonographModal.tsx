@@ -9,15 +9,9 @@ interface MonographModalProps {
 }
 
 export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose }) => {
-  if (!product) return null;
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   // Strictly display ingredients stored in Supabase record - no placeholder fallback
   const effectiveIngredients: IngredientItem[] = React.useMemo(() => {
-    if (product.ingredients && product.ingredients.length > 0) {
+    if (product?.ingredients && product.ingredients.length > 0) {
       return product.ingredients.map(item => {
         if (typeof item === 'string') {
           const resolved = resolveHerbDetails(item);
@@ -34,6 +28,12 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
     }
     return [];
   }, [product]);
+
+  if (!product) return null;
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4">

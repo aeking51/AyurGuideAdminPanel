@@ -78,6 +78,24 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     };
   }, [slug]);
 
+  // Ingredients strictly from Supabase record (must be top level before early returns)
+  const effectiveIngredients: IngredientItem[] = React.useMemo(() => {
+    if (!product?.ingredients || product.ingredients.length === 0) {
+      return [];
+    }
+    return product.ingredients.map(item => {
+      if (typeof item === 'string') {
+        const clean = item.trim();
+        const parenMatch = clean.match(/^([^(]+)\s*\(([^)]+)\)$/);
+        return {
+          name: parenMatch ? parenMatch[1].trim() : clean,
+          botanicalName: parenMatch ? parenMatch[2].trim() : '',
+        };
+      }
+      return item;
+    });
+  }, [product]);
+
   const handleCopyShareLink = async () => {
     if (!product) return;
     const { shareQrLink } = ensureProductShareFields(product);
@@ -162,24 +180,6 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
     ? product.images 
     : [product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"];
   const currentImage = allImages[selectedImageIndex] || allImages[0];
-
-  // Ingredients strictly from Supabase record
-  const effectiveIngredients: IngredientItem[] = React.useMemo(() => {
-    if (!product?.ingredients || product.ingredients.length === 0) {
-      return [];
-    }
-    return product.ingredients.map(item => {
-      if (typeof item === 'string') {
-        const clean = item.trim();
-        const parenMatch = clean.match(/^([^(]+)\s*\(([^)]+)\)$/);
-        return {
-          name: parenMatch ? parenMatch[1].trim() : clean,
-          botanicalName: parenMatch ? parenMatch[2].trim() : '',
-        };
-      }
-      return item;
-    });
-  }, [product]);
 
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white">
