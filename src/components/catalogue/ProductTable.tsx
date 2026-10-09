@@ -11,6 +11,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Product, Category } from '../../types';
+import { AyurCheckbox } from '../common/AyurCheckbox';
 
 interface ProductTableProps {
   products: Product[];
@@ -85,13 +86,14 @@ export const ProductTable: React.FC<ProductTableProps> = ({
               {/* Select All Checkbox Column */}
               <th className="py-3 px-3 w-12 text-center">
                 <div className="relative inline-flex items-center justify-center">
-                  <input
+                  <AyurCheckbox
                     ref={selectAllCheckboxRef}
-                    type="checkbox"
+                    size="sm"
+                    variant="botanical"
                     checked={isAllSelected}
+                    indeterminate={isSomeSelected}
                     onChange={() => onToggleSelectAll && onToggleSelectAll()}
-                    className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
-                    title={isAllSelected ? "Deselect All" : "Select All Filtered Formulations"}
+                    title={isAllSelected ? "Deselect All Formulations" : "Select All Filtered Formulations"}
                   />
                   {onSelectGroup && (
                     <button
@@ -227,15 +229,16 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   key={product.id} 
                   className={`transition duration-150 group ${
                     isSelected 
-                      ? 'bg-[#133829]/70 border-l-2 border-emerald-500' 
-                      : 'hover:bg-[#133829]/40'
+                      ? 'bg-[#103828]/80 border-l-[3px] border-l-emerald-400 shadow-[inset_0_1px_0_0_rgba(16,185,129,0.15)]' 
+                      : 'hover:bg-[#133829]/40 border-l-[3px] border-l-transparent'
                   }`}
                 >
                   
                   {/* Row Checkbox Column */}
                   <td className="py-3 px-3 text-center">
-                    <input
-                      type="checkbox"
+                    <AyurCheckbox
+                      size="sm"
+                      variant="botanical"
                       checked={isSelected}
                       onChange={(e) => {
                         const nativeEvent = e.nativeEvent as MouseEvent;
@@ -243,8 +246,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                           onToggleSelect(product.id, nativeEvent.shiftKey, index);
                         }
                       }}
-                      className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
-                      title="Select formulation (Shift+Click to select group)"
+                      title={`Select ${product.name} (Hold Shift+Click to range select)`}
                     />
                   </td>
 

@@ -97,7 +97,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@ayurguide.org"
+                  placeholder="admin@ayurindex.org"
                   className="w-full bg-[#0D281C] border border-[#23493C] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
                 />
               </div>

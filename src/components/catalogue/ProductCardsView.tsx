@@ -12,6 +12,7 @@ import {
   Layers
 } from 'lucide-react';
 import { Product, Category } from '../../types';
+import { AyurCheckbox } from '../common/AyurCheckbox';
 
 interface ProductCardsViewProps {
   products: Product[];
@@ -82,11 +83,13 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
           <div className="flex items-center gap-3">
             {onToggleSelectAll && (
               <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
+                <AyurCheckbox
+                  size="sm"
+                  variant="botanical"
                   checked={isAllSelected}
+                  indeterminate={selectedCount > 0 && selectedCount < products.length}
                   onChange={() => onToggleSelectAll()}
-                  className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
+                  title={isAllSelected ? 'Deselect All Cards' : `Select All (${products.length})`}
                 />
                 <span className="font-semibold text-gray-200">
                   {isAllSelected ? 'Deselect All Cards' : `Select All (${products.length})`}
@@ -238,12 +241,13 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                       {onToggleSelect && (
-                        <input
-                          type="checkbox"
+                        <AyurCheckbox
+                          size="sm"
+                          variant="card-badge"
+                          shape="squircle"
                           checked={selectedProductIds.has(product.id)}
                           onChange={() => onToggleSelect(product.id)}
-                          className="w-4 h-4 rounded border-[#23493C] text-emerald-600 focus:ring-emerald-500 bg-[#05140D] cursor-pointer"
-                          title="Select formulation"
+                          title={`Select ${product.name}`}
                         />
                       )}
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#081C13] text-emerald-400 border border-[#23493C]">

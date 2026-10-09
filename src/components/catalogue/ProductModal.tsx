@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Sparkles, Check, Camera, Image as ImageIcon, Star, Lea
 import { Product, Category, IngredientItem, BotanicalIngredient } from '../../types';
 import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
 import { getClassicalFormulationIngredients } from '../../data/classicalFormulations';
+import { AyurCheckbox } from '../common/AyurCheckbox';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -512,17 +513,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
+              <div className="pt-2">
+                <AyurCheckbox
                   id="featured-checkbox"
                   checked={featured}
                   onChange={(e) => setFeatured(e.target.checked)}
-                  className="rounded border-[#23493C] text-emerald-500 focus:ring-emerald-500"
+                  variant="amber"
+                  size="md"
+                  label="Feature in Apothecary Highlights & Quick Prescribing Bar"
+                  sublabel="Displays prominent badge and surfaces this medicine in clinical quick-access"
                 />
-                <label htmlFor="featured-checkbox" className="text-xs text-gray-300 select-none cursor-pointer">
-                  Feature in Apothecary Highlights & Quick Prescribing Bar
-                </label>
               </div>
             </div>
           )}
