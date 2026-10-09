@@ -16,7 +16,6 @@ import {
   AlertCircle,
   CheckSquare,
   ChevronDown,
-  UploadCloud,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown
@@ -129,8 +128,6 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [isSelectMenuOpen, setIsSelectMenuOpen] = useState(false);
-  const [isSyncingHerbs, setIsSyncingHerbs] = useState(false);
-  const [syncHerbsNotice, setSyncHerbsNotice] = useState<string | null>(null);
 
   // 1. Filter products by search query, category, Dosha, and status
   const filteredProducts = useMemo(() => {
@@ -472,39 +469,8 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
     setLastSelectedIndex(null);
   };
 
-  const handleStoreHerbsToSupabase = async () => {
-    setIsSyncingHerbs(true);
-    setSyncHerbsNotice(null);
-    try {
-      const res = await SupabaseService.syncAllPlaceholderDataToSupabase();
-      setSyncHerbsNotice(res.message);
-      if (onReload) onReload();
-    } catch (err: any) {
-      setSyncHerbsNotice(err.message || 'Failed to store herbs to Supabase.');
-    } finally {
-      setIsSyncingHerbs(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
-      {/* Sync Herbs Notice */}
-      {syncHerbsNotice && (
-        <div className="bg-emerald-950/90 border border-emerald-500/80 rounded-2xl p-4 flex items-center justify-between text-xs text-emerald-200 shadow-xl">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span className="font-medium">{syncHerbsNotice}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSyncHerbsNotice(null)}
-            className="text-gray-400 hover:text-white p-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      
       {/* Top Filter and Actions Toolbar */}
       <div className="bg-[#0D281C]/90 rounded-2xl border border-[#23493C] p-4 shadow-lg space-y-3">
         
@@ -651,7 +617,7 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
             {onReload && (
               <button
                 onClick={onReload}
-                disabled={isReloading || isSyncingHerbs}
+                disabled={isReloading}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 text-xs font-semibold hover:text-white hover:bg-emerald-950/80 transition cursor-pointer disabled:opacity-50"
                 title="Reload formulations live from Supabase public.products"
               >
@@ -659,17 +625,6 @@ export const CatalogueView: React.FC<CatalogueViewProps> = ({
                 <span>{isReloading ? 'Reloading...' : 'Reload Products'}</span>
               </button>
             )}
-
-            {/* Store Herbs to Supabase */}
-            <button
-              onClick={handleStoreHerbsToSupabase}
-              disabled={isSyncingHerbs || isReloading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#081C13] border border-emerald-600/70 text-emerald-200 text-xs font-semibold hover:text-white hover:bg-emerald-950/90 transition cursor-pointer disabled:opacity-50 shadow-sm"
-              title="Store authentic classical formulation herbs (such as the 63 herbs for Dashamoolarishtam) and reference botanicals directly into Supabase"
-            >
-              <UploadCloud className={`w-3.5 h-3.5 text-emerald-400 ${isSyncingHerbs ? 'animate-bounce' : ''}`} />
-              <span>{isSyncingHerbs ? 'Storing to Supabase...' : 'Store Herbs to Supabase'}</span>
-            </button>
 
             {/* Quick Group Selection Options Menu */}
             <div className="relative">

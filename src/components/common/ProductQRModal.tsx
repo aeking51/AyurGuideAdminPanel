@@ -145,7 +145,7 @@ export const ProductQRModal: React.FC<ProductQRModalProps> = ({
                 SHARE PRODUCT
               </h3>
               <p className="text-[10px] sm:text-[11px] text-emerald-400/90 font-mono">
-                Universal Canonical QR & App Link
+                Universal Canonical QR & Share Link
               </p>
             </div>
           </div>
