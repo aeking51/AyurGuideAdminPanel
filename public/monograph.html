@@ -47,19 +47,29 @@
 
   <style>
     @media print {
+      @page {
+        margin: 12mm 15mm;
+        size: auto;
+      }
       body {
         background: white !important;
-        color: black !important;
+        color: #062414 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
       .no-print {
         display: none !important;
       }
       .print-shadow-none {
         box-shadow: none !important;
-        border: 1px solid #ddd !important;
+        border: 1px solid #d1d5db !important;
       }
       .page-break {
         page-break-after: always;
+      }
+      .monograph-break-avoid {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
       }
     }
   </style>

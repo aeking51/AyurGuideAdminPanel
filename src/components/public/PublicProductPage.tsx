@@ -24,7 +24,8 @@ import {
   X, 
   Copy, 
   Check, 
-  Share2 
+  Share2,
+  Printer 
 } from 'lucide-react';
 import { Product, IngredientItem } from '../../types';
 import { SupabaseService } from '../../services/supabase';
@@ -331,8 +332,8 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                 </div>
               )}
 
-              {/* Share Medicine Action */}
-              <div className="pt-3 sm:pt-4 border-t border-[#23493C] flex items-center gap-3">
+              {/* Action Buttons: Share & Print Monograph */}
+              <div className="pt-3 sm:pt-4 border-t border-[#23493C] flex flex-wrap items-center gap-3 no-print">
                 <button
                   type="button"
                   onClick={handleCopyShareLink}
@@ -341,6 +342,16 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
                 >
                   {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
                   <span>{copiedLink ? 'Link Copied!' : 'Share Medicine'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm shadow-md transition active:scale-[0.98] cursor-pointer"
+                  title="Print official pharmacopoeial monograph (A4/Letter or PDF)"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Monograph</span>
                 </button>
               </div>
 
@@ -575,7 +586,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
           </div>
 
           {/* Quick Links Section - Mobile & Tablet Responsive */}
-          <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 sm:p-6 shadow-xl space-y-3.5 sm:space-y-4">
+          <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 sm:p-6 shadow-xl space-y-3.5 sm:space-y-4 no-print">
             <div className="flex items-center justify-between border-b border-[#23493C]/80 pb-2.5 sm:pb-3">
               <div className="flex items-center gap-2">
                 <Compass className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -661,7 +672,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
       </main>
 
       {/* Footer - Extra Bottom Clearance for Mobile Gestures / Tab Bars */}
-      <footer className="border-t border-[#23493C]/60 py-5 sm:py-6 pb-8 sm:pb-6 bg-[#061810] text-center text-xs text-gray-400 space-y-1 px-4">
+      <footer className="no-print border-t border-[#23493C]/60 py-5 sm:py-6 pb-8 sm:pb-6 bg-[#061810] text-center text-xs text-gray-400 space-y-1 px-4">
         <p className="text-emerald-300 font-serif font-semibold">
           AYUR INDEX &bull; Ayurvedic Clinical Pharmacopoeia
         </p>

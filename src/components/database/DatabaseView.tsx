@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { Database, CheckCircle2, AlertCircle, RefreshCw, Download, Upload, ShieldCheck, KeyRound, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Database, 
+  CheckCircle2, 
+  AlertCircle, 
+  RefreshCw, 
+  ShieldCheck, 
+  Download, 
+  FileSpreadsheet, 
+  Search, 
+  TableProperties, 
+  Check, 
+  ExternalLink,
+  Layers,
+  Activity,
+  HardDrive
+} from 'lucide-react';
 import { SupabaseConfig } from '../../types';
 import { SupabaseService } from '../../services/supabase';
 import { StorageService } from '../../services/storage';
@@ -7,13 +22,18 @@ import { StorageService } from '../../services/storage';
 interface DatabaseViewProps {
   config: SupabaseConfig;
   onSaveConfig: (config: SupabaseConfig) => void;
-  onReloadAllData: () => void;
+  onReloadAllData?: () => void;
+}
+
+interface TableCount {
+  name: string;
+  count: number;
+  status: 'Synced' | 'Accessible' | 'Checking';
 }
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   config,
   onSaveConfig,
-  onReloadAllData,
 }) => {
   const [url, setUrl] = useState(config.url || 'https://ksnsfilauqzxsegpjpdt.supabase.co');
   const [key, setKey] = useState(config.key || '');
@@ -21,7 +41,85 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [copiedSql, setCopiedSql] = useState(false);
+
+  // Disaster Recovery / Read-only Inspection States
+  const [isExportingJson, setIsExportingJson] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isVerifyingIntegrity, setIsVerifyingIntegrity] = useState(false);
+  const [integrityReport, setIntegrityReport] = useState<{
+    healthy: boolean;
+    timestamp: string;
+    metrics: { label: string; value: string | number; ok: boolean }[];
+    notes: string[];
+  } | null>(null);
+  
+  const [tableStats, setTableStats] = useState<TableCount[]>([
+    { name: 'public.products', count: 0, status: 'Checking' },
+    { name: 'public.categories', count: 0, status: 'Checking' },
+    { name: 'public.profiles', count: 0, status: 'Checking' },
+    { name: 'public.audit_logs', count: 0, status: 'Checking' },
+  ]);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  // Fetch read-only table statistics without altering database
+  const loadDatabaseStats = async () => {
+    setIsLoadingStats(true);
+    try {
+      const client = SupabaseService.getClient();
+      if (client) {
+        const [prodRes, catRes, profRes, logRes] = await Promise.all([
+          client.from('products').select('id', { count: 'exact', head: true }),
+          client.from('categories').select('id', { count: 'exact', head: true }),
+          client.from('profiles').select('id', { count: 'exact', head: true }),
+          client.from('audit_logs').select('id', { count: 'exact', head: true }),
+        ]);
+
+        setTableStats([
+          { 
+            name: 'public.products', 
+            count: prodRes.count ?? StorageService.getProducts().length, 
+            status: prodRes.error ? 'Accessible' : 'Synced' 
+          },
+          { 
+            name: 'public.categories', 
+            count: catRes.count ?? StorageService.getCategories().length, 
+            status: catRes.error ? 'Accessible' : 'Synced' 
+          },
+          { 
+            name: 'public.profiles', 
+            count: profRes.count ?? StorageService.getUsers().length, 
+            status: profRes.error ? 'Accessible' : 'Synced' 
+          },
+          { 
+            name: 'public.audit_logs', 
+            count: logRes.count ?? StorageService.getAuditLogs().length, 
+            status: logRes.error ? 'Accessible' : 'Synced' 
+          },
+        ]);
+      } else {
+        setTableStats([
+          { name: 'public.products', count: StorageService.getProducts().length, status: 'Accessible' },
+          { name: 'public.categories', count: StorageService.getCategories().length, status: 'Accessible' },
+          { name: 'public.profiles', count: StorageService.getUsers().length, status: 'Accessible' },
+          { name: 'public.audit_logs', count: StorageService.getAuditLogs().length, status: 'Accessible' },
+        ]);
+      }
+    } catch {
+      // Fallback to local counts
+      setTableStats([
+        { name: 'public.products', count: StorageService.getProducts().length, status: 'Accessible' },
+        { name: 'public.categories', count: StorageService.getCategories().length, status: 'Accessible' },
+        { name: 'public.profiles', count: StorageService.getUsers().length, status: 'Accessible' },
+        { name: 'public.audit_logs', count: StorageService.getAuditLogs().length, status: 'Accessible' },
+      ]);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDatabaseStats();
+  }, []);
 
   const handleTestConnection = async () => {
     setTesting(true);
@@ -36,6 +134,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           connected: true,
           lastSyncTime: new Date().toISOString()
         });
+        loadDatabaseStats();
       }
     } finally {
       setTesting(false);
@@ -48,38 +147,99 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     try {
       const res = await SupabaseService.syncToCloud();
       setSyncResult(res);
+      if (res.success) {
+        loadDatabaseStats();
+      }
     } finally {
       setSyncing(false);
     }
   };
 
-  const handleDownloadBackup = () => {
-    const jsonStr = StorageService.exportFullBackup();
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `ayur_index_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // 1. Download JSON Snapshot (Read-Only: does not alter database)
+  const handleDownloadSnapshot = () => {
+    setIsExportingJson(true);
+    try {
+      const jsonBackup = StorageService.exportFullBackup();
+      const blob = new Blob([jsonBackup], { type: 'application/json;charset=utf-8;' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `ayur_index_snapshot_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } finally {
+      setTimeout(() => setIsExportingJson(false), 800);
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // 2. Export Products CSV for Spreadsheet Analysis (Read-Only: does not alter database)
+  const handleExportCsv = () => {
+    setIsExportingCsv(true);
+    try {
+      const products = StorageService.getProducts();
+      const headers = ['ID', 'Code', 'Name', 'Category', 'Classical Reference', 'Dosage', 'Indications', 'Status', 'Updated At'];
+      const rows = products.map(p => [
+        p.id,
+        `"${(p.code || '').replace(/"/g, '""')}"`,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${(p.categoryName || '').replace(/"/g, '""')}"`,
+        `"${(p.classicalReference || '').replace(/"/g, '""')}"`,
+        `"${(p.dosage || p.usage || '').replace(/"/g, '""')}"`,
+        `"${(p.indications || '').replace(/"/g, '""')}"`,
+        p.status,
+        p.updatedAt || p.createdAt || ''
+      ]);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const success = StorageService.importBackup(content);
-      if (success) {
-        alert('Database snapshot restored successfully!');
-        onReloadAllData();
-      } else {
-        alert('Failed to parse backup JSON file.');
-      }
-    };
-    reader.readAsText(file);
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `ayur_index_products_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } finally {
+      setTimeout(() => setIsExportingCsv(false), 800);
+    }
+  };
+
+  // 3. Verify Database Integrity & Health (Read-Only: does not alter database)
+  const handleVerifyIntegrity = async () => {
+    setIsVerifyingIntegrity(true);
+    try {
+      const products = StorageService.getProducts();
+      const categories = StorageService.getCategories();
+      const users = StorageService.getUsers();
+      
+      const missingSlugs = products.filter(p => !p.publicSlug).length;
+      const missingCategories = products.filter(p => !p.categoryName).length;
+      const inactiveCount = products.filter(p => p.status === 'Inactive').length;
+      const activePractitioners = users.filter(u => u.status === 'Active').length;
+
+      setIntegrityReport({
+        healthy: missingSlugs === 0 && missingCategories === 0,
+        timestamp: new Date().toLocaleTimeString(),
+        metrics: [
+          { label: 'Products Verified', value: products.length, ok: products.length > 0 },
+          { label: 'Categories Defined', value: categories.length, ok: categories.length > 0 },
+          { label: 'Canonical Slugs Formatted', value: `${products.length - missingSlugs}/${products.length}`, ok: missingSlugs === 0 },
+          { label: 'Assigned Categories', value: `${products.length - missingCategories}/${products.length}`, ok: missingCategories === 0 },
+          { label: 'Active Clinical Staff', value: activePractitioners, ok: activePractitioners > 0 },
+          { label: 'Archived / Inactive Products', value: inactiveCount, ok: true },
+        ],
+        notes: [
+          missingSlugs === 0 ? 'All formulations have valid web public slugs.' : 'Some items need slug regeneration.',
+          missingCategories === 0 ? 'All medicines are correctly mapped to taxonomy groups.' : 'Some medicines lack categories.',
+          'Database read-only integrity verification completed without schema modification.'
+        ]
+      });
+    } finally {
+      setIsVerifyingIntegrity(false);
+    }
   };
 
   return (
@@ -141,7 +301,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           <button
             onClick={handleTestConnection}
             disabled={testing}
-            className="px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer"
           >
             {testing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
             <span>Test Connection & Save</span>
@@ -150,7 +310,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           <button
             onClick={handleLiveSync}
             disabled={syncing}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>Sync Medicines to Cloud</span>
@@ -178,71 +338,178 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         )}
       </div>
 
-      {/* Database Schema & Password Column Migration */}
-      <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-[#23493C] pb-2">
-          <div className="flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-serif font-bold text-base text-gray-100">
-              Database Password Column (public.profiles.password)
-            </h3>
+      {/* Dispensary Database Snapshot & Disaster Recovery (Read-Only / Safe Non-Altering Options) */}
+      <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#23493C] pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <HardDrive className="w-5 h-5 text-emerald-400" />
+              <h3 className="font-serif font-bold text-base text-gray-100">
+                Dispensary Database Snapshot & Disaster Recovery
+              </h3>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Safely inspect, archive, and verify dispensary database state without modifying or writing any database records.
+            </p>
           </div>
-          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 rounded-full">
-            Database Column Ready
+          
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/70 border border-emerald-800/80 text-[10px] text-emerald-300 font-mono w-fit">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Read-Only &bull; Zero DB Alteration</span>
           </span>
         </div>
-        <p className="text-xs text-gray-400 leading-relaxed">
-          The admin panel stores and updates passwords in the <code className="text-emerald-300 font-mono">password</code> column of the <code className="text-emerald-300 font-mono">public.profiles</code> table. If your remote Supabase instance does not have this column yet, run this one-line SQL migration in your Supabase SQL Editor:
-        </p>
 
-        <div className="relative bg-[#081C13] border border-[#23493C] rounded-xl p-3.5 font-mono text-xs text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <code className="text-emerald-200 select-all">ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text NULL;</code>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText('ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password text NULL;');
-              setCopiedSql(true);
-              setTimeout(() => setCopiedSql(false), 2000);
-            }}
-            className="px-3 py-1.5 rounded-lg bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 text-xs flex items-center gap-1.5 border border-emerald-700/60 transition cursor-pointer self-start sm:self-center shrink-0"
-          >
-            {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedSql ? 'Copied SQL!' : 'Copy SQL Migration'}</span>
-          </button>
+        {/* Grid of Safe, Non-Altering Database Options */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Option 1: Download JSON Snapshot (Safe, read-only backup) */}
+          <div className="bg-[#081C13] border border-[#23493C] rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-300 font-semibold text-xs">
+                <Download className="w-4 h-4 text-emerald-400" />
+                <span>JSON Database Snapshot</span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                Export an immutable, standalone JSON archive containing all products, categories, staff, and audit trails.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadSnapshot}
+              disabled={isExportingJson}
+              className="w-full py-2 px-3 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 border border-emerald-700/60 text-emerald-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isExportingJson ? 'Generating JSON...' : 'Download Snapshot'}</span>
+            </button>
+          </div>
+
+          {/* Option 2: Export CSV Spreadsheet (Safe, read-only tabular export) */}
+          <div className="bg-[#081C13] border border-[#23493C] rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-300 font-semibold text-xs">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Spreadsheet CSV Export</span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                Export products and classical formulation references as a CSV table for external offline reporting and spreadsheet audit.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={isExportingCsv}
+              className="w-full py-2 px-3 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 border border-emerald-700/60 text-emerald-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{isExportingCsv ? 'Exporting CSV...' : 'Export Products CSV'}</span>
+            </button>
+          </div>
+
+          {/* Option 3: Verify Integrity & Diagnostics (Safe, read-only diagnostic check) */}
+          <div className="bg-[#081C13] border border-[#23493C] rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-300 font-semibold text-xs">
+                <Search className="w-4 h-4 text-emerald-400" />
+                <span>Integrity & Health Check</span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+                Run read-only consistency checks for orphaned categories, missing canonical slugs, and inactive clinical records.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleVerifyIntegrity}
+              disabled={isVerifyingIntegrity}
+              className="w-full py-2 px-3 rounded-lg bg-emerald-900/60 hover:bg-emerald-800/80 border border-emerald-700/60 text-emerald-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            >
+              {isVerifyingIntegrity ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              <span>Verify Integrity</span>
+            </button>
+          </div>
+
         </div>
-      </div>
 
-      {/* Snapshot Backup & Restore */}
-      <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl space-y-4">
-        <h3 className="font-serif font-bold text-base text-gray-100 border-b border-[#23493C] pb-2">
-          Dispensary Database Snapshot & Disaster Recovery
-        </h3>
-        <p className="text-xs text-gray-400">
-          Export a complete, self-contained JSON backup containing all 28 formulation categories, medicines, stock allocations, and audit logs.
-        </p>
+        {/* Option 4: Read-Only Schema & Live Row Inspection Table */}
+        <div className="bg-[#081C13] border border-[#23493C] rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-300 font-semibold text-xs">
+              <TableProperties className="w-4 h-4 text-emerald-400" />
+              <span>Live Database Tables & Record Volume (Read-Only)</span>
+            </div>
+            <button
+              type="button"
+              onClick={loadDatabaseStats}
+              disabled={isLoadingStats}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition cursor-pointer"
+              title="Refresh record counts without altering data"
+            >
+              <RefreshCw className={`w-3 h-3 ${isLoadingStats ? 'animate-spin' : ''}`} />
+              <span>Refresh Stats</span>
+            </button>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-4 pt-2">
-          <button
-            onClick={handleDownloadBackup}
-            className="px-4 py-2 rounded-xl bg-[#081C13] border border-[#23493C] text-gray-200 hover:text-white hover:bg-emerald-950 text-xs font-semibold flex items-center gap-2 transition"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Download JSON Snapshot</span>
-          </button>
-
-          <label className="cursor-pointer px-4 py-2 rounded-xl bg-[#081C13] border border-[#23493C] text-gray-200 hover:text-white hover:bg-emerald-950 text-xs font-semibold flex items-center gap-2 transition">
-            <Upload className="w-3.5 h-3.5 text-amber-400" />
-            <span>Restore Backup JSON</span>
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+            {tableStats.map((tbl) => (
+              <div key={tbl.name} className="bg-[#0D281C]/80 border border-[#23493C]/70 rounded-lg p-2.5">
+                <span className="text-[10px] font-mono text-gray-400 block truncate" title={tbl.name}>
+                  {tbl.name}
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-base font-bold font-mono text-emerald-300">
+                    {tbl.count.toLocaleString()}
+                  </span>
+                  <span className="text-[9px] font-mono text-emerald-500/80 px-1.5 py-0.2 rounded bg-emerald-950/60 border border-emerald-800/40">
+                    {tbl.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* Integrity Report Modal / Card */}
+        {integrityReport && (
+          <div className="bg-[#081C13] border border-emerald-800/80 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#23493C] pb-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Integrity Verification Report ({integrityReport.timestamp})</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIntegrityReport(null)}
+                className="text-[10px] text-gray-400 hover:text-gray-200"
+              >
+                Dismiss
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {integrityReport.metrics.map((m, idx) => (
+                <div key={idx} className="bg-[#0D281C] border border-[#23493C]/50 rounded-lg p-2">
+                  <span className="text-[10px] text-gray-400 block">{m.label}</span>
+                  <span className={`text-xs font-mono font-bold mt-0.5 block ${m.ok ? 'text-emerald-300' : 'text-amber-300'}`}>
+                    {m.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1 pt-1">
+              {integrityReport.notes.map((note, idx) => (
+                <p key={idx} className="text-[11px] text-gray-300 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span>{note}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
     </div>
   );
 };
+
