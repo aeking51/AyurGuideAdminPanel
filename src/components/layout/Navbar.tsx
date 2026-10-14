@@ -143,10 +143,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   else setCurrentTab('download');
                 }}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 text-emerald-300 hover:text-white rounded-lg text-xs font-medium transition"
-                title="Download AyurGuide Android APK"
+                title="Download Ayur Index Android APK"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden xl:inline">AyurGuide App</span>
+                <span className="hidden xl:inline">Ayur Index App</span>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1 rounded font-mono">APK</span>
               </button>
               {onOpenDownloadQr && (

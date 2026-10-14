@@ -26,11 +26,13 @@ import {
   Check, 
   Share2,
   Printer,
-  Smartphone
+  Smartphone,
+  Maximize2
 } from 'lucide-react';
 import { Product, IngredientItem } from '../../types';
 import { SupabaseService } from '../../services/supabase';
 import { ensureProductShareFields } from '../../utils/shareUtils';
+import { PhotoLightboxModal } from '../common/PhotoLightboxModal';
 
 interface PublicProductPageProps {
   slug: string;
@@ -48,6 +50,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [isPhotoLightboxOpen, setIsPhotoLightboxOpen] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -211,7 +214,7 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
               <button
                 onClick={onNavigateToDownload}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition"
-                title="Download AyurGuide Android App"
+                title="Download Ayur Index Android App"
               >
                 <Smartphone className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Get App</span>
@@ -235,15 +238,23 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
             
             {/* Product Image & Thumbnail Gallery */}
             <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
-              <div className="w-full max-w-[220px] sm:max-w-[260px] aspect-square rounded-2xl overflow-hidden bg-[#081C13] border-2 border-emerald-800/60 shadow-xl relative mx-auto">
+              <div 
+                onClick={() => setIsPhotoLightboxOpen(true)}
+                className="w-full max-w-[220px] sm:max-w-[260px] aspect-square rounded-2xl overflow-hidden bg-[#081C13] border-2 border-emerald-800/60 shadow-xl relative mx-auto cursor-pointer group/heroimg hover:border-emerald-400 transition"
+                title="Click to view packaging photography in full screen"
+              >
                 <img 
                   src={currentImage} 
                   alt={product.name}
                   loading="eager"
-                  className="w-full h-full object-cover transition duration-300"
+                  className="w-full h-full object-cover group-hover/heroimg:scale-105 transition duration-300"
                 />
                 <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-700/80 text-[9px] sm:text-[10px] font-mono text-emerald-300">
                   {product.code}
+                </div>
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/heroimg:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-xs text-white font-medium">
+                  <Maximize2 className="w-4 h-4 text-emerald-300" />
+                  <span>Enlarge Photo</span>
                 </div>
               </div>
 
@@ -695,6 +706,16 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
           Standardized Classical Formulations &bull; Authentic Clinical Reference Portal
         </p>
       </footer>
+
+      {/* Photo Lightbox Modal */}
+      {isPhotoLightboxOpen && product && (
+        <PhotoLightboxModal
+          isOpen={isPhotoLightboxOpen}
+          product={product}
+          initialIndex={selectedImageIndex}
+          onClose={() => setIsPhotoLightboxOpen(false)}
+        />
+      )}
 
     </div>
   );

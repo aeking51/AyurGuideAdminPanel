@@ -9,10 +9,12 @@ import {
   Camera,
   QrCode,
   ChevronDown,
-  Layers
+  Layers,
+  Maximize2
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { AyurCheckbox } from '../common/AyurCheckbox';
+import { PhotoLightboxModal } from '../common/PhotoLightboxModal';
 
 interface ProductCardsViewProps {
   products: Product[];
@@ -46,6 +48,8 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
   const [flippedCards, setFlippedCards] = useState<Record<string | number, boolean>>({});
   const [activePhotoIndices, setActivePhotoIndices] = useState<Record<string | number, number>>({});
   const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+  const [lightboxProduct, setLightboxProduct] = useState<Product | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   const selectedOnCurrentPageCount = products.filter(p => selectedProductIds.has(p.id)).length;
   const isAllSelected = products.length > 0 && selectedOnCurrentPageCount === products.length;
@@ -288,17 +292,28 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
                     return (
                       <div className="flex gap-4 items-start mb-3">
                         <div className="flex flex-col items-center gap-1.5 shrink-0">
-                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-[#081C13] border border-emerald-800/50 shrink-0 relative group/img">
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLightboxProduct(product);
+                              setLightboxIndex(safeActiveIdx);
+                            }}
+                            className="w-20 h-20 rounded-xl overflow-hidden bg-[#081C13] border border-emerald-800/50 shrink-0 relative group/img cursor-pointer hover:border-emerald-400 transition"
+                            title="Click to view full packaging photos"
+                          >
                             <img 
                               src={activeImg} 
                               alt={product.name}
                               loading="lazy"
                               decoding="async"
-                              className="w-full h-full object-cover transition duration-300"
+                              className="w-full h-full object-cover group-hover/img:scale-105 transition duration-300"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
                               }}
                             />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                              <Maximize2 className="w-4 h-4 text-emerald-300 drop-shadow" />
+                            </div>
                             {photos.length > 1 && (
                               <div className="absolute bottom-1 left-1 px-1 py-0.5 rounded bg-black/75 text-[9px] font-mono text-emerald-300 flex items-center gap-0.5">
                                 <Camera className="w-2.5 h-2.5" />
@@ -518,6 +533,16 @@ export const ProductCardsView: React.FC<ProductCardsViewProps> = ({
         );
       })}
       </div>
+
+      {lightboxProduct && (
+        <PhotoLightboxModal
+          isOpen={!!lightboxProduct}
+          product={lightboxProduct}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxProduct(null)}
+          onOpenMonograph={onViewMonograph}
+        />
+      )}
     </div>
   );
 };

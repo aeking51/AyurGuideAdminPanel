@@ -248,3 +248,34 @@ ON CONFLICT (name) DO UPDATE SET
   title = EXCLUDED.title,
   description = EXCLUDED.description,
   icon = EXCLUDED.icon;
+
+-- ====================================================================
+-- 10. SUPABASE STORAGE BUCKET: apks (Ayur Index Android Distribution)
+-- ====================================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'apks',
+  'apks',
+  true,
+  104857600, -- 100 MB max APK size
+  ARRAY['application/vnd.android.package-archive', 'application/octet-stream']
+)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Public read access policy for anonymous APK downloads
+CREATE POLICY "Public Read Access for APKs"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'apks');
+
+-- Authenticated and anonymous upload policy for clinic release publishing
+CREATE POLICY "Authenticated Release Uploads"
+ON storage.objects FOR INSERT
+TO authenticated, anon
+WITH CHECK (bucket_id = 'apks');
+
+CREATE POLICY "Authenticated Release Updates"
+ON storage.objects FOR UPDATE
+TO authenticated, anon
+USING (bucket_id = 'apks');
+

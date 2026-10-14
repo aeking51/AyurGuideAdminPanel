@@ -32,9 +32,9 @@ export const DownloadQRModal: React.FC<DownloadQRModalProps> = ({
     if (!isOpen) return;
 
     // Determine target URL for the QR code
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayur-guide-admin-panel.vercel.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayurindex.app';
     const targetUrl = downloadTarget === 'apk' 
-      ? `${origin}${APK_CONFIG.directDownloadUrl}`
+      ? (APK_CONFIG.supabaseLatestApkUrl || `${origin}${APK_CONFIG.directDownloadUrl}`)
       : `${origin}/download`;
 
     generateQrDataUrl(targetUrl, 320)
@@ -44,9 +44,9 @@ export const DownloadQRModal: React.FC<DownloadQRModalProps> = ({
 
   if (!isOpen) return null;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayur-guide-admin-panel.vercel.app';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayurindex.app';
   const currentUrl = downloadTarget === 'apk' 
-    ? `${origin}${APK_CONFIG.directDownloadUrl}`
+    ? (APK_CONFIG.supabaseLatestApkUrl || `${origin}${APK_CONFIG.directDownloadUrl}`)
     : `${origin}/download`;
 
   const handleCopyLink = async () => {
@@ -82,7 +82,7 @@ export const DownloadQRModal: React.FC<DownloadQRModalProps> = ({
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white text-base">Get AyurGuide for Android</h3>
+              <h3 className="font-semibold text-white text-base">Get Ayur Index for Android</h3>
               <p className="text-xs text-emerald-400/80">Scan with your smartphone camera</p>
             </div>
           </div>
@@ -126,7 +126,7 @@ export const DownloadQRModal: React.FC<DownloadQRModalProps> = ({
             {qrDataUrl ? (
               <img
                 src={qrDataUrl}
-                alt="AyurGuide Android Download QR Code"
+                alt="Ayur Index Android Download QR Code"
                 className="w-56 h-56 rounded-lg object-contain"
               />
             ) : (

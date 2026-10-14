@@ -13,11 +13,16 @@ import {
   ExternalLink,
   Layers,
   Activity,
-  HardDrive
+  HardDrive,
+  Smartphone,
+  Upload,
+  Radio
 } from 'lucide-react';
 import { SupabaseConfig } from '../../types';
 import { SupabaseService } from '../../services/supabase';
 import { StorageService } from '../../services/storage';
+import { ReleaseManagerModal } from '../admin/ReleaseManagerModal';
+import { APK_CONFIG } from '../../config/apkConfig';
 
 interface DatabaseViewProps {
   config: SupabaseConfig;
@@ -41,6 +46,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
 
   // Disaster Recovery / Read-only Inspection States
   const [isExportingJson, setIsExportingJson] = useState(false);
@@ -517,6 +523,68 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         )}
 
       </div>
+
+      {/* APK Cloud Hosting & Release Distribution (Supabase Storage) */}
+      <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#23493C] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-base text-gray-100">
+                Ayur Index Android APK Cloud Distribution
+              </h3>
+              <p className="text-xs text-gray-400">
+                Host, version, and distribute the official Android APK directly via Supabase Storage bucket (<code className="text-emerald-300 font-mono">apks</code>)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsReleaseModalOpen(true)}
+              className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-md transition"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Manage APK Releases</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div className="p-3.5 rounded-xl bg-[#081C13] border border-[#23493C] space-y-1">
+            <span className="text-[10px] text-gray-400 uppercase font-mono block">Active Release Version</span>
+            <span className="font-bold text-emerald-300 text-sm font-mono flex items-center gap-1.5">
+              <span>{APK_CONFIG.version}</span>
+              <span className="text-[10px] text-gray-400 font-normal">({APK_CONFIG.fileSize})</span>
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#081C13] border border-[#23493C] space-y-1">
+            <span className="text-[10px] text-gray-400 uppercase font-mono block">Primary Cloud CDN Target</span>
+            <span className="font-semibold text-white text-xs truncate block font-mono" title={APK_CONFIG.supabaseLatestApkUrl}>
+              {APK_CONFIG.supabaseStorageBucket}/Latest_App/AyurIndex.apk
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#081C13] border border-[#23493C] space-y-1">
+            <span className="text-[10px] text-gray-400 uppercase font-mono block">Clinic QR Strategy</span>
+            <span className="font-semibold text-emerald-400 text-xs block">
+              Permanent Latest Redirect
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Release Manager Modal */}
+      {isReleaseModalOpen && (
+        <ReleaseManagerModal
+          isOpen={isReleaseModalOpen}
+          onClose={() => setIsReleaseModalOpen(false)}
+        />
+      )}
 
     </div>
   );

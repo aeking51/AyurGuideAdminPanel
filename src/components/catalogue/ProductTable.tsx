@@ -8,10 +8,12 @@ import {
   Camera,
   QrCode,
   Check,
-  ChevronDown
+  ChevronDown,
+  Maximize2
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { AyurCheckbox } from '../common/AyurCheckbox';
+import { PhotoLightboxModal } from '../common/PhotoLightboxModal';
 
 interface ProductTableProps {
   products: Product[];
@@ -46,6 +48,7 @@ export const ProductTable: React.FC<ProductTableProps> = ({
 }) => {
   const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
   const [isGroupMenuOpen, setIsGroupMenuOpen] = useState(false);
+  const [lightboxProduct, setLightboxProduct] = useState<Product | null>(null);
 
   const selectedOnCurrentPageCount = products.filter(p => selectedProductIds.has(p.id)).length;
   const totalCount = products.length;
@@ -269,13 +272,17 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   {/* Medicine Identity */}
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-emerald-950 border border-emerald-800/80 shrink-0 relative">
+                      <div 
+                        onClick={() => setLightboxProduct(product)}
+                        className="w-12 h-12 rounded-xl overflow-hidden bg-emerald-950 border border-emerald-800/80 shrink-0 relative cursor-pointer hover:border-emerald-400 transition group/img"
+                        title="Click to view packaging photo"
+                      >
                         <img 
                           src={product.imageUrl || "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600"} 
                           alt={product.name}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          className="w-full h-full object-cover group-hover/img:scale-105 transition duration-300"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600";
                           }}
@@ -422,6 +429,15 @@ export const ProductTable: React.FC<ProductTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {lightboxProduct && (
+        <PhotoLightboxModal
+          isOpen={!!lightboxProduct}
+          product={lightboxProduct}
+          onClose={() => setLightboxProduct(null)}
+          onOpenMonograph={onViewMonograph}
+        />
+      )}
     </div>
   );
 };

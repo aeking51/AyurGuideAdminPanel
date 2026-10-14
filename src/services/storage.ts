@@ -2,19 +2,28 @@ import { Product, Category, User, AuditLog, SupabaseConfig, BotanicalIngredient 
 import { initialProducts, initialCategories, initialUsers, initialAuditLogs } from '../data/initialData';
 import { ensureProductShareFields } from '../utils/shareUtils';
 
-const PRODUCTS_KEY = 'ayurguide_products';
-const CATEGORIES_KEY = 'ayurguide_categories';
-const USERS_KEY = 'ayurguide_users';
-const AUDIT_KEY = 'ayurguide_audit_logs';
-const BOTANICALS_KEY = 'ayurguide_botanicals_cache';
-const SUPABASE_KEY = 'ayurguide_supabase_config';
-const ACTIVE_USER_KEY = 'ayurguide_active_user';
-const CLEANED_FLAG = 'ayurguide_v3_clean_central_db';
+const PRODUCTS_KEY = 'ayurindex_products';
+const CATEGORIES_KEY = 'ayurindex_categories';
+const USERS_KEY = 'ayurindex_users';
+const AUDIT_KEY = 'ayurindex_audit_logs';
+const BOTANICALS_KEY = 'ayurindex_botanicals_cache';
+const SUPABASE_KEY = 'ayurindex_supabase_config';
+const ACTIVE_USER_KEY = 'ayurindex_active_user';
+const CLEANED_FLAG = 'ayurindex_v4_clean_flag';
+
+const DEFAULT_SUPABASE_URL = 'https://ksnsfilauqzxsegpjpdt.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbnNmaWxhdXF6eHNlZ3BqcGR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MDI0NTcsImV4cCI6MjEwNTI3ODQ1N30.G3rsM9AUhTr9u3xrEC61sZp01fLeLy8Hsgq48IYoffg';
 
 // Automatically purge legacy mock placeholders if present
 if (typeof window !== 'undefined') {
   try {
     if (localStorage.getItem(CLEANED_FLAG) !== 'true') {
+      localStorage.removeItem('ayurguide_products');
+      localStorage.removeItem('ayurguide_users');
+      localStorage.removeItem('ayurguide_audit_logs');
+      localStorage.removeItem('ayurguide_categories');
+      localStorage.removeItem('ayurguide_botanicals_cache');
+      localStorage.removeItem('ayurguide_supabase_config');
       localStorage.removeItem(PRODUCTS_KEY);
       localStorage.removeItem(USERS_KEY);
       localStorage.removeItem(AUDIT_KEY);
@@ -393,23 +402,26 @@ export class StorageService {
     const envUrl = (import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || "").trim();
     const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY || import.meta.env.SUPABASE_KEY || "").trim();
 
+    const effectiveUrl = envUrl || DEFAULT_SUPABASE_URL;
+    const effectiveKey = envKey || DEFAULT_SUPABASE_ANON_KEY;
+
     try {
       const data = localStorage.getItem(SUPABASE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
         return {
-          url: envUrl || parsed.url || "https://ksnsfilauqzxsegpjpdt.supabase.co",
-          key: envKey || parsed.key || "",
-          connected: !!(envKey || (parsed.key && parsed.key.length > 10)),
+          url: envUrl || parsed.url || effectiveUrl,
+          key: envKey || parsed.key || effectiveKey,
+          connected: true,
           lastSyncTime: parsed.lastSyncTime
         };
       }
     } catch {}
 
     return {
-      url: envUrl || "https://ksnsfilauqzxsegpjpdt.supabase.co",
-      key: envKey || "",
-      connected: !!(envKey && envKey.length > 10)
+      url: effectiveUrl,
+      key: effectiveKey,
+      connected: !!(effectiveKey && effectiveKey.length > 10)
     };
   }
 

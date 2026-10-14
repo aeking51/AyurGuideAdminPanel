@@ -103,11 +103,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCategoryId(categories[0]?.id || 1);
       setClassicalReference('Ashtanga Hrudayam / AFI');
       setImages([
-        'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600',
-        'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600',
-        'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600'
+        'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/09_AMRUTHARISHTAM_450_ML.jpg?v=1760080313',
+        'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/138_THENGIN_POOKKULA_LEHYAM_400_GM.jpg?v=1768148741',
+        'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/48_BALAMRUTHAM_450_ML.jpg?v=1762334437'
       ]);
-      setImageUrl('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600');
+      setImageUrl('https://cdn.shopify.com/s/files/1/0705/1182/0938/files/09_AMRUTHARISHTAM_450_ML.jpg?v=1760080313');
       setDescription('');
       setPrimaryBenefit('');
       setDoshaImpact('Tridoshic');
@@ -225,15 +225,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   const handleApplyPresetGroup = (count: 3 | 4) => {
     const presets3 = [
-      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600', // Bottle packaging
-      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600', // Herbal extract / Decoction
-      'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600', // Pure Botanical Churna
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/09_AMRUTHARISHTAM_450_ML.jpg?v=1760080313', // Classical Arishta Bottle
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/138_THENGIN_POOKKULA_LEHYAM_400_GM.jpg?v=1768148741', // Classical Lehyam Confection
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/48_BALAMRUTHAM_450_ML.jpg?v=1762334437', // Classical Asava Formulation
     ];
     const presets4 = [
-      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600', // Bottle packaging
-      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600', // Formulation Tablets / Gulika
-      'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600', // Decoction extract
-      'https://images.unsplash.com/photo-1514733670139-4d87a1941d55?w=600', // Dispensing Churna & Box
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/09_AMRUTHARISHTAM_450_ML.jpg?v=1760080313', // Bottle packaging
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/15_AP_HAR_TABLET_100_NOSxxxhdpi.png?v=1779688369', // Formulation Tablets / Gulika
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/138_THENGIN_POOKKULA_LEHYAM_400_GM.jpg?v=1768148741', // Lehyam Confection
+      'https://cdn.shopify.com/s/files/1/0705/1182/0938/files/261_RED_SANDALWOOD_POWDER_-_RAKTA_CHANDAN_POWDER_50_GMS.jpg?v=1771395228', // Dispensing Churna
     ];
     const selected = count === 3 ? presets3 : presets4;
     setImages(selected);

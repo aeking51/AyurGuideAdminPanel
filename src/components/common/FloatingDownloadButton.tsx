@@ -21,8 +21,8 @@ export const FloatingDownloadButton: React.FC<FloatingDownloadButtonProps> = ({
     e.stopPropagation();
     setDownloadStarted(true);
     const link = document.createElement('a');
-    link.href = APK_CONFIG.directDownloadUrl;
-    link.download = `ayurguide-${APK_CONFIG.version}.apk`;
+    link.href = APK_CONFIG.supabaseLatestApkUrl || APK_CONFIG.directDownloadUrl;
+    link.download = `AyurIndex.apk`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -31,7 +31,7 @@ export const FloatingDownloadButton: React.FC<FloatingDownloadButtonProps> = ({
 
   return (
     <aside 
-      aria-label="AyurGuide Android App Download"
+      aria-label="Ayur Index Android App Download"
       className="fixed bottom-6 right-6 z-40 flex items-center gap-2 group print:hidden select-none"
     >
       <div 
@@ -49,7 +49,7 @@ export const FloatingDownloadButton: React.FC<FloatingDownloadButtonProps> = ({
         <button
           onClick={onNavigateToDownload}
           className="flex items-center gap-2 text-left focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#081C13] rounded-full py-1 px-1"
-          title="Open AyurGuide Android APK Download Hub"
+          title="Open Ayur Index Android APK Download Hub"
         >
           <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0 shadow-inner">
             <Smartphone className="w-4 h-4 text-emerald-300" />
@@ -58,7 +58,7 @@ export const FloatingDownloadButton: React.FC<FloatingDownloadButtonProps> = ({
           <div className="flex flex-col pr-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold tracking-wide text-emerald-100 font-sans">
-                Get AyurGuide APK
+                Get Ayur Index APK
               </span>
               <span className="text-[10px] bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 px-1.5 py-0.2 rounded-full font-mono font-medium">
                 {APK_CONFIG.version}

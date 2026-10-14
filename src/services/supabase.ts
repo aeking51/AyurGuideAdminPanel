@@ -251,7 +251,7 @@ function inferTargetEntity(action: string): string {
 }
 
 // Local cache key for ingredients
-const INGREDIENTS_LOCAL_KEY = 'ayurguide_botanicals_cache';
+const INGREDIENTS_LOCAL_KEY = 'ayurindex_botanicals_cache';
 
 export class SupabaseService {
   static getClient(): SupabaseClient | null {
@@ -1846,7 +1846,7 @@ export class SupabaseService {
 
     try {
       const channel = client
-        .channel('ayurguide-central-realtime')
+        .channel('ayurindex-central-realtime')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'products' },

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Printer, Download, Sparkles, QrCode, Camera } from 'lucide-react';
+import { X, Printer, Download, Sparkles, QrCode, Camera, Maximize2 } from 'lucide-react';
 import { Product, IngredientItem } from '../../types';
 import { resolveHerbDetails } from '../../utils/dravyagunaDirectory';
 import { ensureProductShareFields, generateQrDataUrl } from '../../utils/shareUtils';
+import { PhotoLightboxModal } from '../common/PhotoLightboxModal';
 
 interface MonographModalProps {
   product: Product | null;
@@ -11,6 +12,7 @@ interface MonographModalProps {
 
 export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [lightboxPhotoIndex, setLightboxPhotoIndex] = useState<number | null>(null);
 
   // Strictly display ingredients stored in Supabase record - no placeholder fallback
   const effectiveIngredients: IngredientItem[] = useMemo(() => {
@@ -157,18 +159,26 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
                   {photos.map((img, i) => {
                     const captions = ['Packaging / Bottle', 'Formulation Label', 'Medicine Texture / Decoction', 'Batch Carton'];
                     return (
-                      <div key={i} className="flex flex-col items-center text-center">
-                        <div className="w-full aspect-square max-h-36 rounded-lg overflow-hidden border border-[#E2D9CC] bg-[#FAF7F2] mb-1">
+                      <div 
+                        key={i} 
+                        onClick={() => setLightboxPhotoIndex(i)}
+                        className="flex flex-col items-center text-center cursor-pointer group/monoimg"
+                        title="Click to inspect high-resolution photo"
+                      >
+                        <div className="w-full aspect-square max-h-36 rounded-lg overflow-hidden border border-[#E2D9CC] group-hover/monoimg:border-emerald-600 bg-[#FAF7F2] mb-1 relative transition">
                           <img 
                             src={img} 
                             alt={`Medicine Angle ${i + 1}`} 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover/monoimg:scale-105 transition duration-300"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
                             }}
                           />
+                          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/monoimg:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="w-3.5 h-3.5 text-white drop-shadow" />
+                          </div>
                         </div>
-                        <span className="text-[10px] text-gray-600 font-medium">
+                        <span className="text-[10px] text-gray-600 font-medium group-hover/monoimg:text-emerald-800 transition">
                           {captions[i] || `Angle ${i + 1}`}
                         </span>
                       </div>
@@ -273,6 +283,15 @@ export const MonographModal: React.FC<MonographModalProps> = ({ product, onClose
         </div>
 
       </div>
+
+      {lightboxPhotoIndex !== null && product && (
+        <PhotoLightboxModal
+          isOpen={lightboxPhotoIndex !== null}
+          product={product}
+          initialIndex={lightboxPhotoIndex}
+          onClose={() => setLightboxPhotoIndex(null)}
+        />
+      )}
     </div>
   );
 };

@@ -453,6 +453,13 @@ export const App: React.FC = () => {
             setIsDownloadView(false);
             if (currentTab === 'download') setCurrentTab('catalogue');
           }}
+          onNavigateToProduct={(slug) => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', `/product/${slug}`);
+            }
+            setIsDownloadView(false);
+            setPublicProductSlug(slug);
+          }}
         />
         <DownloadQRModal
           isOpen={isDownloadQrModalOpen}
