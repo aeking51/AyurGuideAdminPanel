@@ -16,17 +16,15 @@ import {
   AlertTriangle, 
   Info, 
   ChevronRight, 
-  HelpCircle,
-  FileCode,
-  Share2,
-  RefreshCw,
-  Search,
-  Pill,
-  Terminal,
-  Server,
-  Camera,
-  Maximize2,
-  Clock,
+  HelpCircle, 
+  FileCode, 
+  Share2, 
+  RefreshCw, 
+  Search, 
+  Pill, 
+  Terminal, 
+  Server, 
+  Clock, 
   Radio
 } from 'lucide-react';
 import { APK_CONFIG, ApkReleaseInfo, ApkVersionArchive } from '../../config/apkConfig';
@@ -34,7 +32,6 @@ import { generateQrDataUrl } from '../../utils/shareUtils';
 import { SupabaseService } from '../../services/supabase';
 import { ApkStorageService, StorageStatusResult } from '../../services/apkStorageService';
 import { Product, BotanicalIngredient } from '../../types';
-import { PhotoLightboxModal } from '../common/PhotoLightboxModal';
 
 interface ApkDownloadPageProps {
   onNavigateHome: () => void;
@@ -46,8 +43,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   onNavigateToProduct
 }) => {
   // Download configuration & mirrors (Default to Supabase Storage CDN)
-  const [downloadSource, setDownloadSource] = useState<'supabase_cdn' | 'bundled' | 'github' | 'custom'>('supabase_cdn');
-  const [customUrl, setCustomUrl] = useState<string>('');
+  const [downloadSource, setDownloadSource] = useState<'supabase_cdn' | 'github'>('supabase_cdn');
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
 
@@ -65,7 +61,6 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   const [activeStep, setActiveStep] = useState<number>(1);
 
   // Live Supabase feature preview data (NO placeholder data - strictly from Supabase)
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [sampleProducts, setSampleProducts] = useState<Product[]>([]);
   const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
   const [totalHerbsCount, setTotalHerbsCount] = useState<number>(0);
@@ -74,10 +69,6 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
   // Active feature tab preview
   const [activeFeatureIndex, setActiveFeatureIndex] = useState<number>(0);
-
-  // Photo Lightbox State
-  const [lightboxProduct, setLightboxProduct] = useState<Product | null>(null);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
 
   // Check Supabase Storage CDN status on load
   const refreshStorageStatus = () => {
@@ -102,7 +93,6 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
       SupabaseService.fetchCategories().catch(() => [])
     ]).then(([prods, herbs, cats]) => {
       if (!isMounted) return;
-      setAllProducts(prods);
       setTotalProductsCount(prods.length);
       setTotalHerbsCount(herbs.length);
       setTotalCategoriesCount(cats.length);
@@ -117,17 +107,15 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
     };
   }, []);
 
-  // Compute active download URL based on selected mirror / custom URL
+  // Compute active download URL based on selected mirror (Supabase Storage Cloud CDN or GitHub mirror)
   const activeDownloadUrl = React.useMemo(() => {
-    if (downloadSource === 'supabase_cdn') return APK_CONFIG.supabaseLatestApkUrl;
     if (downloadSource === 'github') return APK_CONFIG.githubMirrorUrl;
-    if (downloadSource === 'custom' && customUrl.trim()) return customUrl.trim();
-    return APK_CONFIG.directDownloadUrl;
-  }, [downloadSource, customUrl]);
+    return APK_CONFIG.supabaseLatestApkUrl;
+  }, [downloadSource]);
 
   // Generate QR code whenever target or download URL changes
   useEffect(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayur-guide-admin-panel.vercel.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayurindex.app';
     const targetUrl = qrTarget === 'apk' 
       ? (activeDownloadUrl.startsWith('http') ? activeDownloadUrl : `${origin}${activeDownloadUrl}`)
       : `${origin}/download`;
@@ -144,7 +132,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
     try {
       const link = document.createElement('a');
       link.href = activeDownloadUrl;
-      link.download = `ayurindex-latest.apk`;
+      link.download = `AyurIndex.apk`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -171,29 +159,12 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   };
 
   const handleCopyPageLink = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayur-guide-admin-panel.vercel.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ayurindex.app';
     navigator.clipboard.writeText(`${origin}/download`).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
     });
   };
-
-  // Filter products for the live photo showcase gallery
-  const photoGalleryProducts = React.useMemo(() => {
-    const withPhotos = allProducts.filter(p => p.imageUrl && p.imageUrl.startsWith('http'));
-    if (selectedCategoryFilter === 'All') {
-      return withPhotos.slice(0, 8);
-    }
-    return withPhotos.filter(p => p.categoryName === selectedCategoryFilter).slice(0, 8);
-  }, [allProducts, selectedCategoryFilter]);
-
-  const availableCategories = React.useMemo(() => {
-    const cats = new Set<string>();
-    allProducts.forEach(p => {
-      if (p.categoryName && p.imageUrl) cats.add(p.categoryName);
-    });
-    return ['All', ...Array.from(cats).slice(0, 6)];
-  }, [allProducts]);
 
   return (
     <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white">
@@ -215,8 +186,12 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             <div className="h-6 w-px bg-[#23493C]/80" />
 
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 p-0.5 shadow-md shadow-emerald-950 flex items-center justify-center">
-                <Smartphone className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/40 shadow-md shadow-emerald-950 flex items-center justify-center bg-[#061810] flex-shrink-0">
+                <img 
+                  src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+                  alt="Ayur Index Official Luxury Logo" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -270,27 +245,37 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             {/* Left 7 Columns: Product Intro & Download Actions */}
             <div className="lg:col-span-7 space-y-6">
               
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>OFFICIAL STANDALONE ANDROID RELEASE &bull; BUILD {APK_CONFIG.buildNumber}</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-emerald-400/60 shadow-2xl shadow-emerald-950/80 bg-[#061810] p-1 flex-shrink-0 group hover:border-emerald-300 transition-all duration-300">
+                  <img 
+                    src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+                    alt="Ayur Index Official Luxury App Logo" 
+                    className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>OFFICIAL STANDALONE ANDROID RELEASE &bull; BUILD {APK_CONFIG.buildNumber}</span>
+                    </div>
 
-                {/* Supabase Storage Badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#081C13] border border-[#23493C] text-[11px] font-mono text-gray-300">
-                  <Database className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Supabase Cloud Storage CDN</span>
+                    {/* Supabase Storage Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#081C13] border border-[#23493C] text-[11px] font-mono text-gray-300">
+                      <Database className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Supabase Cloud Storage CDN</span>
+                    </div>
+                  </div>
+
+                  <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-serif leading-tight">
+                    Ayur Index for Android
+                  </h1>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-serif leading-tight">
-                  Ayur Index for Android
-                </h1>
-                <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl">
-                  Carry the complete Ayurvedic medicine catalogue, high-resolution formulation photography, Dravyaguna botanical herbs database, and camera barcode monograph scanner in your pocket. Built for offline clinical consultations and daily practitioner use.
-                </p>
-              </div>
+              <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl">
+                Carry the complete Ayurvedic medicine catalogue, formulation monographs, Dravyaguna botanical herbs database, and camera barcode monograph scanner in your pocket. Built for offline clinical consultations and daily practitioner use.
+              </p>
 
               {/* Version & System Spec Badges */}
               <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -370,22 +355,22 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
               </div>
 
-              {/* Mirror Selection & Custom URL Hosting Accordion */}
+              {/* CDN Edge Source & Download Routing */}
               <div className="p-4 rounded-2xl bg-[#0D281C]/60 border border-[#23493C] space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-emerald-200 flex items-center gap-1.5">
                     <Server className="w-3.5 h-3.5 text-emerald-400" />
-                    CDN Edge Source & Download Routing
+                    CDN Edge Source &amp; Download Routing
                   </span>
                   <span className="text-[10px] text-gray-400">
                     Auto-selected: Supabase Cloud CDN
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                   <button
                     onClick={() => setDownloadSource('supabase_cdn')}
-                    className={`py-2 px-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       downloadSource === 'supabase_cdn' 
                         ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
                         : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
@@ -393,29 +378,14 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   >
                     <div>
                       <div className="font-semibold text-white">Supabase CDN</div>
-                      <div className="text-[10px] text-emerald-400/80">Primary Edge</div>
+                      <div className="text-[10px] text-emerald-400/80">Primary Edge &bull; Instant Cloud Delivery</div>
                     </div>
                     {downloadSource === 'supabase_cdn' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                   </button>
 
                   <button
-                    onClick={() => setDownloadSource('bundled')}
-                    className={`py-2 px-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                      downloadSource === 'bundled' 
-                        ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
-                        : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-semibold text-white">Bundled Server</div>
-                      <div className="text-[10px] text-emerald-400/80">Local Fallback</div>
-                    </div>
-                    {downloadSource === 'bundled' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                  </button>
-
-                  <button
                     onClick={() => setDownloadSource('github')}
-                    className={`py-2 px-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       downloadSource === 'github' 
                         ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
                         : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
@@ -423,41 +393,11 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   >
                     <div>
                       <div className="font-semibold text-white">GitHub Mirror</div>
-                      <div className="text-[10px] text-emerald-400/80">Global Releases</div>
+                      <div className="text-[10px] text-emerald-400/80">Global Releases Mirror</div>
                     </div>
                     {downloadSource === 'github' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                   </button>
-
-                  <button
-                    onClick={() => setDownloadSource('custom')}
-                    className={`py-2 px-3 rounded-xl border text-left flex items-center justify-between transition-all ${
-                      downloadSource === 'custom' 
-                        ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
-                        : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-semibold text-white">Custom URL</div>
-                      <div className="text-[10px] text-emerald-400/80">Clinic Server</div>
-                    </div>
-                    {downloadSource === 'custom' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                  </button>
                 </div>
-
-                {downloadSource === 'custom' && (
-                  <div className="pt-2 animate-in fade-in duration-200">
-                    <label className="block text-[11px] text-gray-400 mb-1">
-                      Custom APK Direct Download URL:
-                    </label>
-                    <input
-                      type="url"
-                      value={customUrl}
-                      onChange={(e) => setCustomUrl(e.target.value)}
-                      placeholder="https://your-clinic-storage.com/downloads/ayurindex.apk"
-                      className="w-full py-2 px-3 bg-[#081C13] border border-emerald-500/50 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 font-mono"
-                    />
-                  </div>
-                )}
               </div>
 
             </div>
@@ -471,7 +411,11 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                 
                 <div className="w-full flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-emerald-400" />
+                    <img 
+                      src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+                      alt="Logo" 
+                      className="w-5 h-5 rounded-md object-cover border border-emerald-400/50" 
+                    />
                     <span className="text-xs font-bold text-white uppercase tracking-wider">
                       Scan to Mobile
                     </span>
@@ -709,121 +653,6 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
           </div>
         </section>
 
-        {/* AUTHENTIC MEDICINES & PHOTOGRAPHY GALLERY (LIVE SUPABASE DATA) */}
-        <section className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
-                <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                Live Supabase Records &amp; Packaging Photography
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white font-serif mt-2">
-                Classical Formulations &amp; Medicine Photos
-              </h2>
-              <p className="text-sm text-gray-400">
-                Explore authentic classical medicines with real packaging photography, Sanskrit references, and clinical monographs.
-              </p>
-            </div>
-
-            {/* Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-              {availableCategories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategoryFilter(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                    selectedCategoryFilter === cat
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'bg-[#0D281C] text-emerald-300/80 hover:bg-[#1A3D2E] border border-[#23493C]'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Photo Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {photoGalleryProducts.map(prod => (
-              <div
-                key={prod.id}
-                className="group bg-[#0D281C] border border-[#23493C] rounded-2xl overflow-hidden shadow-lg hover:border-emerald-500/50 hover:shadow-emerald-950/60 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  {/* Photo Thumbnail with Zoom Trigger */}
-                  <div 
-                    onClick={() => setLightboxProduct(prod)}
-                    className="relative aspect-square bg-[#081C13] overflow-hidden cursor-pointer"
-                  >
-                    <img 
-                      src={prod.imageUrl} 
-                      alt={prod.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600';
-                      }}
-                    />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] font-mono text-emerald-300 border border-emerald-500/30">
-                      {prod.code}
-                    </div>
-                    {prod.categoryName && (
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-emerald-950/90 text-[10px] text-emerald-300 border border-emerald-800">
-                        {prod.categoryName}
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-xs text-white font-medium">
-                      <Maximize2 className="w-4 h-4 text-emerald-300" />
-                      <span>Inspect Photo</span>
-                    </div>
-                  </div>
-
-                  {/* Card Details */}
-                  <div className="p-4 space-y-1.5">
-                    <h3 className="font-bold text-white text-sm font-serif line-clamp-1 group-hover:text-emerald-300 transition-colors">
-                      {prod.name}
-                    </h3>
-                    <p className="text-[11px] text-emerald-400/80 font-mono line-clamp-1">
-                      {prod.classicalReference || prod.categoryName || 'Ayurvedic Pharmacopoeia'}
-                    </p>
-                    {prod.packings && prod.packings.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {prod.packings.slice(0, 2).map((pkg, i) => (
-                          <span key={i} className="text-[10px] px-1.5 py-0.2 rounded bg-[#081C13] text-gray-400 border border-[#23493C]">
-                            {pkg}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer Action */}
-                <div className="p-3 pt-0 border-t border-[#23493C]/40 flex items-center justify-between">
-                  <button
-                    onClick={() => setLightboxProduct(prod)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 py-1"
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>View Photos</span>
-                  </button>
-
-                  {onNavigateToProduct && prod.publicSlug && (
-                    <button
-                      onClick={() => onNavigateToProduct(prod.publicSlug!)}
-                      className="text-xs text-gray-400 hover:text-white flex items-center gap-1 py-1"
-                    >
-                      <span>Monograph</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* LIVE FEATURE PREVIEW & SUPABASE SHOWCASE */}
         <section className="space-y-6">
           
@@ -941,8 +770,12 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[11px] pb-2 border-b border-[#23493C]/60">
-                        <span className="font-serif font-bold text-white flex items-center gap-1">
-                          <Pill className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="font-serif font-bold text-white flex items-center gap-1.5">
+                          <img 
+                            src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+                            alt="Logo" 
+                            className="w-4 h-4 rounded-full object-cover border border-emerald-400/50" 
+                          />
                           <span>Ayur Index Mobile</span>
                         </span>
                         <span className="text-[10px] font-mono text-emerald-400">Offline Ready</span>
@@ -1055,25 +888,17 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             GitHub Releases
           </a>
         </div>
-        <p>
-          Ayur Index Android Companion &bull; Powered by Live Supabase Storage CDN
-        </p>
+        <div className="flex items-center justify-center gap-2">
+          <img 
+            src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+            alt="Ayur Index Logo" 
+            className="w-4 h-4 rounded-full object-cover border border-emerald-400/40 inline-block" 
+          />
+          <p>
+            Ayur Index Android Companion &bull; Powered by Live Supabase Storage CDN
+          </p>
+        </div>
       </footer>
-
-      {/* Photo Lightbox Modal */}
-      {lightboxProduct && (
-        <PhotoLightboxModal
-          isOpen={!!lightboxProduct}
-          product={lightboxProduct}
-          onClose={() => setLightboxProduct(null)}
-          onOpenMonograph={onNavigateToProduct ? (p) => {
-            if (p.publicSlug) {
-              setLightboxProduct(null);
-              onNavigateToProduct(p.publicSlug);
-            }
-          } : undefined}
-        />
-      )}
 
     </div>
   );
