@@ -43,7 +43,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   onNavigateToProduct
 }) => {
   // Download configuration & mirrors (Default to Supabase Storage CDN)
-  const [downloadSource, setDownloadSource] = useState<'supabase_cdn' | 'github'>('supabase_cdn');
+  const [downloadSource, setDownloadSource] = useState<'supabase_cdn' | 'vercel'>('supabase_cdn');
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
 
@@ -107,9 +107,9 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
     };
   }, []);
 
-  // Compute active download URL based on selected mirror (Supabase Storage Cloud CDN or GitHub mirror)
+  // Compute active download URL based on selected mirror (Supabase Storage Cloud CDN or Vercel mirror)
   const activeDownloadUrl = React.useMemo(() => {
-    if (downloadSource === 'github') return APK_CONFIG.githubMirrorUrl;
+    if (downloadSource === 'vercel') return APK_CONFIG.vercelMirrorUrl;
     return APK_CONFIG.supabaseLatestApkUrl;
   }, [downloadSource]);
 
@@ -325,14 +325,14 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   </button>
 
                   <a
-                    href={APK_CONFIG.githubMirrorUrl}
+                    href={APK_CONFIG.vercelMirrorUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="py-3.5 px-4 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
-                    title="Download from official GitHub releases mirror"
+                    title="Download from high-speed secondary Vercel storage mirror"
                   >
                     <ExternalLink className="w-4 h-4 text-emerald-400" />
-                    <span>GitHub Mirror</span>
+                    <span>Vercel Mirror</span>
                   </a>
                 </div>
 
@@ -384,18 +384,18 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   </button>
 
                   <button
-                    onClick={() => setDownloadSource('github')}
+                    onClick={() => setDownloadSource('vercel')}
                     className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
-                      downloadSource === 'github' 
+                      downloadSource === 'vercel' 
                         ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
                         : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
                     }`}
                   >
                     <div>
-                      <div className="font-semibold text-white">GitHub Mirror</div>
-                      <div className="text-[10px] text-emerald-400/80">Global Releases Mirror</div>
+                      <div className="font-semibold text-white">Vercel Mirror</div>
+                      <div className="text-[10px] text-emerald-400/80">Secondary Edge &bull; High-Speed Blob Storage</div>
                     </div>
-                    {downloadSource === 'github' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    {downloadSource === 'vercel' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                   </button>
                 </div>
               </div>
@@ -884,8 +884,8 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             Direct Cloud APK
           </a>
           <span>&bull;</span>
-          <a href={APK_CONFIG.githubMirrorUrl} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 underline underline-offset-4">
-            GitHub Releases
+          <a href={APK_CONFIG.vercelMirrorUrl} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 underline underline-offset-4">
+            Vercel Mirror
           </a>
         </div>
         <div className="flex items-center justify-center gap-2">

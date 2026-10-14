@@ -29,7 +29,7 @@ export interface ApkReleaseInfo {
   // Fallbacks & Mirrors
   directDownloadUrl: string;
   versionedDownloadUrl: string;
-  githubMirrorUrl: string;
+  vercelMirrorUrl: string;
   releaseHighlights: string[];
   features: {
     id: string;
@@ -57,6 +57,7 @@ const SUPABASE_PROJECT_URL = 'https://ksnsfilauqzxsegpjpdt.supabase.co';
 const STORAGE_BUCKET = 'Ayurindex_app_bucket';
 const STORAGE_BASE = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${STORAGE_BUCKET}`;
 export const OFFICIAL_SUPABASE_APK_URL = 'https://ksnsfilauqzxsegpjpdt.supabase.co/storage/v1/object/public/Ayurindex_app_bucket/Latest_App/AyurIndex.apk';
+export const OFFICIAL_VERCEL_APK_URL = 'https://zzctcdr4hvofenhy.public.blob.vercel-storage.com/app/AyurIndex.apk';
 
 export const APK_CONFIG: ApkReleaseInfo = {
   appName: 'Ayur Index',
@@ -78,7 +79,7 @@ export const APK_CONFIG: ApkReleaseInfo = {
   // Local Server Fallbacks
   directDownloadUrl: '/downloads/ayurindex-latest.apk',
   versionedDownloadUrl: '/downloads/ayurindex-v1.2.0.apk',
-  githubMirrorUrl: OFFICIAL_SUPABASE_APK_URL,
+  vercelMirrorUrl: OFFICIAL_VERCEL_APK_URL,
 
   releaseHighlights: [
     'Direct high-speed delivery via Supabase Storage Bucket (Ayurindex_app_bucket)',
@@ -158,7 +159,7 @@ export const APK_CONFIG: ApkReleaseInfo = {
   faq: [
     {
       question: 'Where is the official Ayur Index APK hosted?',
-      answer: 'The official Ayur Index APK is hosted in our high-speed, secure Supabase Storage bucket with automated global CDN edge distribution. We also provide local server fallbacks and GitHub releases.'
+      answer: 'The official Ayur Index APK is hosted in our high-speed, secure Supabase Storage bucket with automated global CDN edge distribution, alongside a secondary high-speed Vercel Storage mirror.'
     },
     {
       question: 'How do printed QR codes on medicine bottles remain updated?',
