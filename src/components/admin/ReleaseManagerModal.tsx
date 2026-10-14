@@ -28,11 +28,14 @@ import {
   Sliders,
   CheckCircle,
   HelpCircle,
+  Eye,
+  EyeOff,
   Link as LinkIcon
 } from 'lucide-react';
 import { APK_CONFIG } from '../../config/apkConfig';
 import { ApkStorageService, StorageStatusResult } from '../../services/apkStorageService';
 import { ApkLinkManagerService, ManagedApkLink } from '../../services/apkLinkManagerService';
+import { ApkVersionManagerService, ManagedApkVersion } from '../../services/apkVersionManagerService';
 
 interface ReleaseManagerModalProps {
   isOpen: boolean;
@@ -60,6 +63,13 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
   const [customDesc, setCustomDesc] = useState<string>('');
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
+  // Managed APK Versions State (Active/Inactive toggle & link management)
+  const [managedVersions, setManagedVersions] = useState<ManagedApkVersion[]>(() => ApkVersionManagerService.getVersions());
+  const [editingVersionTag, setEditingVersionTag] = useState<string | null>(null);
+  const [editingVersionUrl, setEditingVersionUrl] = useState<string>('');
+  const [testingVersionTag, setTestingVersionTag] = useState<string | null>(null);
+  const [versionTestResults, setVersionTestResults] = useState<{ [version: string]: { isReachable: boolean; latencyMs: number; statusText: string } }>({});
+
   // Upload States
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [versionTag, setVersionTag] = useState<string>(APK_CONFIG.version);
@@ -68,13 +78,93 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; latestUrl?: string } | null>(null);
 
-  // Subscribe to live link updates
+  // Subscribe to live link and version updates
   useEffect(() => {
-    const unsubscribe = ApkLinkManagerService.subscribe((links) => {
+    const unsubLinks = ApkLinkManagerService.subscribe((links) => {
       setManagedLinks(links);
     });
-    return unsubscribe;
+    const unsubVersions = ApkVersionManagerService.subscribe((versions) => {
+      setManagedVersions(versions);
+    });
+    return () => {
+      unsubLinks();
+      unsubVersions();
+    };
   }, []);
+
+  // APK Version Management Handlers
+  const handleToggleVersionActive = (version: string) => {
+    const updated = ApkVersionManagerService.toggleVersionActive(version);
+    setManagedVersions(updated);
+    const target = updated.find(v => v.version === version);
+    setFeedbackMessage(
+      target?.isActive 
+        ? `Version ${version} is now ACTIVE (Visible on public download page).`
+        : `Version ${version} is now INACTIVE (Hidden from public download page).`
+    );
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleStartEditVersion = (v: ManagedApkVersion) => {
+    setEditingVersionTag(v.version);
+    setEditingVersionUrl(v.cloudStorageUrl);
+  };
+
+  const handleSaveVersionUrl = (version: string) => {
+    const trimmed = editingVersionUrl.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      alert('Please enter a valid URL starting with https:// or http://');
+      return;
+    }
+    const updated = ApkVersionManagerService.updateVersionUrl(version, trimmed);
+    setManagedVersions(updated);
+    setEditingVersionTag(null);
+    setFeedbackMessage(`Download URL for version ${version} updated successfully.`);
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleCancelEditVersion = () => {
+    setEditingVersionTag(null);
+    setEditingVersionUrl('');
+  };
+
+  const handleResetVersionUrl = (version: string) => {
+    const updated = ApkVersionManagerService.resetVersionUrl(version);
+    setManagedVersions(updated);
+    if (editingVersionTag === version) {
+      setEditingVersionTag(null);
+    }
+    setFeedbackMessage(`Version ${version} URL reset to default.`);
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleTestVersionLink = async (version: string) => {
+    setTestingVersionTag(version);
+    try {
+      const res = await ApkVersionManagerService.testVersionReachability(version);
+      setVersionTestResults(prev => ({ ...prev, [version]: res }));
+    } finally {
+      setTestingVersionTag(null);
+    }
+  };
+
+  const handleEnableAllVersions = () => {
+    const updated = ApkVersionManagerService.enableAllVersions();
+    setManagedVersions(updated);
+    setFeedbackMessage('All APK versions have been enabled for public download.');
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleResetAllVersions = () => {
+    if (confirm('Reset all APK versions to active status and default Supabase Storage URLs?')) {
+      const updated = ApkVersionManagerService.resetAllToDefaults();
+      setManagedVersions(updated);
+      setEditingVersionTag(null);
+      setFeedbackMessage('All version settings reset to factory defaults.');
+      setTimeout(() => setFeedbackMessage(null), 3000);
+    }
+  };
 
   const handleToggleActive = (id: string) => {
     const updated = ApkLinkManagerService.toggleLinkActive(id);
@@ -301,7 +391,7 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>Version Archive ({APK_CONFIG.archiveReleases.length})</span>
+            <span>Version Archive ({managedVersions.filter(v => v.isActive).length}/{managedVersions.length} Active)</span>
           </button>
 
           <button
@@ -798,31 +888,114 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
             </div>
           )}
 
-          {/* TAB 3: VERSION ARCHIVE & CHANGELOG */}
+          {/* TAB 3: VERSION ARCHIVE & CHANGELOG MANAGEMENT */}
           {activeTab === 'archive' && (
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wider font-mono">
-                Historical Release Archive (Supabase Storage CDN)
-              </h4>
+            <div className="space-y-4">
+              {/* Header & Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#081C13] border border-[#23493C]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-white">
+                      APK Version Archive &amp; Links Manager
+                    </h4>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      {managedVersions.filter(v => v.isActive).length} / {managedVersions.length} Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Toggle <strong className="text-emerald-300">Active/Inactive</strong> for each APK version link below. Only active versions are rendered to the public download page.
+                  </p>
+                </div>
 
-              <div className="space-y-2.5">
-                {APK_CONFIG.archiveReleases.map(rel => (
-                  <div 
-                    key={rel.version}
-                    className="p-4 rounded-2xl bg-[#081C13] border border-[#23493C] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleEnableAllVersions}
+                    className="py-1.5 px-3 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-xs font-medium flex items-center gap-1.5 transition"
+                    title="Enable all versions on the public download page"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm font-mono">{rel.version}</span>
-                        {rel.isLatest && (
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono font-semibold">
-                            Current Latest
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400">&bull; {rel.releaseDate}</span>
-                        <span className="text-xs text-gray-400">&bull; {rel.fileSize}</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Enable All</span>
+                  </button>
+                  <button
+                    onClick={handleResetAllVersions}
+                    className="py-1.5 px-3 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-gray-400 hover:text-white border border-[#23493C] text-xs font-medium flex items-center gap-1.5 transition"
+                    title="Reset all version links and states to defaults"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Version Cards */}
+              <div className="space-y-3">
+                {managedVersions.map(rel => {
+                  const isEditing = editingVersionTag === rel.version;
+                  const isTesting = testingVersionTag === rel.version;
+                  const testRes = versionTestResults[rel.version];
+
+                  return (
+                    <div 
+                      key={rel.version}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        rel.isActive 
+                          ? 'bg-[#081C13] border-[#23493C]' 
+                          : 'bg-[#06140E]/80 border-gray-800/80 opacity-90'
+                      }`}
+                    >
+                      {/* Top Bar: Version info & Active/Inactive Toggle */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#23493C]/40">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <span className="font-bold text-white text-base font-mono">{rel.version}</span>
+                          {rel.isLatest && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono font-semibold">
+                              Latest
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400 font-mono">&bull; {rel.releaseDate}</span>
+                          <span className="text-xs text-gray-400 font-mono">&bull; {rel.fileSize}</span>
+                          <span className="text-xs text-gray-400 font-mono">&bull; {rel.minAndroid}</span>
+
+                          {/* Visibility badge */}
+                          {rel.isActive ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Publicly Visible
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                              <EyeOff className="w-3 h-3 text-amber-400" />
+                              Hidden from Public
+                            </span>
+                          )}
+                        </div>
+
+                        {/* ACTIVE / INACTIVE TOGGLE BUTTON */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleVersionActive(rel.version)}
+                            className={`py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-2 transition border ${
+                              rel.isActive
+                                ? 'bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 border-emerald-500/60 shadow-sm'
+                                : 'bg-gray-800/80 hover:bg-gray-700 text-gray-400 border-gray-700'
+                            }`}
+                            title={rel.isActive ? `Deactivate ${rel.version} (hides from public download page)` : `Activate ${rel.version} (shows on public download page)`}
+                          >
+                            <Power className={`w-3.5 h-3.5 ${rel.isActive ? 'text-emerald-400' : 'text-gray-500'}`} />
+                            <span>{rel.isActive ? 'Active' : 'Inactive'}</span>
+                            {/* Switch Pill Graphic */}
+                            <span className={`w-7 h-3.5 flex items-center rounded-full p-0.5 transition-colors ${
+                              rel.isActive ? 'bg-emerald-500 justify-end' : 'bg-gray-600 justify-start'
+                            }`}>
+                              <span className="w-2.5 h-2.5 rounded-full bg-white shadow-sm" />
+                            </span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-y-0.5 pt-1">
+
+                      {/* Release highlights */}
+                      <div className="space-y-1 py-2.5">
                         {rel.highlights.map((h, i) => (
                           <div key={i} className="text-xs text-gray-300 flex items-center gap-1.5">
                             <span className="w-1 h-1 rounded-full bg-emerald-400" />
@@ -830,18 +1003,122 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
                           </div>
                         ))}
                       </div>
-                    </div>
 
-                    <a
-                      href={rel.cloudStorageUrl}
-                      download
-                      className="py-2 px-3.5 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-xs font-medium flex items-center gap-1.5 transition shrink-0"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download {rel.version}</span>
-                    </a>
-                  </div>
-                ))}
+                      {/* Download URL row or Inline Edit Mode */}
+                      {isEditing ? (
+                        <div className="pt-2 border-t border-[#23493C]/40 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-mono text-emerald-300 flex items-center gap-1.5">
+                              <Edit2 className="w-3 h-3" />
+                              <span>Edit APK Download Link for {rel.version}</span>
+                            </label>
+                            <span className="text-[10px] text-gray-400 font-mono">Requires HTTP/HTTPS</span>
+                          </div>
+
+                          <input
+                            type="url"
+                            value={editingVersionUrl}
+                            onChange={(e) => setEditingVersionUrl(e.target.value)}
+                            className="w-full py-1.5 px-3 bg-[#06140E] border border-emerald-500/50 rounded-xl text-xs font-mono text-emerald-200 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                            placeholder="https://..."
+                          />
+
+                          <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={handleCancelEditVersion}
+                              className="py-1 px-3 rounded-lg text-xs text-gray-400 hover:text-white border border-[#23493C] transition"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetVersionUrl(rel.version)}
+                              className="py-1 px-3 rounded-lg text-xs text-amber-300 hover:bg-amber-500/10 border border-amber-500/30 transition flex items-center gap-1"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Reset to Default</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveVersionUrl(rel.version)}
+                              className="py-1 px-3.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition flex items-center gap-1"
+                            >
+                              <Save className="w-3 h-3" />
+                              <span>Save Link</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t border-[#23493C]/40 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 overflow-hidden flex-1">
+                            <span className="text-[10px] font-mono text-gray-400 shrink-0">Link:</span>
+                            <span className="text-xs font-mono text-emerald-300/80 truncate" title={rel.cloudStorageUrl}>
+                              {rel.cloudStorageUrl}
+                            </span>
+                            {testRes && (
+                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0 ${
+                                testRes.isReachable ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                              }`}>
+                                {testRes.statusText} ({testRes.latencyMs}ms)
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Copy URL */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(rel.cloudStorageUrl);
+                                setCopiedUrl(rel.version);
+                                setTimeout(() => setCopiedUrl(null), 2000);
+                              }}
+                              className="p-1.5 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-gray-300 hover:text-white border border-[#23493C] text-xs transition"
+                              title="Copy version APK link"
+                            >
+                              {copiedUrl === rel.version ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+
+                            {/* Test Link */}
+                            <button
+                              type="button"
+                              onClick={() => handleTestVersionLink(rel.version)}
+                              disabled={isTesting}
+                              className="py-1 px-2.5 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-gray-300 hover:text-white border border-[#23493C] text-xs transition flex items-center gap-1"
+                              title="Test link reachability & latency"
+                            >
+                              <Activity className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin text-emerald-400' : ''}`} />
+                              <span>{isTesting ? 'Testing...' : 'Test'}</span>
+                            </button>
+
+                            {/* Edit URL */}
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditVersion(rel)}
+                              className="py-1 px-2.5 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-gray-300 hover:text-white border border-[#23493C] text-xs transition flex items-center gap-1"
+                              title="Edit download URL for this version"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+
+                            {/* Download Button */}
+                            <a
+                              href={rel.cloudStorageUrl}
+                              download
+                              className="py-1 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition"
+                              title={`Download ${rel.version} APK`}
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Download</span>
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

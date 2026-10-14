@@ -36,6 +36,7 @@ import { generateQrDataUrl } from '../../utils/shareUtils';
 import { SupabaseService } from '../../services/supabase';
 import { ApkStorageService, StorageStatusResult } from '../../services/apkStorageService';
 import { ApkLinkManagerService, ManagedApkLink } from '../../services/apkLinkManagerService';
+import { ApkVersionManagerService, ManagedApkVersion } from '../../services/apkVersionManagerService';
 import { ReleaseManagerModal } from '../admin/ReleaseManagerModal';
 import { Product, BotanicalIngredient } from '../../types';
 
@@ -50,6 +51,10 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 }) => {
   // Managed Distribution Links (Supabase, Vercel & Custom mirrors)
   const [managedLinks, setManagedLinks] = useState<ManagedApkLink[]>(() => ApkLinkManagerService.getLinks());
+  
+  // Managed APK Release Versions (Active/Inactive toggle)
+  const [managedVersions, setManagedVersions] = useState<ManagedApkVersion[]>(() => ApkVersionManagerService.getVersions());
+  
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState<boolean>(false);
 
   // Download configuration & mirrors (Default to Supabase Storage CDN)
@@ -82,11 +87,22 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
   // Subscribe to live link updates across components
   useEffect(() => {
-    const unsubscribe = ApkLinkManagerService.subscribe((links) => {
+    const unsubLinks = ApkLinkManagerService.subscribe((links) => {
       setManagedLinks(links);
     });
-    return unsubscribe;
+    const unsubVersions = ApkVersionManagerService.subscribe((versions) => {
+      setManagedVersions(versions);
+    });
+    return () => {
+      unsubLinks();
+      unsubVersions();
+    };
   }, []);
+
+  // Filter only active versions for public rendering
+  const activeVersions = React.useMemo(() => {
+    return managedVersions.filter(v => v.isActive);
+  }, [managedVersions]);
 
   // Check Supabase Storage CDN status on load
   const refreshStorageStatus = () => {
