@@ -25,12 +25,18 @@ import {
   Terminal, 
   Server, 
   Clock, 
-  Radio
+  Radio,
+  Sliders,
+  Star,
+  Settings,
+  Power
 } from 'lucide-react';
 import { APK_CONFIG, ApkReleaseInfo, ApkVersionArchive } from '../../config/apkConfig';
 import { generateQrDataUrl } from '../../utils/shareUtils';
 import { SupabaseService } from '../../services/supabase';
 import { ApkStorageService, StorageStatusResult } from '../../services/apkStorageService';
+import { ApkLinkManagerService, ManagedApkLink } from '../../services/apkLinkManagerService';
+import { ReleaseManagerModal } from '../admin/ReleaseManagerModal';
 import { Product, BotanicalIngredient } from '../../types';
 
 interface ApkDownloadPageProps {
@@ -42,6 +48,10 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   onNavigateHome,
   onNavigateToProduct
 }) => {
+  // Managed Distribution Links (Supabase, Vercel & Custom mirrors)
+  const [managedLinks, setManagedLinks] = useState<ManagedApkLink[]>(() => ApkLinkManagerService.getLinks());
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState<boolean>(false);
+
   // Download configuration & mirrors (Default to Supabase Storage CDN)
   const [downloadSource, setDownloadSource] = useState<'supabase_cdn' | 'vercel'>('supabase_cdn');
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
@@ -69,6 +79,14 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
   // Active feature tab preview
   const [activeFeatureIndex, setActiveFeatureIndex] = useState<number>(0);
+
+  // Subscribe to live link updates across components
+  useEffect(() => {
+    const unsubscribe = ApkLinkManagerService.subscribe((links) => {
+      setManagedLinks(links);
+    });
+    return unsubscribe;
+  }, []);
 
   // Check Supabase Storage CDN status on load
   const refreshStorageStatus = () => {
@@ -107,11 +125,43 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
     };
   }, []);
 
-  // Compute active download URL based on selected mirror (Supabase Storage Cloud CDN or Vercel mirror)
+  // Resolve managed links for Supabase & Vercel
+  const supabaseLink = managedLinks.find(l => l.id === 'supabase') || {
+    id: 'supabase',
+    name: 'Supabase Cloud Storage',
+    badge: 'Supabase CDN',
+    url: APK_CONFIG.supabaseLatestApkUrl,
+    defaultUrl: APK_CONFIG.supabaseLatestApkUrl,
+    isActive: true,
+    isPrimary: true,
+    description: 'Permanent latest pointer hosted on Supabase Storage bucket.'
+  };
+
+  const vercelLink = managedLinks.find(l => l.id === 'vercel') || {
+    id: 'vercel',
+    name: 'Vercel Blob Mirror',
+    badge: 'Vercel Edge',
+    url: APK_CONFIG.vercelMirrorUrl,
+    defaultUrl: APK_CONFIG.vercelMirrorUrl,
+    isActive: true,
+    isPrimary: false,
+    description: 'High-speed redundant blob mirror hosted on Vercel Storage edge infrastructure.'
+  };
+
+  // Compute active download URL based on selected mirror, active states, and primary configuration
   const activeDownloadUrl = React.useMemo(() => {
-    if (downloadSource === 'vercel') return APK_CONFIG.vercelMirrorUrl;
-    return APK_CONFIG.supabaseLatestApkUrl;
-  }, [downloadSource]);
+    if (downloadSource === 'vercel') {
+      if (vercelLink.isActive) return vercelLink.url;
+      if (supabaseLink.isActive) return supabaseLink.url;
+    }
+    // Default or 'supabase_cdn'
+    if (supabaseLink.isActive) return supabaseLink.url;
+    if (vercelLink.isActive) return vercelLink.url;
+
+    // Fallback to primary active link or default
+    const primary = ApkLinkManagerService.getPrimaryActiveLink();
+    return primary ? primary.url : APK_CONFIG.supabaseLatestApkUrl;
+  }, [downloadSource, supabaseLink, vercelLink]);
 
   // Generate QR code whenever target or download URL changes
   useEffect(() => {
@@ -324,16 +374,27 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                     )}
                   </button>
 
-                  <a
-                    href={APK_CONFIG.vercelMirrorUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="py-3.5 px-4 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
-                    title="Download from high-speed secondary Vercel storage mirror"
-                  >
-                    <ExternalLink className="w-4 h-4 text-emerald-400" />
-                    <span>Vercel Mirror</span>
-                  </a>
+                  {vercelLink.isActive ? (
+                    <a
+                      href={vercelLink.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3.5 px-4 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+                      title="Download from high-speed secondary Vercel storage mirror"
+                    >
+                      <ExternalLink className="w-4 h-4 text-emerald-400" />
+                      <span>Vercel Mirror</span>
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => setIsReleaseModalOpen(true)}
+                      className="py-3.5 px-4 rounded-xl bg-[#0D281C]/60 hover:bg-[#1A3D2E] text-gray-400 hover:text-emerald-300 border border-[#23493C] font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors"
+                      title="Manage and configure APK distribution endpoints"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Manage Mirrors</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* SHA256 Verification String */}
@@ -357,45 +418,106 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
               {/* CDN Edge Source & Download Routing */}
               <div className="p-4 rounded-2xl bg-[#0D281C]/60 border border-[#23493C] space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-xs font-semibold text-emerald-200 flex items-center gap-1.5">
                     <Server className="w-3.5 h-3.5 text-emerald-400" />
                     CDN Edge Source &amp; Download Routing
                   </span>
-                  <span className="text-[10px] text-gray-400">
-                    Auto-selected: Supabase Cloud CDN
-                  </span>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 hidden sm:inline">
+                      Auto-selected: {downloadSource === 'vercel' ? (vercelLink.isActive ? 'Vercel Mirror' : 'Supabase CDN') : (supabaseLink.isActive ? 'Supabase CDN' : 'Vercel Mirror')}
+                    </span>
+                    <button
+                      onClick={() => setIsReleaseModalOpen(true)}
+                      className="py-1 px-2.5 rounded-lg bg-[#081C13] hover:bg-[#153426] text-emerald-300 border border-[#23493C] text-[11px] font-semibold flex items-center gap-1.5 transition shadow-sm"
+                      title="Edit links, toggle active/inactive status, test reachability, or add mirrors"
+                    >
+                      <Sliders className="w-3 h-3 text-emerald-400" />
+                      <span>Manage Cloud Links</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  {/* Supabase CDN Option */}
                   <button
-                    onClick={() => setDownloadSource('supabase_cdn')}
+                    onClick={() => {
+                      if (!supabaseLink.isActive) {
+                        setIsReleaseModalOpen(true);
+                      } else {
+                        setDownloadSource('supabase_cdn');
+                      }
+                    }}
                     className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
-                      downloadSource === 'supabase_cdn' 
-                        ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
-                        : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
+                      !supabaseLink.isActive
+                        ? 'bg-[#06140E]/60 border-red-950/40 text-gray-500 opacity-60 hover:opacity-100'
+                        : downloadSource === 'supabase_cdn' 
+                          ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
+                          : 'bg-[#081C13] border-[#23493C] text-gray-300 hover:text-white'
                     }`}
                   >
                     <div>
-                      <div className="font-semibold text-white">Supabase CDN</div>
-                      <div className="text-[10px] text-emerald-400/80">Primary Edge &bull; Instant Cloud Delivery</div>
+                      <div className="font-semibold text-white flex items-center gap-1.5">
+                        <span>Supabase CDN</span>
+                        {supabaseLink.isPrimary && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Primary
+                          </span>
+                        )}
+                        {!supabaseLink.isActive && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-emerald-400/80">
+                        {supabaseLink.isActive ? 'Official Storage Bucket • High Speed' : 'Disabled in link manager (Click to enable)'}
+                      </div>
                     </div>
-                    {downloadSource === 'supabase_cdn' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    {supabaseLink.isActive && downloadSource === 'supabase_cdn' && (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
                   </button>
 
+                  {/* Vercel Mirror Option */}
                   <button
-                    onClick={() => setDownloadSource('vercel')}
+                    onClick={() => {
+                      if (!vercelLink.isActive) {
+                        setIsReleaseModalOpen(true);
+                      } else {
+                        setDownloadSource('vercel');
+                      }
+                    }}
                     className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
-                      downloadSource === 'vercel' 
-                        ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
-                        : 'bg-[#081C13] border-[#23493C] text-gray-400 hover:text-gray-200'
+                      !vercelLink.isActive
+                        ? 'bg-[#06140E]/60 border-red-950/40 text-gray-500 opacity-60 hover:opacity-100'
+                        : downloadSource === 'vercel' 
+                          ? 'bg-emerald-600/30 border-emerald-400 text-white shadow' 
+                          : 'bg-[#081C13] border-[#23493C] text-gray-300 hover:text-white'
                     }`}
                   >
                     <div>
-                      <div className="font-semibold text-white">Vercel Mirror</div>
-                      <div className="text-[10px] text-emerald-400/80">Secondary Edge &bull; High-Speed Blob Storage</div>
+                      <div className="font-semibold text-white flex items-center gap-1.5">
+                        <span>Vercel Mirror</span>
+                        {vercelLink.isPrimary && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Primary
+                          </span>
+                        )}
+                        {!vercelLink.isActive && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-emerald-400/80">
+                        {vercelLink.isActive ? 'Secondary Edge • Vercel Blob Storage' : 'Disabled in link manager (Click to enable)'}
+                      </div>
                     </div>
-                    {downloadSource === 'vercel' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                    {vercelLink.isActive && downloadSource === 'vercel' && (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -884,9 +1006,17 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             Direct Cloud APK
           </a>
           <span>&bull;</span>
-          <a href={APK_CONFIG.vercelMirrorUrl} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 underline underline-offset-4">
+          <a href={vercelLink.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 underline underline-offset-4">
             Vercel Mirror
           </a>
+          <span>&bull;</span>
+          <button 
+            onClick={() => setIsReleaseModalOpen(true)}
+            className="hover:text-emerald-300 underline underline-offset-4 flex items-center gap-1 inline-flex"
+          >
+            <Sliders className="w-3 h-3" />
+            <span>Manage Cloud Links</span>
+          </button>
         </div>
         <div className="flex items-center justify-center gap-2">
           <img 
@@ -899,6 +1029,14 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
           </p>
         </div>
       </footer>
+
+      {/* Cloud Hosting & Link Manager Modal */}
+      {isReleaseModalOpen && (
+        <ReleaseManagerModal
+          isOpen={isReleaseModalOpen}
+          onClose={() => setIsReleaseModalOpen(false)}
+        />
+      )}
 
     </div>
   );

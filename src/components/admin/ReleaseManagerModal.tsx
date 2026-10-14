@@ -15,10 +15,24 @@ import {
   Database,
   FileCode,
   Download,
-  Clock
+  Clock,
+  Edit2,
+  Save,
+  RotateCcw,
+  Power,
+  Activity,
+  Plus,
+  Trash2,
+  Globe,
+  Star,
+  Sliders,
+  CheckCircle,
+  HelpCircle,
+  Link as LinkIcon
 } from 'lucide-react';
 import { APK_CONFIG } from '../../config/apkConfig';
 import { ApkStorageService, StorageStatusResult } from '../../services/apkStorageService';
+import { ApkLinkManagerService, ManagedApkLink } from '../../services/apkLinkManagerService';
 
 interface ReleaseManagerModalProps {
   isOpen: boolean;
@@ -32,6 +46,20 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
   const [copiedSql, setCopiedSql] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+  // Managed Links State (Supabase, Vercel & Custom mirrors)
+  const [managedLinks, setManagedLinks] = useState<ManagedApkLink[]>(() => ApkLinkManagerService.getLinks());
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editingUrl, setEditingUrl] = useState<string>('');
+  const [testingLinkId, setTestingLinkId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<{ [id: string]: { isReachable: boolean; latencyMs: number; statusText: string } }>({});
+  
+  // Custom mirror creation state
+  const [isAddingCustom, setIsAddingCustom] = useState<boolean>(false);
+  const [customName, setCustomName] = useState<string>('');
+  const [customUrl, setCustomUrl] = useState<string>('');
+  const [customDesc, setCustomDesc] = useState<string>('');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
   // Upload States
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [versionTag, setVersionTag] = useState<string>(APK_CONFIG.version);
@@ -39,6 +67,111 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; latestUrl?: string } | null>(null);
+
+  // Subscribe to live link updates
+  useEffect(() => {
+    const unsubscribe = ApkLinkManagerService.subscribe((links) => {
+      setManagedLinks(links);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleToggleActive = (id: string) => {
+    const updated = ApkLinkManagerService.toggleLinkActive(id);
+    setManagedLinks(updated);
+    const link = updated.find(l => l.id === id);
+    setFeedbackMessage(`Link "${link?.name}" is now ${link?.isActive ? 'Active' : 'Inactive'}.`);
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleSetPrimary = (id: string) => {
+    const updated = ApkLinkManagerService.setPrimaryLink(id);
+    setManagedLinks(updated);
+    const link = updated.find(l => l.id === id);
+    setFeedbackMessage(`"${link?.name}" is now the Primary Download Route.`);
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleStartEdit = (link: ManagedApkLink) => {
+    setEditingLinkId(link.id);
+    setEditingUrl(link.url);
+  };
+
+  const handleSaveEdit = (id: string) => {
+    const trimmed = editingUrl.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      alert('Please enter a valid URL starting with https:// or http://');
+      return;
+    }
+    const updated = ApkLinkManagerService.updateLinkUrl(id, trimmed);
+    setManagedLinks(updated);
+    setEditingLinkId(null);
+    setFeedbackMessage('Link URL updated successfully.');
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLinkId(null);
+    setEditingUrl('');
+  };
+
+  const handleResetLink = (id: string) => {
+    const updated = ApkLinkManagerService.resetLinkUrl(id);
+    setManagedLinks(updated);
+    if (editingLinkId === id) {
+      setEditingLinkId(null);
+    }
+    setFeedbackMessage('Link URL reset to default.');
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleTestLink = async (id: string) => {
+    setTestingLinkId(id);
+    try {
+      const res = await ApkLinkManagerService.testLinkReachability(id);
+      setTestResults(prev => ({ ...prev, [id]: res }));
+    } finally {
+      setTestingLinkId(null);
+    }
+  };
+
+  const handleResetAllLinks = () => {
+    if (confirm('Reset all Supabase & Vercel links back to factory defaults?')) {
+      const defaults = ApkLinkManagerService.resetAllToDefaults();
+      setManagedLinks(defaults);
+      setEditingLinkId(null);
+      setFeedbackMessage('All distribution links reset to official defaults.');
+      setTimeout(() => setFeedbackMessage(null), 3000);
+    }
+  };
+
+  const handleAddCustomMirror = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = customUrl.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      alert('Please enter a valid URL starting with https:// or http://');
+      return;
+    }
+    const updated = ApkLinkManagerService.addCustomLink(customName || 'Custom Mirror', trimmed, customDesc);
+    setManagedLinks(updated);
+    setCustomName('');
+    setCustomUrl('');
+    setCustomDesc('');
+    setIsAddingCustom(false);
+    setFeedbackMessage('Custom mirror added.');
+    setTimeout(() => setFeedbackMessage(null), 3000);
+  };
+
+  const handleRemoveCustomMirror = (id: string) => {
+    if (confirm('Remove this custom mirror link?')) {
+      const updated = ApkLinkManagerService.removeCustomLink(id);
+      setManagedLinks(updated);
+      setFeedbackMessage('Custom mirror removed.');
+      setTimeout(() => setFeedbackMessage(null), 3000);
+    }
+  };
 
   const checkStatus = () => {
     setIsCheckingStatus(true);
@@ -221,76 +354,340 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
                 </button>
               </div>
 
-              {/* Endpoint URLs */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wider font-mono">
-                  Official Public Distribution Endpoints
-                </h4>
-
-                {/* Latest URL (For all QR codes) */}
-                <div className="p-3.5 rounded-xl bg-[#081C13] border border-emerald-500/40 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-300 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      Permanent Latest Pointer (Embedded in Clinic QR Codes)
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-mono">Never changes</span>
+              {/* Feedback Toast */}
+              {feedbackMessage && (
+                <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{feedbackMessage}</span>
                   </div>
-                  <div className="flex items-center justify-between bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 gap-2">
-                    <span className="text-[11px] font-mono text-gray-200 truncate">
-                      {APK_CONFIG.supabaseLatestApkUrl}
-                    </span>
+                  <button 
+                    onClick={() => setFeedbackMessage(null)}
+                    className="text-emerald-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Endpoint URLs & CDN Link Management */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#23493C]/80 pb-2.5">
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-200 uppercase tracking-wider font-mono flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                      Manage Cloud CDN Endpoints (Supabase &amp; Vercel)
+                    </h4>
+                    <p className="text-[11px] text-gray-400">
+                      Edit URLs, activate or inactivate download mirrors, and assign the primary route for mobile QR codes.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                     <button
-                      onClick={() => handleCopy(APK_CONFIG.supabaseLatestApkUrl, 'latest')}
-                      className="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1 shrink-0 font-mono"
+                      onClick={() => setIsAddingCustom(!isAddingCustom)}
+                      className="py-1 px-2.5 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-[11px] flex items-center gap-1 font-medium transition"
                     >
-                      {copiedUrl === 'latest' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedUrl === 'latest' ? 'Copied' : 'Copy'}</span>
+                      <Plus className="w-3 h-3" />
+                      <span>{isAddingCustom ? 'Cancel Add' : 'Add Mirror'}</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleResetAllLinks}
+                      className="py-1 px-2.5 rounded-lg bg-[#081C13] hover:bg-[#143022] text-gray-300 hover:text-white border border-[#23493C] text-[11px] flex items-center gap-1 font-medium transition"
+                      title="Reset all links to official Supabase & Vercel defaults"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset Defaults</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Versioned URL */}
-                <div className="p-3.5 rounded-xl bg-[#081C13] border border-[#23493C] space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gray-200">
-                      Immutable Versioned Build ({APK_CONFIG.version})
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-mono">Build #{APK_CONFIG.buildNumber}</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 gap-2">
-                    <span className="text-[11px] font-mono text-gray-300 truncate">
-                      {APK_CONFIG.supabaseVersionedApkUrl}
-                    </span>
-                    <button
-                      onClick={() => handleCopy(APK_CONFIG.supabaseVersionedApkUrl, 'versioned')}
-                      className="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1 shrink-0 font-mono"
-                    >
-                      {copiedUrl === 'versioned' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedUrl === 'versioned' ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
+                {/* Optional Custom Mirror Add Form */}
+                {isAddingCustom && (
+                  <form onSubmit={handleAddCustomMirror} className="p-4 rounded-xl bg-[#081C13] border border-emerald-500/50 space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between text-xs font-semibold text-emerald-300">
+                      <span className="flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" /> Add New Distribution Mirror
+                      </span>
+                      <button type="button" onClick={() => setIsAddingCustom(false)} className="text-gray-400 hover:text-white">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-mono text-gray-400 block mb-1">Mirror Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Cloudflare R2 / AWS S3 Mirror"
+                          value={customName}
+                          onChange={(e) => setCustomName(e.target.value)}
+                          className="w-full bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-mono text-gray-400 block mb-1">Description (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Global CDN edge mirror"
+                          value={customDesc}
+                          onChange={(e) => setCustomDesc(e.target.value)}
+                          className="w-full bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase font-mono text-gray-400 block mb-1">Direct APK Download URL (HTTPS)</label>
+                      <input
+                        type="url"
+                        placeholder="https://example.com/storage/AyurIndex.apk"
+                        value={customUrl}
+                        onChange={(e) => setCustomUrl(e.target.value)}
+                        className="w-full bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCustom(false)}
+                        className="py-1 px-3 rounded-lg border border-[#23493C] text-gray-300 text-xs hover:bg-white/5"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="py-1 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow flex items-center gap-1.5"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save Mirror</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* List of Managed Links */}
+                <div className="space-y-3.5">
+                  {managedLinks.map((link) => {
+                    const isEditing = editingLinkId === link.id;
+                    const isTesting = testingLinkId === link.id;
+                    const testResult = testResults[link.id];
+
+                    return (
+                      <div 
+                        key={link.id}
+                        className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                          link.isActive 
+                            ? (link.isPrimary ? 'bg-[#081C13] border-emerald-500/60 shadow-lg' : 'bg-[#081C13]/90 border-[#23493C]') 
+                            : 'bg-[#06140E]/60 border-red-900/30 opacity-75'
+                        }`}
+                      >
+                        {/* Header Row: Title, Badges, Status & Toggle */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <div className={`w-2.5 h-2.5 rounded-full ${link.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+                            <h5 className="font-semibold text-white text-sm">
+                              {link.name}
+                            </h5>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-mono">
+                              {link.badge}
+                            </span>
+
+                            {link.isPrimary ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-semibold flex items-center gap-1 shadow-sm">
+                                <Star className="w-2.5 h-2.5 fill-white" />
+                                Primary Download Route
+                              </span>
+                            ) : link.isActive ? (
+                              <button
+                                onClick={() => handleSetPrimary(link.id)}
+                                className="text-[10px] text-gray-400 hover:text-emerald-300 hover:underline flex items-center gap-0.5"
+                                title="Make this the default primary download link and QR destination"
+                              >
+                                <Star className="w-2.5 h-2.5" />
+                                Set as Primary
+                              </button>
+                            ) : null}
+                          </div>
+
+                          {/* Action Switch & Controls */}
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            {/* Active / Inactive Toggle Switch */}
+                            <button
+                              onClick={() => handleToggleActive(link.id)}
+                              className={`py-1 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition border ${
+                                link.isActive 
+                                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30' 
+                                  : 'bg-red-950/40 text-red-300 border-red-800/40 hover:bg-red-900/40'
+                              }`}
+                              title={link.isActive ? 'Click to inactivate / disable this link' : 'Click to activate this link'}
+                            >
+                              <Power className={`w-3 h-3 ${link.isActive ? 'text-emerald-400' : 'text-red-400'}`} />
+                              <span>{link.isActive ? 'Active' : 'Inactive'}</span>
+                            </button>
+
+                            {/* Delete custom mirror */}
+                            {link.isCustom && (
+                              <button
+                                onClick={() => handleRemoveCustomMirror(link.id)}
+                                className="p-1 text-gray-500 hover:text-red-400 transition"
+                                title="Remove custom mirror"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* URL Display or Edit Mode */}
+                        {isEditing ? (
+                          <div className="p-3 rounded-xl bg-[#061810] border border-emerald-400 space-y-2">
+                            <div className="flex items-center justify-between text-[11px] text-emerald-300 font-mono">
+                              <span>Editing URL:</span>
+                              <button
+                                type="button"
+                                onClick={() => handleResetLink(link.id)}
+                                className="text-gray-400 hover:text-white flex items-center gap-1 text-[10px]"
+                                title="Reset to original default URL"
+                              >
+                                <RotateCcw className="w-3 h-3" /> Reset Default
+                              </button>
+                            </div>
+                            <input
+                              type="url"
+                              value={editingUrl}
+                              onChange={(e) => setEditingUrl(e.target.value)}
+                              className="w-full bg-[#081C13] border border-[#23493C] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono"
+                              placeholder="https://..."
+                              autoFocus
+                            />
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button
+                                onClick={handleCancelEdit}
+                                className="py-1 px-2.5 rounded-lg border border-[#23493C] text-gray-300 text-xs hover:bg-white/5"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleSaveEdit(link.id)}
+                                className="py-1 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1 shadow"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Save Link</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-[#061810] border border-[#23493C] rounded-xl p-2 sm:px-3 sm:py-2 gap-2">
+                            <span 
+                              className={`text-[11px] font-mono truncate select-all ${
+                                link.isActive ? 'text-gray-200' : 'text-gray-500 line-through'
+                              }`}
+                              title={link.url}
+                            >
+                              {link.url}
+                            </span>
+
+                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                              {/* Edit URL button */}
+                              <button
+                                onClick={() => handleStartEdit(link)}
+                                className="py-1 px-2 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-xs flex items-center gap-1 transition"
+                                title="Edit this link URL"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span className="hidden sm:inline text-[11px]">Edit</span>
+                              </button>
+
+                              {/* Copy button */}
+                              <button
+                                onClick={() => handleCopy(link.url, link.id)}
+                                className="py-1 px-2 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-xs flex items-center gap-1 transition font-mono"
+                                title="Copy download link"
+                              >
+                                {copiedUrl === link.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                <span className="text-[11px]">{copiedUrl === link.id ? 'Copied' : 'Copy'}</span>
+                              </button>
+
+                              {/* Ping / Test button */}
+                              <button
+                                onClick={() => handleTestLink(link.id)}
+                                disabled={isTesting}
+                                className="py-1 px-2 rounded-lg bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] text-xs flex items-center gap-1 transition"
+                                title="Test HTTP reachability and measure ping latency"
+                              >
+                                <Activity className={`w-3 h-3 ${isTesting ? 'animate-spin' : ''}`} />
+                                <span className="hidden sm:inline text-[11px]">Test</span>
+                              </button>
+
+                              {/* Direct test download link */}
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 text-gray-400 hover:text-emerald-300 transition"
+                                title="Open URL in new tab / test direct download"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Description & Health Telemetry */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-[#23493C]/40 gap-1.5">
+                          <p className="text-[11px] text-gray-400">
+                            {link.description}
+                          </p>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {testResult ? (
+                              <span className={`font-mono text-[10px] flex items-center gap-1 ${
+                                testResult.isReachable ? 'text-emerald-300' : 'text-red-400'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${testResult.isReachable ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                                {testResult.statusText} ({testResult.latencyMs}ms)
+                              </span>
+                            ) : link.latencyMs ? (
+                              <span className="font-mono text-[10px] text-emerald-400 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                Latency: {link.latencyMs}ms
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-500 font-mono">
+                                Ready for distribution
+                              </span>
+                            )}
+
+                            {!link.isActive && (
+                              <span className="text-[10px] text-amber-400 font-semibold">
+                                &bull; Inactive in App UI
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* Local Bundled Fallback */}
-                <div className="p-3.5 rounded-xl bg-[#081C13] border border-[#23493C] space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gray-200">
-                      Local Web Server Bundled Fallback
+                {/* Reference Fallbacks */}
+                <div className="p-3.5 rounded-xl bg-[#081C13]/60 border border-[#23493C] space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-300 font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      Fallback Build Archive &amp; Local Bundle
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-mono">Zero-dependency</span>
+                    <span className="text-[10px] text-gray-400 font-mono">Build #{APK_CONFIG.buildNumber} ({APK_CONFIG.version})</span>
                   </div>
-                  <div className="flex items-center justify-between bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 gap-2">
-                    <span className="text-[11px] font-mono text-gray-300 truncate">
-                      {typeof window !== 'undefined' ? `${window.location.origin}${APK_CONFIG.directDownloadUrl}` : APK_CONFIG.directDownloadUrl}
-                    </span>
-                    <button
-                      onClick={() => handleCopy(typeof window !== 'undefined' ? `${window.location.origin}${APK_CONFIG.directDownloadUrl}` : APK_CONFIG.directDownloadUrl, 'bundled')}
-                      className="text-emerald-400 hover:text-emerald-300 text-xs flex items-center gap-1 shrink-0 font-mono"
-                    >
-                      {copiedUrl === 'bundled' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedUrl === 'bundled' ? 'Copied' : 'Copy'}</span>
-                    </button>
+                  <div className="flex items-center justify-between text-[11px] text-gray-400">
+                    <span>Local Server Bundled Fallback:</span>
+                    <span className="font-mono text-emerald-300 select-all">{APK_CONFIG.directDownloadUrl}</span>
                   </div>
                 </div>
 
