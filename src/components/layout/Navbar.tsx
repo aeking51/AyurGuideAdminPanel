@@ -16,7 +16,9 @@ import {
   Check,
   X,
   RefreshCw,
-  KeyRound
+  KeyRound,
+  Smartphone,
+  QrCode
 } from 'lucide-react';
 import { User } from '../../types';
 
@@ -34,6 +36,8 @@ interface NavbarProps {
   isReloading?: boolean;
   onChangePassword?: (user: User | null) => void;
   onSignOut?: () => void;
+  onNavigateToDownload?: () => void;
+  onOpenDownloadQr?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -50,6 +54,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isReloading = false,
   onChangePassword,
   onSignOut,
+  onNavigateToDownload,
+  onOpenDownloadQr,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
@@ -62,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'users', label: 'Practitioners & Users', icon: Users },
     { id: 'audit', label: 'Audit Trail', icon: History },
     { id: 'database', label: 'Cloud Supabase', icon: Database },
+    { id: 'download', label: 'Android APK', icon: Smartphone, badge: 'v1.2.0' },
   ];
 
   const handleCustomLogin = (e: React.FormEvent) => {
@@ -127,7 +134,32 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Quick Action & User Session Switcher */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Get Android App Quick Trigger */}
+            <div className="hidden sm:inline-flex items-center bg-[#0D281C] border border-[#23493C] hover:border-emerald-500/50 rounded-xl p-0.5 shadow-sm transition">
+              <button
+                onClick={() => {
+                  if (onNavigateToDownload) onNavigateToDownload();
+                  else setCurrentTab('download');
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-emerald-300 hover:text-white rounded-lg text-xs font-medium transition"
+                title="Download AyurGuide Android APK"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden xl:inline">AyurGuide App</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1 rounded font-mono">APK</span>
+              </button>
+              {onOpenDownloadQr && (
+                <button
+                  onClick={onOpenDownloadQr}
+                  className="p-1 text-emerald-400 hover:text-white hover:bg-emerald-800/30 rounded-lg transition"
+                  title="Scan QR Code to download on mobile"
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
             <button
               onClick={onOpenNewProduct}
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-xs font-semibold hover:from-emerald-500 hover:to-emerald-600 transition shadow-sm border border-emerald-500/30"
@@ -374,10 +406,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = currentTab === item.id;
+              const badge = (item as any).badge;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentTab(item.id)}
+                  onClick={() => {
+                    if (item.id === 'download' && onNavigateToDownload) {
+                      onNavigateToDownload();
+                    } else {
+                      setCurrentTab(item.id);
+                    }
+                  }}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition ${
                     active
                       ? 'bg-emerald-800/40 text-emerald-300 border border-emerald-700/60 shadow-xs'
@@ -386,6 +425,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Icon className={`w-3.5 h-3.5 ${active ? 'text-emerald-400' : 'text-gray-400'}`} />
                   <span>{item.label}</span>
+                  {badge && (
+                    <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+                      {badge}
+                    </span>
+                  )}
                 </button>
               );
             })}

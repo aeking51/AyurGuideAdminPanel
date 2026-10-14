@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for AyurGuide Android APK Public Download Page featuring direct & custom URL downloads, persistent floating download buttons across all public pages, dedicated navbar link, mobile QR scanner, guided APK installation steps, and live interactive feature preview with Supabase product integration.",
+  "updatedAt": "2026-10-14T06:24:48.930073841Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

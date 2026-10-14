@@ -48,6 +48,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   // Existing Botanicals Selection State
   const [selectedBotanicalId, setSelectedBotanicalId] = useState<string>('');
+  const [customHerbInput, setCustomHerbInput] = useState<string>('');
 
   useEffect(() => {
     if (product) {
@@ -160,6 +161,27 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         sanskritName: botanical.sanskritName || ''
       }
     ]);
+  };
+
+  const handleAddNewCustomHerb = () => {
+    const raw = customHerbInput.trim();
+    if (!raw) return;
+    if (ingredients.some(i => i.name.toLowerCase() === raw.toLowerCase())) {
+      alert(`"${raw}" is already added to this formulation.`);
+      return;
+    }
+    const resolved = resolveHerbDetails(raw, availableIngredients);
+    setIngredients(prev => [
+      ...prev,
+      {
+        name: resolved.name,
+        botanicalName: resolved.botanicalName || '',
+        sanskritName: resolved.sanskritName || '',
+        partUsed: resolved.partUsed || 'Root / Standardized Part',
+        classicalRole: resolved.therapeuticAction || 'Classical formulation active'
+      }
+    ]);
+    setCustomHerbInput('');
   };
 
   const handleRemoveIngredient = (index: number) => {
@@ -755,14 +777,68 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                           ))}
                         </div>
                       </div>
+
+                      {/* Manual / Custom Herb Input */}
+                      <div className="pt-2 border-t border-[#23493C]/60 space-y-1.5">
+                        <label className="text-[10px] text-gray-400 block">
+                          Or add herb by name (stored to Supabase ingredients table on save):
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Enter herb name (e.g. Ashwagandha, Brahmi, Guduchi)..."
+                            value={customHerbInput}
+                            onChange={(e) => setCustomHerbInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddNewCustomHerb();
+                              }
+                            }}
+                            className="flex-1 bg-[#0D281C] border border-[#23493C] rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddNewCustomHerb}
+                            disabled={!customHerbInput.trim()}
+                            className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shrink-0 flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Add Herb</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-xl bg-[#081C13] border border-[#23493C] text-center">
-                      <Leaf className="w-6 h-6 text-emerald-500/60 mx-auto mb-2" />
-                      <p className="text-xs text-gray-300 font-medium">No pharmacopoeia botanicals found in database</p>
-                      <p className="text-[11px] text-gray-400 mt-1 max-w-sm mx-auto">
-                        Formulations only use verified botanicals from Supabase. Please add standardized herbs in the <span className="text-emerald-400 font-semibold">Botanicals & Herbs</span> tab first.
-                      </p>
+                    <div className="p-4 rounded-xl bg-[#081C13] border border-[#23493C] space-y-3">
+                      <div className="text-center">
+                        <Leaf className="w-6 h-6 text-emerald-500/60 mx-auto mb-1" />
+                        <p className="text-xs text-gray-300 font-medium">Add formulation ingredients</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter herb name (e.g. Ashwagandha, Brahmi)..."
+                          value={customHerbInput}
+                          onChange={(e) => setCustomHerbInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddNewCustomHerb();
+                            }
+                          }}
+                          className="flex-1 bg-[#0D281C] border border-[#23493C] rounded-lg px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewCustomHerb}
+                          disabled={!customHerbInput.trim()}
+                          className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shrink-0 flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Add Herb</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

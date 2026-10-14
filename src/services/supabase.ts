@@ -3,7 +3,7 @@ import { Product, Category, User, AuditLog, BotanicalIngredient, IngredientItem 
 import { StorageService } from './storage';
 import { initialCategories } from '../data/initialData';
 import { generateProductSlug, getProductShareUrl, ensureProductShareFields, normalizeShareQrLink } from '../utils/shareUtils';
-import { DRAVYAGUNA_REFERENCE_HERBS } from '../utils/dravyagunaDirectory';
+import { DRAVYAGUNA_REFERENCE_HERBS, resolveHerbDetails } from '../utils/dravyagunaDirectory';
 import { CLASSICAL_FORMULATIONS_RECIPES, getClassicalFormulationIngredients } from '../data/classicalFormulations';
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -380,6 +380,9 @@ export class SupabaseService {
       const created = mapRowToProduct(data);
       this.logAudit('MEDICINE_CREATE', created.code, `Created medicine "${created.name}" in public.products.`);
       StorageService.upsertProduct(created);
+      if (created.ingredients && created.ingredients.length > 0) {
+        this.syncMedicineIngredientsToSupabase(created.ingredients).catch(() => {});
+      }
       return created;
     } catch (err) {
       console.error('Error creating product in Supabase:', err);
@@ -432,6 +435,9 @@ export class SupabaseService {
       const updated = mapRowToProduct(data);
       this.logAudit('MEDICINE_UPDATE', updated.code, `Updated formulation "${updated.name}" (${updated.code}).`);
       StorageService.upsertProduct(updated);
+      if (updated.ingredients && updated.ingredients.length > 0) {
+        this.syncMedicineIngredientsToSupabase(updated.ingredients).catch(() => {});
+      }
       return updated;
     } catch (err) {
       console.error('Error updating product in Supabase:', err);
@@ -663,7 +669,8 @@ export class SupabaseService {
       const { data, error } = await client
         .from('ingredients')
         .select('*')
-        .order('id', { ascending: false });
+        .range(0, 1999)
+        .order('name', { ascending: true });
 
       if (error) {
         console.warn('Supabase fetch ingredients notice:', error.message);
@@ -808,8 +815,246 @@ export class SupabaseService {
   }
 
   /**
+   * Automatically ensures that all ingredients given in a medicine
+   * are stored into the public.ingredients table in Supabase.
+   */
+  static async syncMedicineIngredientsToSupabase(
+    ingredients: (string | IngredientItem)[]
+  ): Promise<number> {
+    if (!ingredients || ingredients.length === 0) return 0;
+    const client = this.getClient();
+    if (!client) return 0;
+
+    try {
+      const { data: existingData } = await client
+        .from('ingredients')
+        .select('name')
+        .range(0, 1999);
+      const existingNames = new Set((existingData || []).map((x: any) => (x.name || '').toLowerCase().trim()));
+
+      const toInsert: any[] = [];
+      for (const item of ingredients) {
+        let name = '';
+        let botanicalName = '';
+        let sanskritName = '';
+        let partUsed = 'Standardized Part';
+        let therapeuticAction = 'Classical active';
+        let referenceLink = '';
+
+        if (typeof item === 'string') {
+          const m = item.trim().match(/^([^(]+)\s*\(([^)]+)\)$/);
+          if (m) {
+            name = m[1].trim();
+            botanicalName = m[2].trim();
+          } else {
+            name = item.trim();
+          }
+        } else if (typeof item === 'object' && item !== null) {
+          name = (item.name || '').trim();
+          botanicalName = (item.botanicalName || '').trim();
+          sanskritName = (item.sanskritName || '').trim();
+          if (item.partUsed) partUsed = item.partUsed.trim();
+          if (item.classicalRole || item.therapeuticAction) {
+            therapeuticAction = (item.classicalRole || item.therapeuticAction).trim();
+          }
+          if (item.referenceLink) referenceLink = item.referenceLink.trim();
+        }
+
+        if (!name) continue;
+        const key = name.toLowerCase().trim();
+        if (!existingNames.has(key)) {
+          const resolved = resolveHerbDetails(name);
+          existingNames.add(key);
+          toInsert.push({
+            name,
+            botanical_name: botanicalName || resolved.botanicalName || null,
+            sanskrit_name: sanskritName || resolved.sanskritName || null,
+            part_used: partUsed !== 'Standardized Part' ? partUsed : (resolved.partUsed || 'Standardized Part'),
+            therapeutic_action: therapeuticAction !== 'Classical active' ? therapeuticAction : (resolved.therapeuticAction || 'Classical active'),
+            reference_link: referenceLink || resolved.referenceLink || null,
+          });
+        }
+      }
+
+      if (toInsert.length > 0) {
+        const { error } = await client.from('ingredients').insert(toInsert);
+        if (error) {
+          for (const row of toInsert) {
+            try {
+              await client.from('ingredients').insert([row]);
+            } catch {}
+          }
+        }
+        this.logAudit('INGREDIENT_SYNC', `${toInsert.length} Herbs`, `Auto-stored ${toInsert.length} new ingredients from medicine formulation into public.ingredients.`);
+        return toInsert.length;
+      }
+      return 0;
+    } catch (err) {
+      console.warn('Auto-sync medicine ingredients notice:', err);
+      return 0;
+    }
+  }
+
+  /**
+   * Synchronizes and persists all ingredients from all medicines in Supabase
+   * into the public.ingredients table, resolving botanical and Sanskrit details.
+   */
+  static async syncAllMedicineIngredientsToSupabase(productsList?: Product[]): Promise<{
+    success: boolean;
+    insertedCount: number;
+    totalBotanicals: number;
+    message: string;
+  }> {
+    const client = this.getClient();
+    const products = productsList && productsList.length > 0 ? productsList : await this.fetchProducts();
+
+    const herbsMap = new Map<string, {
+      name: string;
+      botanicalName?: string;
+      sanskritName?: string;
+      partUsed?: string;
+      therapeuticAction?: string;
+      referenceLink?: string;
+    }>();
+
+    for (const p of products) {
+      for (const raw of (p.ingredients || [])) {
+        let name = '';
+        let bName = '';
+        let sName = '';
+        let pUsed = 'Standardized Part';
+        let action = 'Classical active';
+        let rLink = '';
+
+        if (typeof raw === 'string') {
+          const m = raw.trim().match(/^([^(]+)\s*\(([^)]+)\)$/);
+          if (m) {
+            name = m[1].trim();
+            bName = m[2].trim();
+          } else {
+            name = raw.trim();
+          }
+        } else if (typeof raw === 'object' && raw !== null) {
+          name = (raw.name || '').trim();
+          bName = (raw.botanicalName || '').trim();
+          sName = (raw.sanskritName || '').trim();
+          if (raw.partUsed) pUsed = raw.partUsed.trim();
+          if (raw.classicalRole || raw.therapeuticAction) {
+            action = (raw.classicalRole || raw.therapeuticAction).trim();
+          }
+          if (raw.referenceLink) rLink = raw.referenceLink.trim();
+        }
+
+        if (!name) continue;
+        const key = name.toLowerCase().trim();
+        if (!herbsMap.has(key)) {
+          const resolved = resolveHerbDetails(name);
+          herbsMap.set(key, {
+            name,
+            botanicalName: bName || resolved.botanicalName || undefined,
+            sanskritName: sName || resolved.sanskritName || undefined,
+            partUsed: pUsed !== 'Standardized Part' ? pUsed : (resolved.partUsed || 'Standardized Part'),
+            therapeuticAction: action !== 'Classical active' ? action : (resolved.therapeuticAction || 'Classical active'),
+            referenceLink: rLink || resolved.referenceLink || undefined,
+          });
+        }
+      }
+    }
+
+    if (!client) {
+      const current = await this.fetchBotanicalIngredients();
+      const existingNames = new Set(current.map(c => c.name.toLowerCase().trim()));
+      let added = 0;
+      for (const h of herbsMap.values()) {
+        if (!existingNames.has(h.name.toLowerCase().trim())) {
+          current.push({
+            id: Date.now() + added,
+            name: h.name,
+            botanicalName: h.botanicalName || '',
+            sanskritName: h.sanskritName || '',
+            partUsed: h.partUsed || 'Standardized Part',
+            therapeuticAction: h.therapeuticAction || 'Classical active',
+            referenceLink: h.referenceLink || '',
+            createdAt: new Date().toISOString()
+          });
+          added++;
+        }
+      }
+      localStorage.setItem(INGREDIENTS_LOCAL_KEY, JSON.stringify(current));
+      return {
+        success: true,
+        insertedCount: added,
+        totalBotanicals: current.length,
+        message: `Synced ${added} medicine ingredients to local pharmacopoeia directory.`
+      };
+    }
+
+    try {
+      const { data: existingData } = await client
+        .from('ingredients')
+        .select('name')
+        .range(0, 1999);
+      const existingNames = new Set((existingData || []).map((x: any) => (x.name || '').toLowerCase().trim()));
+
+      const rowsToInsert = Array.from(herbsMap.values())
+        .filter(h => !existingNames.has(h.name.toLowerCase().trim()))
+        .map(h => ({
+          name: h.name,
+          botanical_name: h.botanicalName || null,
+          sanskrit_name: h.sanskritName || null,
+          part_used: h.partUsed || 'Standardized Part',
+          therapeutic_action: h.therapeuticAction || 'Classical active',
+          reference_link: h.referenceLink || null,
+        }));
+
+      if (rowsToInsert.length === 0) {
+        const total = (existingData || []).length;
+        return {
+          success: true,
+          insertedCount: 0,
+          totalBotanicals: total,
+          message: `All ingredients from all ${products.length} medicines are already stored in Supabase public.ingredients table (${total} total botanicals).`
+        };
+      }
+
+      // Batch insert in chunks of 50
+      let successful = 0;
+      for (let i = 0; i < rowsToInsert.length; i += 50) {
+        const chunk = rowsToInsert.slice(i, i + 50);
+        const { error } = await client.from('ingredients').insert(chunk);
+        if (error) {
+          for (const item of chunk) {
+            const res = await client.from('ingredients').insert([item]);
+            if (!res.error) successful++;
+          }
+        } else {
+          successful += chunk.length;
+        }
+      }
+
+      const refreshed = await this.fetchBotanicalIngredients();
+      this.logAudit('INGREDIENT_SYNC', `${successful} Herbs`, `Stored ${successful} ingredients from all medicines into Supabase public.ingredients.`);
+
+      return {
+        success: true,
+        insertedCount: successful,
+        totalBotanicals: refreshed.length,
+        message: `Successfully extracted and stored ${successful} medicine ingredients into Supabase public.ingredients table! Total: ${refreshed.length} registered botanicals.`
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        insertedCount: 0,
+        totalBotanicals: 0,
+        message: err.message || 'Failed to sync ingredients to Supabase.'
+      };
+    }
+  }
+
+  /**
    * Stores / seeds all standard botanical herbs into Supabase public.ingredients table.
-   * Pulls from the standard Ayurvedic Dravyaguna pharmacopoeia and classical formulation recipes.
+   * Pulls from the standard Ayurvedic Dravyaguna pharmacopoeia, classical formulation recipes,
+   * and all ingredients defined across medicines in the catalog.
    */
   static async seedBotanicalsToSupabase(): Promise<{ success: boolean; insertedCount: number; message: string }> {
     const client = this.getClient();
@@ -855,6 +1100,54 @@ export class SupabaseService {
       }
     }
 
+    // 3. From all existing medicine formulations in catalog
+    try {
+      const products = await this.fetchProducts();
+      for (const p of products) {
+        for (const raw of (p.ingredients || [])) {
+          let name = '';
+          let bName = '';
+          let sName = '';
+          let pUsed = 'Standardized Part';
+          let action = 'Classical active';
+          let rLink = '';
+
+          if (typeof raw === 'string') {
+            const m = raw.trim().match(/^([^(]+)\s*\(([^)]+)\)$/);
+            if (m) {
+              name = m[1].trim();
+              bName = m[2].trim();
+            } else {
+              name = raw.trim();
+            }
+          } else if (typeof raw === 'object' && raw !== null) {
+            name = (raw.name || '').trim();
+            bName = (raw.botanicalName || '').trim();
+            sName = (raw.sanskritName || '').trim();
+            if (raw.partUsed) pUsed = raw.partUsed.trim();
+            if (raw.classicalRole || raw.therapeuticAction) {
+              action = (raw.classicalRole || raw.therapeuticAction).trim();
+            }
+            if (raw.referenceLink) rLink = raw.referenceLink.trim();
+          }
+
+          if (!name) continue;
+          const key = name.toLowerCase().trim();
+          if (!herbsMap.has(key)) {
+            const resolved = resolveHerbDetails(name);
+            herbsMap.set(key, {
+              name,
+              botanicalName: bName || resolved.botanicalName || undefined,
+              sanskritName: sName || resolved.sanskritName || undefined,
+              partUsed: pUsed !== 'Standardized Part' ? pUsed : (resolved.partUsed || 'Standardized Part'),
+              therapeuticAction: action !== 'Classical active' ? action : (resolved.therapeuticAction || 'Classical active'),
+              referenceLink: rLink || resolved.referenceLink || undefined,
+            });
+          }
+        }
+      }
+    } catch {}
+
     const uniqueHerbs = Array.from(herbsMap.values());
 
     if (!client) {
@@ -886,7 +1179,10 @@ export class SupabaseService {
     }
 
     try {
-      const { data: existingData } = await client.from('ingredients').select('name, botanical_name');
+      const { data: existingData } = await client
+        .from('ingredients')
+        .select('name, botanical_name')
+        .range(0, 1999);
       const existingNames = new Set((existingData || []).map((x: any) => (x.name || '').toLowerCase().trim()));
 
       const rowsToInsert = uniqueHerbs
@@ -896,40 +1192,39 @@ export class SupabaseService {
           botanical_name: h.botanicalName || null,
           sanskrit_name: h.sanskritName || null,
           part_used: h.partUsed || 'Standardized Part',
-          therapeutic_action: h.therapeuticAction || 'Classical active'
+          therapeutic_action: h.therapeuticAction || 'Classical active',
+          reference_link: h.referenceLink || null,
         }));
 
       if (rowsToInsert.length === 0) {
+        const total = (existingData || []).length;
         return {
           success: true,
           insertedCount: 0,
-          message: 'All botanical herbs are already stored in Supabase public.ingredients.'
+          message: `All botanical herbs from standard pharmacopoeia and medicines are already stored in Supabase public.ingredients (${total} total).`
         };
       }
 
-      const { error } = await client.from('ingredients').insert(rowsToInsert);
-      if (error) {
-        console.warn('Supabase bulk insert warning:', error.message);
-        let successful = 0;
-        for (const row of rowsToInsert) {
-          const res = await client.from('ingredients').insert([row]);
-          if (!res.error) successful++;
+      let successful = 0;
+      for (let i = 0; i < rowsToInsert.length; i += 50) {
+        const chunk = rowsToInsert.slice(i, i + 50);
+        const { error } = await client.from('ingredients').insert(chunk);
+        if (error) {
+          for (const row of chunk) {
+            const res = await client.from('ingredients').insert([row]);
+            if (!res.error) successful++;
+          }
+        } else {
+          successful += chunk.length;
         }
-        await this.fetchBotanicalIngredients();
-        this.logAudit('INGREDIENT_SEED', `${successful} Herbs`, `Stored ${successful} botanical herbs into Supabase public.ingredients.`);
-        return {
-          success: successful > 0,
-          insertedCount: successful,
-          message: `Successfully stored ${successful} botanical herbs into Supabase public.ingredients.`
-        };
       }
 
       await this.fetchBotanicalIngredients();
-      this.logAudit('INGREDIENT_SEED', `${rowsToInsert.length} Herbs`, `Stored ${rowsToInsert.length} botanical herbs into Supabase public.ingredients.`);
+      this.logAudit('INGREDIENT_SEED', `${successful} Herbs`, `Stored ${successful} botanical herbs into Supabase public.ingredients.`);
       return {
-        success: true,
-        insertedCount: rowsToInsert.length,
-        message: `Successfully stored ${rowsToInsert.length} botanical herbs into Supabase public.ingredients!`
+        success: successful > 0,
+        insertedCount: successful,
+        message: `Successfully stored ${successful} botanical herbs into Supabase public.ingredients!`
       };
     } catch (err: any) {
       return {

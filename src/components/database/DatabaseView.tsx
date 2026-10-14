@@ -56,6 +56,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const [tableStats, setTableStats] = useState<TableCount[]>([
     { name: 'public.products', count: 0, status: 'Checking' },
     { name: 'public.categories', count: 0, status: 'Checking' },
+    { name: 'public.ingredients', count: 0, status: 'Checking' },
     { name: 'public.profiles', count: 0, status: 'Checking' },
     { name: 'public.audit_logs', count: 0, status: 'Checking' },
   ]);
@@ -67,9 +68,10 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     try {
       const client = SupabaseService.getClient();
       if (client) {
-        const [prodRes, catRes, profRes, logRes] = await Promise.all([
+        const [prodRes, catRes, ingRes, profRes, logRes] = await Promise.all([
           client.from('products').select('id', { count: 'exact', head: true }),
           client.from('categories').select('id', { count: 'exact', head: true }),
+          client.from('ingredients').select('id', { count: 'exact', head: true }),
           client.from('profiles').select('id', { count: 'exact', head: true }),
           client.from('audit_logs').select('id', { count: 'exact', head: true }),
         ]);
@@ -86,6 +88,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             status: catRes.error ? 'Accessible' : 'Synced' 
           },
           { 
+            name: 'public.ingredients', 
+            count: ingRes.count ?? StorageService.getBotanicalIngredients().length, 
+            status: ingRes.error ? 'Accessible' : 'Synced' 
+          },
+          { 
             name: 'public.profiles', 
             count: profRes.count ?? StorageService.getUsers().length, 
             status: profRes.error ? 'Accessible' : 'Synced' 
@@ -100,6 +107,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         setTableStats([
           { name: 'public.products', count: StorageService.getProducts().length, status: 'Accessible' },
           { name: 'public.categories', count: StorageService.getCategories().length, status: 'Accessible' },
+          { name: 'public.ingredients', count: StorageService.getBotanicalIngredients().length, status: 'Accessible' },
           { name: 'public.profiles', count: StorageService.getUsers().length, status: 'Accessible' },
           { name: 'public.audit_logs', count: StorageService.getAuditLogs().length, status: 'Accessible' },
         ]);
@@ -109,6 +117,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       setTableStats([
         { name: 'public.products', count: StorageService.getProducts().length, status: 'Accessible' },
         { name: 'public.categories', count: StorageService.getCategories().length, status: 'Accessible' },
+        { name: 'public.ingredients', count: StorageService.getBotanicalIngredients().length, status: 'Accessible' },
         { name: 'public.profiles', count: StorageService.getUsers().length, status: 'Accessible' },
         { name: 'public.audit_logs', count: StorageService.getAuditLogs().length, status: 'Accessible' },
       ]);
@@ -449,7 +458,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
             {tableStats.map((tbl) => (
               <div key={tbl.name} className="bg-[#0D281C]/80 border border-[#23493C]/70 rounded-lg p-2.5">
                 <span className="text-[10px] font-mono text-gray-400 block truncate" title={tbl.name}>

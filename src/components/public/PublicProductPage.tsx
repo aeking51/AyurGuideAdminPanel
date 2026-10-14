@@ -25,7 +25,8 @@ import {
   Copy, 
   Check, 
   Share2,
-  Printer 
+  Printer,
+  Smartphone
 } from 'lucide-react';
 import { Product, IngredientItem } from '../../types';
 import { SupabaseService } from '../../services/supabase';
@@ -34,10 +35,13 @@ import { ensureProductShareFields } from '../../utils/shareUtils';
 interface PublicProductPageProps {
   slug: string;
   onNavigateHome?: () => void;
+  onNavigateToDownload?: () => void;
 }
 
 export const PublicProductPage: React.FC<PublicProductPageProps> = ({ 
   slug,
+  onNavigateHome,
+  onNavigateToDownload,
 }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -203,6 +207,17 @@ export const PublicProductPage: React.FC<PublicProductPageProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {onNavigateToDownload && (
+              <button
+                onClick={onNavigateToDownload}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition"
+                title="Download AyurGuide Android App"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Get App</span>
+                <span className="text-[10px] bg-emerald-700/60 px-1 rounded font-mono">APK</span>
+              </button>
+            )}
             <span className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800/80 font-mono font-bold tracking-tight">
               {product.code}
             </span>

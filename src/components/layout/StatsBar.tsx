@@ -6,20 +6,45 @@ interface StatsBarProps {
   products: Product[];
   categories: Category[];
   users: User[];
+  botanicalsCount?: number;
 }
 
 export const StatsBar: React.FC<StatsBarProps> = ({
   products,
   categories,
   users,
+  botanicalsCount,
 }) => {
-  const { totalCount, activeCount, practitionerCount, totalBotanicals } = React.useMemo(() => {
+  const { totalCount, activeCount, practitionerCount, totalBotanicals, totalIngredientEntries } = React.useMemo(() => {
     const total = products.length;
     const active = products.filter(p => p.status === 'Active').length;
     const practitioners = users.filter(u => u.role === 'PRACTITIONER' || u.role === 'ADMIN').length;
-    const botanicals = products.reduce((acc, p) => acc + (p.ingredients?.length || 0), 0);
-    return { totalCount: total, activeCount: active, practitionerCount: practitioners, totalBotanicals: botanicals };
-  }, [products, users]);
+    
+    // Total registered botanical herbs: if botanicalsCount is passed, use it; otherwise compute unique botanicals across medicines
+    const uniqueHerbNames = new Set<string>();
+    let totalIngredientEntries = 0;
+    products.forEach(p => {
+      (p.ingredients || []).forEach(ing => {
+        totalIngredientEntries++;
+        const name = typeof ing === 'string' ? ing : ing?.name;
+        if (name && name.trim()) {
+          uniqueHerbNames.add(name.trim().toLowerCase());
+        }
+      });
+    });
+
+    const botanicals = typeof botanicalsCount === 'number' && botanicalsCount > 0 
+      ? botanicalsCount 
+      : uniqueHerbNames.size;
+
+    return { 
+      totalCount: total, 
+      activeCount: active, 
+      practitionerCount: practitioners, 
+      totalBotanicals: botanicals,
+      totalIngredientEntries
+    };
+  }, [products, users, botanicalsCount]);
 
   const stats = [
     {
@@ -52,7 +77,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
     {
       title: 'Herbal Ingredients',
       value: totalBotanicals,
-      detail: 'Dravyaguna indexed botanicals',
+      detail: `${totalIngredientEntries.toLocaleString()} recipe entries across medicines`,
       icon: Sparkles,
       color: 'text-amber-400',
       bgColor: 'bg-amber-950/40',

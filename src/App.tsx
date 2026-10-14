@@ -9,6 +9,9 @@ import { DeleteConfirmModal } from './components/common/DeleteConfirmModal';
 import { LoginView } from './components/auth/LoginView';
 import { PublicProductPage } from './components/public/PublicProductPage';
 import { ProductQRModal } from './components/common/ProductQRModal';
+import { ApkDownloadPage } from './components/public/ApkDownloadPage';
+import { FloatingDownloadButton } from './components/common/FloatingDownloadButton';
+import { DownloadQRModal } from './components/common/DownloadQRModal';
 
 // Code-split secondary views & modals for faster initial load
 const IngredientsView = lazy(() => import('./components/ingredients/IngredientsView').then(m => ({ default: m.IngredientsView })));
@@ -51,9 +54,32 @@ function getPublicProductSlugFromUrl(): string | null {
   return null;
 }
 
+/**
+ * Checks whether the current URL targets the public APK download page.
+ * Supports /download, /apk, #/download, #/apk, or ?view=download.
+ */
+function isDownloadRouteFromUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const pathname = window.location.pathname.toLowerCase();
+  if (pathname === '/download' || pathname.startsWith('/download/') || pathname === '/apk' || pathname.startsWith('/apk/')) {
+    return true;
+  }
+  const hash = window.location.hash.toLowerCase();
+  if (hash === '#/download' || hash.startsWith('#/download') || hash === '#/apk' || hash.startsWith('#/apk') || hash === '#download') {
+    return true;
+  }
+  const search = new URLSearchParams(window.location.search);
+  if (search.get('view') === 'download' || search.get('tab') === 'download') {
+    return true;
+  }
+  return false;
+}
+
 export const App: React.FC = () => {
   // Public Route State: Accessible without login
   const [publicProductSlug, setPublicProductSlug] = useState<string | null>(() => getPublicProductSlugFromUrl());
+  const [isDownloadView, setIsDownloadView] = useState<boolean>(() => isDownloadRouteFromUrl());
+  const [isDownloadQrModalOpen, setIsDownloadQrModalOpen] = useState<boolean>(false);
 
   // Cache-first instant hydration (zero initial delay)
   const [products, setProducts] = useState<Product[]>(() => StorageService.getProducts());
@@ -82,6 +108,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const handleLocationChange = () => {
       setPublicProductSlug(getPublicProductSlugFromUrl());
+      setIsDownloadView(isDownloadRouteFromUrl());
     };
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('hashchange', handleLocationChange);
@@ -172,6 +199,8 @@ export const App: React.FC = () => {
         const created = await SupabaseService.createProduct(prodData);
         setProducts(prev => [created, ...prev.filter(p => p.id !== created.id)]);
       }
+      // Instantly reload botanical ingredients so any newly added ingredients show in Herbs & Botanicals
+      SupabaseService.fetchBotanicalIngredients().then(setBotanicalIngredients).catch(() => {});
       SupabaseService.fetchAuditLogs().then(setAuditLogs);
     } catch (err) {
       console.error('Failed to save product:', err);
@@ -412,24 +441,95 @@ export const App: React.FC = () => {
     else await loadCentralData();
   };
 
+  // Public Canonical Route: /download (Permits public user access without admin login)
+  if (isDownloadView || currentTab === 'download') {
+    return (
+      <>
+        <ApkDownloadPage
+          onNavigateHome={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/');
+            }
+            setIsDownloadView(false);
+            if (currentTab === 'download') setCurrentTab('catalogue');
+          }}
+        />
+        <DownloadQRModal
+          isOpen={isDownloadQrModalOpen}
+          onClose={() => setIsDownloadQrModalOpen(false)}
+        />
+      </>
+    );
+  }
+
   // Public Canonical Route: /product/:slug (Permits public user access without admin login)
   if (publicProductSlug) {
     return (
-      <PublicProductPage
-        slug={publicProductSlug}
-        onNavigateHome={() => {
-          if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', '/');
-          }
-          setPublicProductSlug(null);
-        }}
-      />
+      <>
+        <PublicProductPage
+          slug={publicProductSlug}
+          onNavigateHome={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/');
+            }
+            setPublicProductSlug(null);
+          }}
+          onNavigateToDownload={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+        />
+        <FloatingDownloadButton
+          onNavigateToDownload={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+          onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
+        />
+        <DownloadQRModal
+          isOpen={isDownloadQrModalOpen}
+          onClose={() => setIsDownloadQrModalOpen(false)}
+          onNavigateToFullPage={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+        />
+      </>
     );
   }
 
   // Authentication Guard: Require authentication to access the admin panel
   if (!activeUser) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <>
+        <LoginView onLoginSuccess={handleLoginSuccess} />
+        <FloatingDownloadButton
+          onNavigateToDownload={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+          onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
+        />
+        <DownloadQRModal
+          isOpen={isDownloadQrModalOpen}
+          onClose={() => setIsDownloadQrModalOpen(false)}
+          onNavigateToFullPage={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+        />
+      </>
+    );
   }
 
   const isModalActive = Boolean(sharingProduct || monographProduct);
@@ -456,6 +556,13 @@ export const App: React.FC = () => {
           isReloading={reloadingSection !== null}
           onChangePassword={handleOpenChangePassword}
           onSignOut={handleSignOut}
+          onNavigateToDownload={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+          onOpenDownloadQr={() => setIsDownloadQrModalOpen(true)}
         />
       </div>
 
@@ -467,6 +574,7 @@ export const App: React.FC = () => {
           products={products}
           categories={categories}
           users={users}
+          botanicalsCount={botanicalIngredients.length}
         />
 
         {/* Tab Views */}
@@ -491,6 +599,7 @@ export const App: React.FC = () => {
           {currentTab === 'ingredients' && (
             <IngredientsView
               ingredients={botanicalIngredients}
+              products={products}
               onSaveIngredient={handleSaveIngredient}
               onDeleteIngredient={handleDeleteIngredient}
               onReload={handleReloadBotanicals}
@@ -601,6 +710,29 @@ export const App: React.FC = () => {
           onClose={() => setSharingProduct(null)}
         />
       )}
+
+      {/* Floating Download Button on all pages */}
+      <FloatingDownloadButton
+        onNavigateToDownload={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/download');
+          }
+          setIsDownloadView(true);
+        }}
+        onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
+      />
+
+      {/* Quick Download QR Modal */}
+      <DownloadQRModal
+        isOpen={isDownloadQrModalOpen}
+        onClose={() => setIsDownloadQrModalOpen(false)}
+        onNavigateToFullPage={() => {
+          if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', '/download');
+          }
+          setIsDownloadView(true);
+        }}
+      />
 
     </div>
   );

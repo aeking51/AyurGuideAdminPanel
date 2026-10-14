@@ -15,12 +15,13 @@ import {
   UploadCloud,
   Check
 } from 'lucide-react';
-import { BotanicalIngredient } from '../../types';
+import { BotanicalIngredient, Product } from '../../types';
 import { DeleteConfirmModal } from '../common/DeleteConfirmModal';
 import { SupabaseService } from '../../services/supabase';
 
 interface IngredientsViewProps {
   ingredients: BotanicalIngredient[];
+  products?: Product[];
   onSaveIngredient: (item: Partial<BotanicalIngredient> & { name: string }) => void;
   onDeleteIngredient: (id: number | string) => void;
   onReload?: () => void;
@@ -29,6 +30,7 @@ interface IngredientsViewProps {
 
 export const IngredientsView: React.FC<IngredientsViewProps> = ({
   ingredients,
+  products = [],
   onSaveIngredient,
   onDeleteIngredient,
   onReload,
@@ -40,6 +42,10 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
   const [deletingItem, setDeletingItem] = useState<BotanicalIngredient | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  const totalFormulationLinkages = React.useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.ingredients?.length || 0), 0);
+  }, [products]);
 
   // Form State
   const [name, setName] = useState('');
@@ -104,6 +110,20 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
     setIsModalOpen(false);
   };
 
+  const handleSyncAllMedicineIngredients = async () => {
+    setIsSyncing(true);
+    setSyncNotice(null);
+    try {
+      const res = await SupabaseService.syncAllMedicineIngredientsToSupabase(products);
+      setSyncNotice(res.message);
+      if (onReload) onReload();
+    } catch (err: any) {
+      setSyncNotice(err.message || 'Failed to sync medicine ingredients to Supabase.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleStoreBotanicalsToSupabase = async () => {
     setIsSyncing(true);
     setSyncNotice(null);
@@ -129,7 +149,7 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
             <h2 className="font-serif font-bold text-xl text-gray-100">Medicinal Herbs & Botanical Directory</h2>
           </div>
           <p className="text-xs text-gray-400 mt-1 max-w-2xl">
-            Central repository of standardized Ayurvedic herbs, medicinal plants, and ingredients synchronized with Supabase.
+            Central repository of standardized Ayurvedic herbs, botanical species, and medicinal ingredients. All ingredients from every medicine formulation are stored in Supabase <code className="text-emerald-300 font-mono">public.ingredients</code>.
           </p>
         </div>
 
@@ -142,31 +162,48 @@ export const IngredientsView: React.FC<IngredientsViewProps> = ({
               title="Reload botanicals live from Supabase public.ingredients"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isReloading ? 'animate-spin' : ''}`} />
-              <span>{isReloading ? 'Reloading...' : 'Reload Herbs'}</span>
+              <span>{isReloading ? 'Reloading...' : 'Reload Directory'}</span>
             </button>
           )}
 
-          {/* Store / Seed Botanicals to Supabase Button */}
+          {/* Sync All Medicine Ingredients to Directory */}
+          <button
+            onClick={handleSyncAllMedicineIngredients}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-950/60 border border-amber-600/70 text-amber-200 hover:text-white hover:bg-amber-900/80 transition text-xs font-semibold shadow-sm cursor-pointer disabled:opacity-50"
+            title="Extract and ensure all ingredients from all medicines are stored into Supabase public.ingredients"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Medicine Ingredients'}</span>
+          </button>
+
+          {/* Store Standard Pharmacopoeia Botanicals */}
           <button
             onClick={handleStoreBotanicalsToSupabase}
             disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-900/60 border border-emerald-500/70 text-emerald-200 hover:text-white hover:bg-emerald-800/80 transition text-xs font-semibold shadow-sm cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-900/60 border border-emerald-500/70 text-emerald-200 hover:text-white hover:bg-emerald-800/80 transition text-xs font-semibold shadow-sm cursor-pointer disabled:opacity-50 hidden sm:inline-flex"
             title="Persist all reference Ayurvedic herbs into Supabase public.ingredients database"
           >
             <UploadCloud className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-bounce' : ''}`} />
-            <span>{isSyncing ? 'Storing to Supabase...' : 'Store Botanicals to Supabase'}</span>
+            <span>Store Dravyaguna Reference</span>
           </button>
 
-          <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono">
-            {ingredients.length} Registered Herbs
+          <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] text-emerald-300 font-mono font-semibold">
+            {ingredients.length} Botanical Herbs
           </span>
+
+          {totalFormulationLinkages > 0 && (
+            <span className="text-xs px-3 py-1.5 rounded-xl bg-[#081C13] border border-amber-800/40 text-amber-300 font-mono hidden md:inline-flex" title="Total formulation ingredient entries across all medicines">
+              {totalFormulationLinkages.toLocaleString()} Recipe Linkages
+            </span>
+          )}
 
           <button
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white text-xs font-semibold shadow-md transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Herb / Botanical</span>
+            <span>Add Herb</span>
           </button>
         </div>
       </div>
