@@ -1047,27 +1047,6 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
       {/* Public Footer */}
       <footer className="border-t border-[#23493C]/80 py-6 sm:py-8 bg-[#061810] text-center text-xs text-emerald-400/70 mt-8 sm:mt-12 space-y-2 px-4">
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
-          <button onClick={onNavigateHome} className="hover:text-emerald-300 underline underline-offset-4">
-            Ayur Index Home
-          </button>
-          <span>&bull;</span>
-          <a href={activeDownloadUrl} download className="hover:text-emerald-300 underline underline-offset-4">
-            Direct Cloud APK
-          </a>
-          <span>&bull;</span>
-          <a href={vercelLink.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 underline underline-offset-4">
-            Vercel Mirror
-          </a>
-          <span>&bull;</span>
-          <button 
-            onClick={() => setIsReleaseModalOpen(true)}
-            className="hover:text-emerald-300 underline underline-offset-4 flex items-center gap-1 inline-flex"
-          >
-            <Sliders className="w-3 h-3" />
-            <span>Manage Cloud Links</span>
-          </button>
-        </div>
         <div className="flex items-center justify-center gap-2 pt-1">
           <img 
             src="/img/sitaram_ayuveda_luxury_logo.jpg" 
