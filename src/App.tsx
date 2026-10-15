@@ -718,16 +718,18 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Floating Download Button on all pages */}
-      <FloatingDownloadButton
-        onNavigateToDownload={() => {
-          if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', '/download');
-          }
-          setIsDownloadView(true);
-        }}
-        onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
-      />
+      {/* Floating Download Button on all non-download pages */}
+      {!isDownloadView && (
+        <FloatingDownloadButton
+          onNavigateToDownload={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/download');
+            }
+            setIsDownloadView(true);
+          }}
+          onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
+        />
+      )}
 
       {/* Quick Download QR Modal */}
       <DownloadQRModal

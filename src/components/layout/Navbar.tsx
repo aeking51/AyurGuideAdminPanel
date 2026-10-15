@@ -68,7 +68,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'users', label: 'Practitioners & Users', icon: Users },
     { id: 'audit', label: 'Audit Trail', icon: History },
     { id: 'database', label: 'Cloud Supabase', icon: Database },
-    { id: 'download', label: 'Android APK', icon: Smartphone, badge: 'v1.2.0' },
   ];
 
   const handleCustomLogin = (e: React.FormEvent) => {

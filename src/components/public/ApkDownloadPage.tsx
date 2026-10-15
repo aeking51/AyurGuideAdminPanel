@@ -233,63 +233,65 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-[#081C13] text-gray-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-20 sm:pb-0">
       
-      {/* Top Navigation Header */}
-      <header className="border-b border-[#23493C]/80 bg-[#061810]/95 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5 shadow-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      {/* Top Navigation Header - Mobile Optimized */}
+      <header className="border-b border-[#23493C]/80 bg-[#061810]/95 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3.5 shadow-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={onNavigateHome}
-              className="p-2 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+              className="p-1.5 sm:p-2 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
               title="Return to Clinical Dashboard"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Index</span>
             </button>
 
-            <div className="h-6 w-px bg-[#23493C]/80" />
+            <div className="h-5 sm:h-6 w-px bg-[#23493C]/80 shrink-0" />
 
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/40 shadow-md shadow-emerald-950 flex items-center justify-center bg-[#061810] flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl overflow-hidden border border-emerald-500/40 shadow-md shadow-emerald-950 flex items-center justify-center bg-[#061810] shrink-0">
                 <img 
                   src="/img/sitaram_ayuveda_luxury_logo.jpg" 
                   alt="Ayur Index Official Luxury Logo" 
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-base tracking-tight font-serif">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-bold text-white text-sm sm:text-base tracking-tight font-serif truncate">
                     Ayur Index
                   </span>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono">
-                    Android APK {APK_CONFIG.version}
+                  <span className="text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 sm:px-2 py-0.5 rounded-full font-mono shrink-0">
+                    APK {APK_CONFIG.version}
                   </span>
                 </div>
-                <p className="text-[11px] text-emerald-400/80 hidden sm:block">
+                <p className="text-[10px] sm:text-[11px] text-emerald-400/80 hidden md:block truncate">
                   Companion mobile formulary for clinical Ayurveda
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               onClick={handleCopyPageLink}
-              className="py-1.5 px-3 bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="p-2 sm:py-1.5 sm:px-3 bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+              title="Share Page Link"
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copiedLink ? 'Link Copied' : 'Share Page'}</span>
+              <span className="hidden sm:inline">{copiedLink ? 'Link Copied' : 'Share'}</span>
             </button>
 
             <button
               onClick={handleDownloadClick}
-              className="py-1.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-950/80 transition-all hover:shadow-emerald-600/30"
+              className="py-1.5 px-3 sm:px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-950/80 transition-all hover:shadow-emerald-600/30"
             >
-              <Download className="w-4 h-4" />
-              <span>Download APK</span>
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Download</span>
+              <span className="hidden xs:inline">APK</span>
             </button>
           </div>
 
@@ -297,94 +299,94 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-8 sm:space-y-12">
         
-        {/* HERO SECTION */}
-        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0D281C] via-[#0B2318] to-[#081C13] border border-[#23493C] p-6 sm:p-10 shadow-2xl">
+        {/* HERO SECTION - MOBILE RESPONSIVE */}
+        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#0D281C] via-[#0B2318] to-[#081C13] border border-[#23493C] p-4 sm:p-8 lg:p-10 shadow-2xl">
           
           {/* Subtle background glow */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 sm:w-96 h-80 sm:h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 sm:w-80 h-64 sm:h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
             
             {/* Left 7 Columns: Product Intro & Download Actions */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
               
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-emerald-400/60 shadow-2xl shadow-emerald-950/80 bg-[#061810] p-1 flex-shrink-0 group hover:border-emerald-300 transition-all duration-300">
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-xl sm:rounded-2xl overflow-hidden border-2 border-emerald-400/60 shadow-2xl shadow-emerald-950/80 bg-[#061810] p-0.5 sm:p-1 shrink-0 group hover:border-emerald-300 transition-all duration-300">
                   <img 
                     src="/img/sitaram_ayuveda_luxury_logo.jpg" 
                     alt="Ayur Index Official Luxury App Logo" 
-                    className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover rounded-lg sm:rounded-xl group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>OFFICIAL STANDALONE ANDROID RELEASE &bull; BUILD {APK_CONFIG.buildNumber}</span>
+                <div className="space-y-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] sm:text-xs font-mono font-medium">
+                      <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">OFFICIAL BUILD {APK_CONFIG.buildNumber}</span>
                     </div>
 
                     {/* Supabase Storage Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#081C13] border border-[#23493C] text-[11px] font-mono text-gray-300">
-                      <Database className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Supabase Cloud Storage CDN</span>
+                    <div className="inline-flex items-center gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-[#081C13] border border-[#23493C] text-[10px] sm:text-[11px] font-mono text-gray-300">
+                      <Database className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400 shrink-0" />
+                      <span>Supabase CDN</span>
                     </div>
                   </div>
 
-                  <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-serif leading-tight">
+                  <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight font-serif leading-tight">
                     Ayur Index for Android
                   </h1>
                 </div>
               </div>
 
-              <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl">
+              <p className="text-xs sm:text-base text-gray-300 leading-relaxed max-w-2xl">
                 Carry the complete Ayurvedic medicine catalogue, formulation monographs, Dravyaguna botanical herbs database, and camera barcode monograph scanner in your pocket. Built for offline clinical consultations and daily practitioner use.
               </p>
 
-              {/* Version & System Spec Badges */}
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                <div className="px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] flex items-center gap-2">
-                  <span className="text-gray-400">Version:</span>
-                  <span className="font-mono text-emerald-300 font-semibold">{APK_CONFIG.version}</span>
+              {/* Version & System Spec Badges - Clean 2x2 grid on mobile */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+                <div className="p-2 sm:px-3 sm:py-2 rounded-xl bg-[#081C13] border border-[#23493C] flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span className="text-gray-400 text-[11px] sm:text-xs">Version:</span>
+                  <span className="font-mono text-emerald-300 font-semibold text-xs sm:text-sm">{APK_CONFIG.version}</span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] flex items-center gap-2">
-                  <span className="text-gray-400">File Size:</span>
-                  <span className="font-mono text-emerald-300 font-semibold">{APK_CONFIG.fileSize}</span>
+                <div className="p-2 sm:px-3 sm:py-2 rounded-xl bg-[#081C13] border border-[#23493C] flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span className="text-gray-400 text-[11px] sm:text-xs">File Size:</span>
+                  <span className="font-mono text-emerald-300 font-semibold text-xs sm:text-sm">{APK_CONFIG.fileSize}</span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] flex items-center gap-2">
-                  <span className="text-gray-400">Requires:</span>
-                  <span className="text-gray-200">{APK_CONFIG.minAndroid}</span>
+                <div className="p-2 sm:px-3 sm:py-2 rounded-xl bg-[#081C13] border border-[#23493C] flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span className="text-gray-400 text-[11px] sm:text-xs">Requires:</span>
+                  <span className="text-gray-200 text-xs sm:text-sm font-medium">{APK_CONFIG.minAndroid}</span>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-[#081C13] border border-[#23493C] flex items-center gap-2">
-                  <span className="text-gray-400">Distribution:</span>
-                  <span className="text-emerald-400 font-mono">Supabase Object CDN</span>
+                <div className="p-2 sm:px-3 sm:py-2 rounded-xl bg-[#081C13] border border-[#23493C] flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                  <span className="text-gray-400 text-[11px] sm:text-xs">Distribution:</span>
+                  <span className="text-emerald-400 font-mono text-xs truncate">Supabase CDN</span>
                 </div>
               </div>
 
               {/* Primary Call to Action Download Box */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#081C13]/90 border border-emerald-500/40 shadow-xl space-y-4">
+              <div className="p-3.5 sm:p-5 rounded-2xl bg-[#081C13]/90 border border-emerald-500/40 shadow-xl space-y-3 sm:space-y-4">
                 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
                   <button
                     onClick={handleDownloadClick}
                     disabled={isDownloading}
-                    className="flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                    className="w-full sm:flex-1 py-3.5 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[48px]"
                   >
                     {isDownloading ? (
                       <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                         <span>Connecting to Cloud CDN...</span>
                       </>
                     ) : downloadSuccess ? (
                       <>
-                        <CheckCircle2 className="w-5 h-5 text-white" />
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         <span>Download Commenced!</span>
                       </>
                     ) : (
                       <>
-                        <Download className="w-5 h-5" />
+                        <Download className="w-4 h-4 sm:w-5 sm:h-5" />
                         <span>Download Ayur Index APK ({APK_CONFIG.fileSize})</span>
                       </>
                     )}
@@ -395,16 +397,16 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                       href={vercelLink.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="py-3.5 px-4 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+                      className="w-full sm:w-auto py-2.5 sm:py-3.5 px-4 rounded-xl bg-[#0D281C] hover:bg-[#1A3D2E] text-emerald-300 border border-[#23493C] font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors min-h-[44px]"
                       title="Download from high-speed secondary Vercel storage mirror"
                     >
-                      <ExternalLink className="w-4 h-4 text-emerald-400" />
+                      <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
                       <span>Vercel Mirror</span>
                     </a>
                   ) : (
                     <button
                       onClick={() => setIsReleaseModalOpen(true)}
-                      className="py-3.5 px-4 rounded-xl bg-[#0D281C]/60 hover:bg-[#1A3D2E] text-gray-400 hover:text-emerald-300 border border-[#23493C] font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors"
+                      className="w-full sm:w-auto py-2.5 sm:py-3.5 px-4 rounded-xl bg-[#0D281C]/60 hover:bg-[#1A3D2E] text-gray-400 hover:text-emerald-300 border border-[#23493C] font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors min-h-[44px]"
                       title="Manage and configure APK distribution endpoints"
                     >
                       <Sliders className="w-3.5 h-3.5" />
@@ -414,16 +416,16 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                 </div>
 
                 {/* SHA256 Verification String */}
-                <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-[#23493C]/60 flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5 font-mono">
-                    <span className="text-gray-400 uppercase font-bold text-[10px]">SHA-256:</span>
-                    <span className="text-emerald-300 select-all truncate max-w-[200px] sm:max-w-xs">
+                <div className="flex flex-col xs:flex-row xs:items-center justify-between text-[10px] sm:text-[11px] text-gray-400 pt-2 border-t border-[#23493C]/60 gap-1.5">
+                  <div className="flex items-center gap-1.5 font-mono min-w-0">
+                    <span className="text-gray-400 uppercase font-bold text-[9px] sm:text-[10px] shrink-0">SHA-256:</span>
+                    <span className="text-emerald-300 select-all truncate max-w-[200px] sm:max-w-xs font-mono">
                       {APK_CONFIG.sha256}
                     </span>
                   </div>
                   <button
                     onClick={handleCopyHash}
-                    className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-mono text-[10px]"
+                    className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-mono text-[10px] self-end xs:self-auto shrink-0"
                   >
                     {copiedHash ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedHash ? 'Checksum Copied' : 'Copy Checksum'}</span>
@@ -433,20 +435,17 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
               </div>
 
               {/* CDN Edge Source & Download Routing */}
-              <div className="p-4 rounded-2xl bg-[#0D281C]/60 border border-[#23493C] space-y-3">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0D281C]/60 border border-[#23493C] space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-xs font-semibold text-emerald-200 flex items-center gap-1.5">
                     <Server className="w-3.5 h-3.5 text-emerald-400" />
-                    CDN Edge Source &amp; Download Routing
+                    CDN Edge Source &amp; Routing
                   </span>
                   
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400 hidden sm:inline">
-                      Auto-selected: {downloadSource === 'vercel' ? (vercelLink.isActive ? 'Vercel Mirror' : 'Supabase CDN') : (supabaseLink.isActive ? 'Supabase CDN' : 'Vercel Mirror')}
-                    </span>
                     <button
                       onClick={() => setIsReleaseModalOpen(true)}
-                      className="py-1 px-2.5 rounded-lg bg-[#081C13] hover:bg-[#153426] text-emerald-300 border border-[#23493C] text-[11px] font-semibold flex items-center gap-1.5 transition shadow-sm"
+                      className="py-1 px-2.5 rounded-lg bg-[#081C13] hover:bg-[#153426] text-emerald-300 border border-[#23493C] text-[10px] sm:text-[11px] font-semibold flex items-center gap-1.5 transition shadow-sm"
                       title="Edit links, toggle active/inactive status, test reachability, or add mirrors"
                     >
                       <Sliders className="w-3 h-3 text-emerald-400" />
@@ -455,7 +454,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 text-xs">
                   {/* Supabase CDN Option */}
                   <button
                     onClick={() => {
@@ -465,7 +464,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                         setDownloadSource('supabase_cdn');
                       }
                     }}
-                    className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       !supabaseLink.isActive
                         ? 'bg-[#06140E]/60 border-red-950/40 text-gray-500 opacity-60 hover:opacity-100'
                         : downloadSource === 'supabase_cdn' 
@@ -473,21 +472,21 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                           : 'bg-[#081C13] border-[#23493C] text-gray-300 hover:text-white'
                     }`}
                   >
-                    <div>
+                    <div className="min-w-0 pr-2">
                       <div className="font-semibold text-white flex items-center gap-1.5">
-                        <span>Supabase CDN</span>
+                        <span className="truncate">Supabase CDN</span>
                         {supabaseLink.isPrimary && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                             Primary
                           </span>
                         )}
                         {!supabaseLink.isActive && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800 shrink-0">
                             Inactive
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-emerald-400/80">
+                      <div className="text-[10px] text-emerald-400/80 truncate">
                         {supabaseLink.isActive ? 'Official Storage Bucket • High Speed' : 'Disabled in link manager (Click to enable)'}
                       </div>
                     </div>
@@ -505,7 +504,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                         setDownloadSource('vercel');
                       }
                     }}
-                    className={`py-2.5 px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
                       !vercelLink.isActive
                         ? 'bg-[#06140E]/60 border-red-950/40 text-gray-500 opacity-60 hover:opacity-100'
                         : downloadSource === 'vercel' 
@@ -513,21 +512,21 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                           : 'bg-[#081C13] border-[#23493C] text-gray-300 hover:text-white'
                     }`}
                   >
-                    <div>
+                    <div className="min-w-0 pr-2">
                       <div className="font-semibold text-white flex items-center gap-1.5">
-                        <span>Vercel Mirror</span>
+                        <span className="truncate">Vercel Mirror</span>
                         {vercelLink.isPrimary && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                             Primary
                           </span>
                         )}
                         {!vercelLink.isActive && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800 shrink-0">
                             Inactive
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-emerald-400/80">
+                      <div className="text-[10px] text-emerald-400/80 truncate">
                         {vercelLink.isActive ? 'Secondary Edge • Vercel Blob Storage' : 'Disabled in link manager (Click to enable)'}
                       </div>
                     </div>
@@ -543,11 +542,17 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             {/* Right 5 Columns: QR Code Scanner for Mobile Visitors */}
             <div className="lg:col-span-5 flex flex-col items-center">
               
-              <div className="w-full max-w-sm rounded-3xl bg-[#0D281C] border border-emerald-500/40 p-6 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
+              <div className="w-full max-w-sm rounded-2xl sm:rounded-3xl bg-[#0D281C] border border-emerald-500/40 p-4 sm:p-6 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
                 
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500" />
                 
-                <div className="w-full flex items-center justify-between mb-4">
+                {/* Mobile Direct Download Advice */}
+                <div className="sm:hidden w-full mb-3 p-2 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-left flex items-center gap-2 text-[11px] text-emerald-300">
+                  <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>On mobile? Tap the <strong>Download APK</strong> button above for direct installation.</span>
+                </div>
+
+                <div className="w-full flex items-center justify-between mb-3 sm:mb-4">
                   <div className="flex items-center gap-2">
                     <img 
                       src="/img/sitaram_ayuveda_luxury_logo.jpg" 
@@ -580,16 +585,16 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   </div>
                 </div>
 
-                {/* QR Code Canvas Frame */}
-                <div className="relative p-3 bg-white rounded-2xl shadow-xl border-4 border-emerald-500/30 mb-4 group cursor-pointer">
+                {/* QR Code Canvas Frame - Responsive sizing */}
+                <div className="relative p-2.5 sm:p-3 bg-white rounded-2xl shadow-xl border-4 border-emerald-500/30 mb-3 sm:mb-4 group cursor-pointer">
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
                       alt="Ayur Index Android Download QR Code"
-                      className="w-52 h-52 sm:w-60 sm:h-60 rounded-lg object-contain"
+                      className="w-44 h-44 sm:w-56 sm:h-56 rounded-lg object-contain"
                     />
                   ) : (
-                    <div className="w-52 h-52 sm:w-60 sm:h-60 flex items-center justify-center bg-gray-100 rounded-lg">
+                    <div className="w-44 h-44 sm:w-56 sm:h-56 flex items-center justify-center bg-gray-100 rounded-lg">
                       <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
                     </div>
                   )}
@@ -605,16 +610,16 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   <p className="text-xs font-semibold text-white">
                     Point Phone Camera to Scan
                   </p>
-                  <p className="text-[11px] text-gray-400 max-w-[240px]">
+                  <p className="text-[10px] sm:text-[11px] text-gray-400 max-w-[240px]">
                     {qrTarget === 'apk' 
                       ? 'Triggers instant direct download of ayurindex-latest.apk from Supabase Storage' 
                       : 'Opens this interactive installation portal directly on mobile'}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-[#23493C]/60 w-full flex items-center justify-center gap-2 text-[11px] text-emerald-300 font-mono">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Hosted in Supabase Storage &bull; Verified Safe</span>
+                <div className="mt-3 sm:mt-4 pt-3 border-t border-[#23493C]/60 w-full flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-300 font-mono">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Hosted in Supabase &bull; Verified Safe</span>
                 </div>
 
               </div>
@@ -626,46 +631,46 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
         </section>
 
         {/* STEP-BY-STEP SIDELOADING / INSTALLATION GUIDE */}
-        <section className="space-y-6">
+        <section className="space-y-4 sm:space-y-6">
           
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+          <div className="text-center max-w-2xl mx-auto space-y-1.5 sm:space-y-2">
+            <span className="text-[10px] sm:text-xs font-mono text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
               Zero Friction Setup
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white font-serif">
+            <h2 className="text-xl sm:text-3xl font-bold text-white font-serif">
               How to Install Ayur Index on Android
             </h2>
-            <p className="text-sm text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-400">
               Follow these 4 simple steps to install the APK directly without requiring a Google Play account.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {APK_CONFIG.installSteps.map((step) => {
               const isSelected = activeStep === step.step;
               return (
                 <div
                   key={step.step}
                   onClick={() => setActiveStep(step.step)}
-                  className={`cursor-pointer rounded-2xl p-5 border transition-all duration-200 relative flex flex-col justify-between ${
+                  className={`cursor-pointer rounded-2xl p-4 sm:p-5 border transition-all duration-200 relative flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-[#0E3524] border-emerald-400 shadow-xl shadow-emerald-950/60 scale-[1.02]'
+                      ? 'bg-[#0E3524] border-emerald-400 shadow-xl shadow-emerald-950/60 sm:scale-[1.02]'
                       : 'bg-[#0D281C]/70 hover:bg-[#0D281C] border-[#23493C]'
                   }`}
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-sm flex items-center justify-center">
+                      <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold text-xs sm:text-sm flex items-center justify-center">
                         {step.step}
                       </span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                      <span className={`text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-medium ${
                         isSelected ? 'bg-emerald-500 text-white' : 'bg-[#081C13] text-gray-400 border border-[#23493C]'
                       }`}>
                         {step.badge}
                       </span>
                     </div>
 
-                    <h3 className="font-semibold text-white text-base">
+                    <h3 className="font-semibold text-white text-sm sm:text-base">
                       {step.title}
                     </h3>
 
@@ -674,7 +679,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                     </p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-[#23493C]/60 flex items-start gap-1.5 text-[11px] text-emerald-300/90 bg-[#081C13]/60 p-2 rounded-lg">
+                  <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-[#23493C]/60 flex items-start gap-1.5 text-[10px] sm:text-[11px] text-emerald-300/90 bg-[#081C13]/60 p-2 rounded-lg">
                     <Info className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                     <span>{step.tip}</span>
                   </div>
@@ -684,13 +689,13 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
           </div>
 
           {/* Android Security Clarification Callout */}
-          <div className="rounded-2xl bg-[#092217] border border-emerald-500/30 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="rounded-2xl bg-[#092217] border border-emerald-500/30 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-300 shrink-0 mt-0.5">
-                <AlertTriangle className="w-5 h-5" />
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-semibold text-white">
+                <h4 className="text-xs sm:text-sm font-semibold text-white">
                   Why does Android show "File might be harmful"?
                 </h4>
                 <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
@@ -701,7 +706,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
             <button
               onClick={handleDownloadClick}
-              className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shrink-0 transition-colors shadow-md"
+              className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shrink-0 transition-colors shadow-md text-center"
             >
               Start APK Download
             </button>
@@ -710,145 +715,174 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
         </section>
 
         {/* VERSION ARCHIVE & RELEASE HISTORY (SUPABASE STORAGE) */}
-        <section className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <section className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
             <div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
                 <Clock className="w-3.5 h-3.5 text-emerald-400" />
                 Permanent Release Archive
               </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white font-serif mt-2">
+              <h2 className="text-xl sm:text-3xl font-bold text-white font-serif mt-2">
                 Version History &amp; Changelogs
               </h2>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 Download historical verified releases or audit cryptographic SHA-256 signatures stored in Supabase.
               </p>
             </div>
 
-            <div className="text-xs text-gray-400">
-              Total archived builds: <span className="font-mono text-emerald-300 font-semibold">{APK_CONFIG.archiveReleases.length}</span>
+            <div className="flex items-center gap-2.5 text-xs text-gray-400">
+              <span>
+                Active builds:{' '}
+                <span className="font-mono text-emerald-300 font-semibold">{activeVersions.length}</span>
+                <span className="text-gray-500 font-mono"> / {managedVersions.length}</span>
+              </span>
+              <button
+                onClick={() => setIsReleaseModalOpen(true)}
+                className="py-1 px-2.5 rounded-lg bg-[#0D281C] hover:bg-[#153426] text-emerald-300 border border-[#23493C] text-[11px] font-semibold flex items-center gap-1 transition shadow-sm"
+                title="Manage active/inactive status and links for archived versions"
+              >
+                <Sliders className="w-3 h-3 text-emerald-400" />
+                <span>Manage</span>
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {APK_CONFIG.archiveReleases.map(rel => (
-              <div
-                key={rel.version}
-                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
-                  rel.isLatest
-                    ? 'bg-[#0E3524] border-emerald-400 shadow-xl shadow-emerald-950/60'
-                    : 'bg-[#0D281C]/70 hover:bg-[#0D281C] border-[#23493C]'
-                }`}
+          {activeVersions.length === 0 ? (
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#0D281C]/50 border border-amber-500/30 text-center space-y-3">
+              <Clock className="w-8 h-8 text-amber-400 mx-auto" />
+              <h3 className="text-base font-semibold text-white">Archived Releases Temporarily Inactive</h3>
+              <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto">
+                Historical APK versions have been set to inactive by administrators. The latest stable release ({APK_CONFIG.version}) remains fully available for download above.
+              </p>
+              <button
+                onClick={() => setIsReleaseModalOpen(true)}
+                className="py-1.5 px-3.5 rounded-xl bg-[#081C13] hover:bg-[#133829] text-emerald-300 border border-[#23493C] text-xs font-medium inline-flex items-center gap-1.5 transition"
               >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold font-mono text-white">{rel.version}</span>
-                      {rel.isLatest && (
-                        <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-mono font-semibold">
-                          Latest
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-400 font-mono">{rel.fileSize}</span>
-                  </div>
-
-                  <div className="text-xs text-gray-400 flex items-center gap-2">
-                    <span>{rel.releaseDate}</span>
-                    <span>&bull;</span>
-                    <span>{rel.minAndroid}</span>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] uppercase font-mono text-gray-400 tracking-wider block">
-                      Release Highlights:
-                    </span>
-                    {rel.highlights.map((h, i) => (
-                      <div key={i} className="text-xs text-gray-300 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span>{h}</span>
+                <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Open Release Manager to Enable Versions</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {activeVersions.map(rel => (
+                <div
+                  key={rel.version}
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-3 sm:space-y-4 ${
+                    rel.isLatest
+                      ? 'bg-[#0E3524] border-emerald-400 shadow-xl shadow-emerald-950/60'
+                      : 'bg-[#0D281C]/70 hover:bg-[#0D281C] border-[#23493C]'
+                  }`}
+                >
+                  <div className="space-y-2.5 sm:space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base sm:text-lg font-bold font-mono text-white">{rel.version}</span>
+                        {rel.isLatest && (
+                          <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-mono font-semibold">
+                            Latest
+                          </span>
+                        )}
                       </div>
-                    ))}
+                      <span className="text-xs text-gray-400 font-mono">{rel.fileSize}</span>
+                    </div>
+
+                    <div className="text-xs text-gray-400 flex items-center gap-2">
+                      <span>{rel.releaseDate}</span>
+                      <span>&bull;</span>
+                      <span>{rel.minAndroid}</span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] uppercase font-mono text-gray-400 tracking-wider block">
+                        Release Highlights:
+                      </span>
+                      {rel.highlights.map((h, i) => (
+                        <div key={i} className="text-xs text-gray-300 flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#23493C]/60 flex items-center justify-between gap-2">
+                    <div className="text-[10px] font-mono text-gray-400 truncate max-w-[120px] sm:max-w-[140px]" title={rel.sha256}>
+                      SHA: {rel.sha256.substring(0, 10)}...
+                    </div>
+
+                    <a
+                      href={rel.cloudStorageUrl}
+                      download
+                      className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
                   </div>
                 </div>
-
-                <div className="pt-3 border-t border-[#23493C]/60 flex items-center justify-between">
-                  <div className="text-[10px] font-mono text-gray-400 truncate max-w-[140px]" title={rel.sha256}>
-                    SHA: {rel.sha256.substring(0, 10)}...
-                  </div>
-
-                  <a
-                    href={rel.cloudStorageUrl}
-                    download
-                    className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download</span>
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* LIVE FEATURE PREVIEW & SUPABASE SHOWCASE */}
-        <section className="space-y-6">
+        <section className="space-y-4 sm:space-y-6">
           
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
             <div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-medium">
                 <Database className="w-3.5 h-3.5 text-emerald-400" />
                 Connected to Supabase
               </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white font-serif mt-2">
+              <h2 className="text-xl sm:text-3xl font-bold text-white font-serif mt-2">
                 Interactive App Feature Preview
               </h2>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 Explore key features packed inside the Ayur Index Android app, synchronized directly with live cloud records.
               </p>
             </div>
 
-            {/* Live Database Metrics Counter */}
-            <div className="flex items-center gap-3 bg-[#0D281C] border border-[#23493C] p-2.5 rounded-2xl text-xs">
-              <div className="px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
-                <span className="block text-gray-400 text-[10px] uppercase">Medicines</span>
-                <span className="font-mono text-emerald-300 font-bold text-sm">
+            {/* Live Database Metrics Counter - 3 equal columns on mobile */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 bg-[#0D281C] border border-[#23493C] p-2 sm:p-2.5 rounded-2xl text-xs w-full sm:w-auto">
+              <div className="px-2 sm:px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
+                <span className="block text-gray-400 text-[9px] sm:text-[10px] uppercase">Medicines</span>
+                <span className="font-mono text-emerald-300 font-bold text-xs sm:text-sm">
                   {isLoadingLiveStats ? '...' : totalProductsCount}
                 </span>
               </div>
-              <div className="px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
-                <span className="block text-gray-400 text-[10px] uppercase">Botanicals</span>
-                <span className="font-mono text-emerald-300 font-bold text-sm">
+              <div className="px-2 sm:px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
+                <span className="block text-gray-400 text-[9px] sm:text-[10px] uppercase">Botanicals</span>
+                <span className="font-mono text-emerald-300 font-bold text-xs sm:text-sm">
                   {isLoadingLiveStats ? '...' : totalHerbsCount}
                 </span>
               </div>
-              <div className="px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
-                <span className="block text-gray-400 text-[10px] uppercase">Categories</span>
-                <span className="font-mono text-emerald-300 font-bold text-sm">
+              <div className="px-2 sm:px-3 py-1 bg-[#081C13] rounded-xl border border-[#23493C] text-center">
+                <span className="block text-gray-400 text-[9px] sm:text-[10px] uppercase">Categories</span>
+                <span className="font-mono text-emerald-300 font-bold text-xs sm:text-sm">
                   {isLoadingLiveStats ? '...' : totalCategoriesCount}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Interactive Feature Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Interactive Feature Tabs - 2x2 grid on mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
             {APK_CONFIG.features.map((feat, idx) => {
               const isTabActive = activeFeatureIndex === idx;
               return (
                 <button
                   key={feat.id}
                   onClick={() => setActiveFeatureIndex(idx)}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-2.5 sm:p-3.5 rounded-xl border text-left transition-all ${
                     isTabActive
                       ? 'bg-[#103E2B] border-emerald-400 text-white shadow-lg'
                       : 'bg-[#0D281C]/70 hover:bg-[#0D281C] border-[#23493C] text-gray-300'
                   }`}
                 >
-                  <span className="text-[10px] font-mono text-emerald-400 block mb-1">
+                  <span className="text-[9px] sm:text-[10px] font-mono text-emerald-400 block mb-0.5 sm:mb-1">
                     {feat.tag}
                   </span>
-                  <span className="text-xs font-semibold line-clamp-1">
+                  <span className="text-[11px] sm:text-xs font-semibold line-clamp-1">
                     {feat.title}
                   </span>
                 </button>
@@ -857,38 +891,38 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
           </div>
 
           {/* Feature Showcase Body */}
-          <div className="rounded-3xl bg-[#0D281C] border border-[#23493C] p-6 sm:p-8 shadow-xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="rounded-2xl sm:rounded-3xl bg-[#0D281C] border border-[#23493C] p-4 sm:p-6 lg:p-8 shadow-xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
               
               {/* Feature Details */}
-              <div className="lg:col-span-7 space-y-4">
+              <div className="lg:col-span-7 space-y-3 sm:space-y-4">
                 <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-mono font-medium">
                   {APK_CONFIG.features[activeFeatureIndex].tag}
                 </div>
-                <h3 className="text-2xl font-bold text-white font-serif">
+                <h3 className="text-xl sm:text-2xl font-bold text-white font-serif">
                   {APK_CONFIG.features[activeFeatureIndex].title}
                 </h3>
-                <p className="text-sm font-medium text-emerald-400">
+                <p className="text-xs sm:text-sm font-medium text-emerald-400">
                   {APK_CONFIG.features[activeFeatureIndex].subtitle}
                 </p>
-                <p className="text-sm text-gray-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
                   {APK_CONFIG.features[activeFeatureIndex].description}
                 </p>
 
                 {/* Key Benefits Checklist */}
-                <div className="space-y-2 pt-2">
+                <div className="space-y-1.5 sm:space-y-2 pt-1 sm:pt-2">
                   {APK_CONFIG.releaseHighlights.slice(0, 3).map((hl, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs text-gray-200">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
                       <span>{hl}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="pt-4 flex items-center gap-3">
+                <div className="pt-2 sm:pt-4 flex items-center gap-3">
                   <button
                     onClick={handleDownloadClick}
-                    className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-md transition-all"
+                    className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
                   >
                     <Download className="w-4 h-4" />
                     <span>Download App for Android</span>
@@ -898,13 +932,13 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
               {/* Mock Mobile Viewport with Real Data & Photos */}
               <div className="lg:col-span-5 flex justify-center">
-                <div className="w-full max-w-xs bg-[#081C13] border-4 border-[#23493C] rounded-[2.5rem] p-3 shadow-2xl relative overflow-hidden">
+                <div className="w-full max-w-[270px] sm:max-w-xs bg-[#081C13] border-4 border-[#23493C] rounded-[2rem] sm:rounded-[2.5rem] p-2.5 sm:p-3 shadow-2xl relative overflow-hidden">
                   
                   {/* Phone Speaker Notch */}
-                  <div className="w-24 h-4 bg-[#23493C] rounded-full mx-auto mb-3" />
+                  <div className="w-20 sm:w-24 h-3.5 sm:h-4 bg-[#23493C] rounded-full mx-auto mb-2.5 sm:mb-3" />
 
                   {/* Mobile Screen Content */}
-                  <div className="bg-[#0A261A] rounded-2xl p-3 border border-[#23493C]/60 space-y-3 min-h-[380px] flex flex-col justify-between">
+                  <div className="bg-[#0A261A] rounded-xl sm:rounded-2xl p-2.5 sm:p-3 border border-[#23493C]/60 space-y-2.5 min-h-[360px] flex flex-col justify-between">
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[11px] pb-2 border-b border-[#23493C]/60">
@@ -921,21 +955,21 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
 
                       {/* Search Bar Preview */}
                       <div className="bg-[#061810] border border-[#23493C] rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 text-xs text-gray-400">
-                        <Search className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-[11px] text-gray-400">Search 300+ formulations...</span>
+                        <Search className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-[10px] sm:text-[11px] text-gray-400 truncate">Search 300+ formulations...</span>
                       </div>
 
                       {/* Live medicine cards from Supabase with Authentic Photos */}
-                      <div className="space-y-2 pt-1">
-                        <span className="text-[10px] text-gray-400 uppercase font-mono tracking-wider">
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[9px] sm:text-[10px] text-gray-400 uppercase font-mono tracking-wider block">
                           Formulary Index:
                         </span>
                         {sampleProducts.slice(0, 3).map((prod) => (
                           <div 
                             key={prod.id}
-                            className="bg-[#081C13] border border-[#23493C]/80 rounded-lg p-2 text-left flex items-center gap-2.5 hover:border-emerald-500/50 transition-colors"
+                            className="bg-[#081C13] border border-[#23493C]/80 rounded-lg p-1.5 sm:p-2 text-left flex items-center gap-2 sm:gap-2.5 hover:border-emerald-500/50 transition-colors"
                           >
-                            <div className="w-10 h-10 rounded-lg bg-[#061810] border border-emerald-800/60 overflow-hidden shrink-0">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#061810] border border-emerald-800/60 overflow-hidden shrink-0">
                               <img 
                                 src={prod.imageUrl || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600'} 
                                 alt={prod.name}
@@ -946,15 +980,15 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold text-white truncate max-w-[130px]">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[11px] sm:text-xs font-semibold text-white truncate max-w-[110px] sm:max-w-[130px]">
                                   {prod.name}
                                 </span>
-                                <span className="text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1 rounded">
+                                <span className="text-[8px] sm:text-[9px] font-mono bg-emerald-500/20 text-emerald-300 px-1 rounded shrink-0">
                                   {prod.code}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-emerald-400/80 truncate">
+                              <p className="text-[9px] sm:text-[10px] text-emerald-400/80 truncate">
                                 {prod.categoryName || 'Classical Medicine'}
                               </p>
                             </div>
@@ -970,7 +1004,7 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
                   </div>
 
                   {/* Phone Bottom Home Bar */}
-                  <div className="w-28 h-1 bg-gray-500 rounded-full mx-auto mt-3" />
+                  <div className="w-24 sm:w-28 h-1 bg-gray-500 rounded-full mx-auto mt-2.5 sm:mt-3" />
 
                 </div>
               </div>
@@ -981,9 +1015,9 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
         </section>
 
         {/* FREQUENTLY ASKED QUESTIONS */}
-        <section className="space-y-6 pt-4">
-          <div className="text-center max-w-2xl mx-auto space-y-2">
-            <h2 className="text-2xl font-bold text-white font-serif">
+        <section className="space-y-4 sm:space-y-6 pt-2">
+          <div className="text-center max-w-2xl mx-auto space-y-1.5 sm:space-y-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-white font-serif">
               Frequently Asked Questions
             </h2>
             <p className="text-xs sm:text-sm text-gray-400">
@@ -991,13 +1025,13 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {APK_CONFIG.faq.map((item, idx) => (
               <div 
                 key={idx}
-                className="rounded-2xl bg-[#0D281C]/70 border border-[#23493C] p-5 space-y-2 text-left"
+                className="rounded-xl sm:rounded-2xl bg-[#0D281C]/70 border border-[#23493C] p-4 sm:p-5 space-y-1.5 sm:space-y-2 text-left"
               >
-                <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-semibold text-white flex items-center gap-2">
                   <HelpCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>{item.question}</span>
                 </h4>
@@ -1012,8 +1046,8 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
       </main>
 
       {/* Public Footer */}
-      <footer className="border-t border-[#23493C]/80 py-8 bg-[#061810] text-center text-xs text-emerald-400/70 mt-12 space-y-2">
-        <div className="flex items-center justify-center gap-3">
+      <footer className="border-t border-[#23493C]/80 py-6 sm:py-8 bg-[#061810] text-center text-xs text-emerald-400/70 mt-8 sm:mt-12 space-y-2 px-4">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
           <button onClick={onNavigateHome} className="hover:text-emerald-300 underline underline-offset-4">
             Ayur Index Home
           </button>
@@ -1034,17 +1068,64 @@ export const ApkDownloadPage: React.FC<ApkDownloadPageProps> = ({
             <span>Manage Cloud Links</span>
           </button>
         </div>
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 pt-1">
           <img 
             src="/img/sitaram_ayuveda_luxury_logo.jpg" 
             alt="Ayur Index Logo" 
             className="w-4 h-4 rounded-full object-cover border border-emerald-400/40 inline-block" 
           />
-          <p>
+          <p className="text-[11px] sm:text-xs">
             Ayur Index Android Companion &bull; Powered by Live Supabase Storage CDN
           </p>
         </div>
       </footer>
+
+      {/* Sticky Mobile Bottom Download Bar - Instant one-tap access on phones */}
+      <aside 
+        aria-label="Quick Mobile Download Bar"
+        className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-[#061810]/95 backdrop-blur-md border-t border-emerald-500/40 p-2.5 px-4 shadow-2xl flex items-center justify-between gap-3"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-400/50 bg-[#061810] shrink-0 p-0.5">
+            <img 
+              src="/img/sitaram_ayuveda_luxury_logo.jpg" 
+              alt="Logo" 
+              className="w-full h-full object-cover rounded-lg"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-white truncate font-serif">
+              Ayur Index APK
+            </div>
+            <div className="text-[10px] text-emerald-400 font-mono">
+              v{APK_CONFIG.version} &bull; {APK_CONFIG.fileSize}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDownloadClick}
+          disabled={isDownloading}
+          className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950 shrink-0"
+        >
+          {isDownloading ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Starting...</span>
+            </>
+          ) : downloadSuccess ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+              <span>Downloaded!</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-3.5 h-3.5" />
+              <span>Download</span>
+            </>
+          )}
+        </button>
+      </aside>
 
       {/* Cloud Hosting & Link Manager Modal */}
       {isReleaseModalOpen && (

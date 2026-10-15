@@ -357,7 +357,7 @@ export const ReleaseManagerModal: React.FC<ReleaseManagerModalProps> = ({ isOpen
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-[#23493C]/80 bg-[#081C13]/60 px-5 text-xs font-medium">
+        <div className="flex border-b border-[#23493C]/80 bg-[#081C13]/60 px-3 sm:px-5 text-xs font-medium overflow-x-auto no-scrollbar whitespace-nowrap">
           <button
             onClick={() => setActiveTab('status')}
             className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
