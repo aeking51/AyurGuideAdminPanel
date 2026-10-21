@@ -19,6 +19,7 @@ const CategoriesView = lazy(() => import('./components/categories/CategoriesView
 const UsersView = lazy(() => import('./components/users/UsersView').then(m => ({ default: m.UsersView })));
 const AuditView = lazy(() => import('./components/audit/AuditView').then(m => ({ default: m.AuditView })));
 const DatabaseView = lazy(() => import('./components/database/DatabaseView').then(m => ({ default: m.DatabaseView })));
+const DeviceRecordsView = lazy(() => import('./components/devices/DeviceRecordsView').then(m => ({ default: m.DeviceRecordsView })));
 const ProductModal = lazy(() => import('./components/catalogue/ProductModal').then(m => ({ default: m.ProductModal })));
 const MonographModal = lazy(() => import('./components/catalogue/MonographModal').then(m => ({ default: m.MonographModal })));
 const ChangePasswordModal = lazy(() => import('./components/common/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
@@ -651,6 +652,13 @@ export const App: React.FC = () => {
               config={supabaseConfig}
               onSaveConfig={handleSaveSupabaseConfig}
               onReloadAllData={loadCentralData}
+            />
+          )}
+
+          {currentTab === 'devices' && (
+            <DeviceRecordsView
+              activeUser={activeUser}
+              onNavigateHome={() => setCurrentTab('catalogue')}
             />
           )}
         </Suspense>

@@ -66,6 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'ingredients', label: 'Herbs & Botanicals', icon: Sparkles },
     { id: 'categories', label: 'Categories', icon: Layers },
     { id: 'users', label: 'Practitioners & Users', icon: Users },
+    { id: 'devices', label: 'Device & Location Records', icon: Smartphone, adminOnly: true },
     { id: 'audit', label: 'Audit Trail', icon: History },
     { id: 'database', label: 'Cloud Supabase', icon: Database },
   ];
@@ -402,13 +403,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Navigation Tabs & Reload Bar */}
         <div className="flex items-center justify-between border-t border-[#23493C]/40 py-1.5 gap-2">
           <nav className="flex space-x-1 sm:space-x-3 overflow-x-auto no-scrollbar">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = currentTab === item.id;
-              const badge = (item as any).badge;
-              return (
-                <button
-                  key={item.id}
+            {navItems
+              .filter(item => !(item as any).adminOnly || (activeUser && activeUser.role === 'ADMIN'))
+              .map((item) => {
+                const Icon = item.icon;
+                const active = currentTab === item.id;
+                const badge = (item as any).badge;
+                return (
+                  <button
+                    key={item.id}
                   onClick={() => {
                     if (item.id === 'download' && onNavigateToDownload) {
                       onNavigateToDownload();

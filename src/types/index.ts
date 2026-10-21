@@ -99,3 +99,52 @@ export interface SupabaseConfig {
   connected: boolean;
   lastSyncTime?: string;
 }
+
+export interface AppDevice {
+  id?: number | string;
+  installationId: string;
+  manufacturer?: string;
+  deviceModel?: string;
+  androidVersion?: string;
+  sdkVersion?: number | string;
+  appVersion?: string;
+  appVersionName?: string;
+  appVersionCode?: number;
+  deviceType?: string; // 'Phone' | 'Tablet' | 'Foldable' | 'Other'
+  language?: string;
+  timezone?: string;
+  networkType?: string;
+  deviceReportingConsent: boolean;
+  locationConsent: boolean;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  lastSyncAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Computed / joined fields
+  locationsCount?: number;
+  latestLocation?: AppDeviceLocation | null;
+}
+
+export interface AppDeviceLocation {
+  id?: number | string;
+  installationId: string;
+  deviceModel?: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number; // meters
+  locationPrecision: 'approximate' | 'precise';
+  locationSource?: string; // 'gps' | 'network' | 'fused' | 'passive'
+  recordedAt: string;
+  uploadedAt: string;
+  createdAt?: string;
+}
+
+export interface DeviceStats {
+  totalDevices: number;
+  active24h: number;
+  active7d: number;
+  locationConsentCount: number;
+  noLocationConsentCount: number;
+  devicesWithLocationData: number;
+}

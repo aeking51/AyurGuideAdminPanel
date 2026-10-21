@@ -162,8 +162,8 @@ export const APK_CONFIG: ApkReleaseInfo = {
       answer: 'The official Ayur Index APK is hosted in our high-speed, secure Supabase Storage bucket with automated global CDN edge distribution, alongside a secondary high-speed Vercel Storage mirror.'
     },
     {
-      question: 'How do printed QR codes on medicine bottles remain updated?',
-      answer: 'All printed clinic QR codes encode the permanent latest endpoint (ayurindex-latest.apk). When a new version is released, the latest cloud link automatically routes to the newest build without needing to reprint labels.'
+      question: 'What are the minimum Android requirements to install Ayur Index?',
+      answer: 'Ayur Index runs smoothly on any smartphone or tablet running Android 8.0 (Oreo) or higher. It is lightweight, optimized for fast performance, and requires less than 35 MB of device storage.'
     },
     {
       question: 'Why does Android show "File might be harmful" when downloading?',
