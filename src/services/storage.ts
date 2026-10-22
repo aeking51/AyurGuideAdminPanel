@@ -283,16 +283,24 @@ export class StorageService {
   }
 
   // Active / Logged in User Management
+  private static cachedActiveUser: User | null = null;
+
   static getActiveUser(): User | null {
+    if (this.cachedActiveUser) return this.cachedActiveUser;
     try {
       const data = localStorage.getItem(ACTIVE_USER_KEY);
-      return data ? JSON.parse(data) : null;
+      if (data) {
+        this.cachedActiveUser = JSON.parse(data);
+        return this.cachedActiveUser;
+      }
+      return null;
     } catch {
       return null;
     }
   }
 
   static setActiveUser(user: User | null): void {
+    this.cachedActiveUser = user;
     try {
       if (user) {
         localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(user));

@@ -89,9 +89,19 @@ export const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(() => StorageService.getUsers());
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => StorageService.getAuditLogs());
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => StorageService.getSupabaseConfig());
-  const [activeUser, setActiveUser] = useState<User | null>(() => StorageService.getActiveUser());
+  const [activeUser, setActiveUser] = useState<User | null>(() => {
+    const u = StorageService.getActiveUser();
+    if (u) SupabaseService.setActiveUser(u);
+    return u;
+  });
   const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
   const [, setLoading] = useState<boolean>(false);
+
+  // Sync active user across storage and services
+  useEffect(() => {
+    StorageService.setActiveUser(activeUser);
+    SupabaseService.setActiveUser(activeUser);
+  }, [activeUser]);
 
   const [currentTab, setCurrentTab] = useState<string>('catalogue');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -141,9 +151,17 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Initial load and Realtime Postgres Changes Subscription
+  // Initial load, Realtime Postgres Changes Subscription, and Instant Audit Listener
   useEffect(() => {
     loadCentralData();
+
+    // Instant local listener for actions logged in this session
+    const unsubAudit = SupabaseService.addAuditListener((newLog) => {
+      setAuditLogs(prev => {
+        if (prev.some(l => String(l.id) === String(newLog.id))) return prev;
+        return [newLog, ...prev];
+      });
+    });
 
     // Subscribe to live PostgreSQL changes
     const unsubscribe = SupabaseService.subscribeRealtime({
@@ -172,6 +190,7 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      unsubAudit();
       unsubscribe();
     };
   }, [loadCentralData]);
@@ -363,12 +382,15 @@ export const App: React.FC = () => {
       await SupabaseService.signOut(activeUser.email);
     } else {
       StorageService.setActiveUser(null);
+      SupabaseService.setActiveUser(null);
     }
     setActiveUser(null);
   };
 
   const handleLoginSuccess = (user: User) => {
     setActiveUser(user);
+    StorageService.setActiveUser(user);
+    SupabaseService.setActiveUser(user);
     loadCentralData();
   };
 
@@ -644,6 +666,7 @@ export const App: React.FC = () => {
               logs={auditLogs} 
               onReload={handleReloadAuditLogs}
               isReloading={reloadingSection === 'audit'}
+              activeUser={activeUser}
             />
           )}
 
@@ -726,18 +749,6 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Floating Download Button on all non-download pages */}
-      {!isDownloadView && (
-        <FloatingDownloadButton
-          onNavigateToDownload={() => {
-            if (typeof window !== 'undefined') {
-              window.history.pushState({}, '', '/download');
-            }
-            setIsDownloadView(true);
-          }}
-          onOpenQrModal={() => setIsDownloadQrModalOpen(true)}
-        />
-      )}
 
       {/* Quick Download QR Modal */}
       <DownloadQRModal

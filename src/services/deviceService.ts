@@ -3,6 +3,7 @@ import { AppDevice, AppDeviceLocation, DeviceStats } from '../types';
 
 export interface DeviceQueryParams {
   search?: string;
+  status?: string; // 'all' | 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED'
   androidVersion?: string;
   appVersion?: string;
   deviceType?: string;
@@ -60,6 +61,37 @@ export function mapRowToDevice(row: any): AppDevice {
     createdAt: row.created_at || new Date().toISOString(),
   } : null;
 
+  const lastSeenStr = row.last_seen_at || row.updated_at || row.created_at || new Date().toISOString();
+  let daysSinceLastSeen = 0;
+  try {
+    const diffMs = Date.now() - new Date(lastSeenStr).getTime();
+    daysSinceLastSeen = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  } catch {}
+
+  // Heartbeat Inactivity Rule:
+  // - If explicitly marked UNINSTALLED or uninstall_detected_at is set: 'UNINSTALLED'
+  // - If explicitly SUSPENDED: 'SUSPENDED'
+  // - If daysSinceLastSeen > 30: 'UNINSTALLED' (Inactivity threshold exceeded; suspected uninstalled)
+  // - If daysSinceLastSeen > 7: 'INACTIVE' (Missed recent regular heartbeats)
+  // - Otherwise: 'ACTIVE' (Reporting within 7 days)
+  let heartbeatStatus: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED' = 'ACTIVE';
+  const rawStatus = (row.status || '').toUpperCase();
+  if (rawStatus === 'UNINSTALLED' || row.uninstall_detected_at) {
+    heartbeatStatus = 'UNINSTALLED';
+  } else if (rawStatus === 'SUSPENDED') {
+    heartbeatStatus = 'SUSPENDED';
+  } else if (daysSinceLastSeen > 30) {
+    heartbeatStatus = 'UNINSTALLED';
+  } else if (daysSinceLastSeen > 7) {
+    heartbeatStatus = 'INACTIVE';
+  } else {
+    heartbeatStatus = 'ACTIVE';
+  }
+
+  const effectiveStatus = (rawStatus === 'ACTIVE' || rawStatus === 'INACTIVE' || rawStatus === 'UNINSTALLED' || rawStatus === 'SUSPENDED')
+    ? (rawStatus as any)
+    : heartbeatStatus;
+
   return {
     id: row.id,
     installationId: row.installation_id || '',
@@ -77,10 +109,16 @@ export function mapRowToDevice(row: any): AppDevice {
     deviceReportingConsent: Boolean(row.device_reporting_consent),
     locationConsent: Boolean(row.location_consent),
     firstSeenAt: row.first_seen_at || row.created_at || new Date().toISOString(),
-    lastSeenAt: row.last_seen_at || row.updated_at || new Date().toISOString(),
+    lastSeenAt: lastSeenStr,
     lastSyncAt: row.last_sync_at || undefined,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString(),
+    status: effectiveStatus,
+    imei: row.imei || null,
+    macAddress: row.mac_address || null,
+    uninstallDetectedAt: row.uninstall_detected_at || (effectiveStatus === 'UNINSTALLED' && daysSinceLastSeen > 30 ? lastSeenStr : null),
+    daysSinceLastSeen,
+    heartbeatStatus,
     locationsCount: hasCoordinates ? (1 + historyCount) : 0,
     latestLocation,
   };
@@ -178,8 +216,25 @@ export class DeviceService {
         }
       }
 
-      // Last Seen temporal filter
       const now = new Date();
+
+      // Status filter with Heartbeat Inactivity logic
+      if (params.status && params.status !== 'all') {
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        if (params.status === 'UNINSTALLED') {
+          query = query.or(`status.eq.UNINSTALLED,uninstall_detected_at.not.is.null,last_seen_at.lt.${thirtyDaysAgo}`);
+        } else if (params.status === 'SUSPENDED') {
+          query = query.eq('status', 'SUSPENDED');
+        } else if (params.status === 'INACTIVE') {
+          query = query.or(`status.eq.INACTIVE,and(last_seen_at.lt.${sevenDaysAgo},last_seen_at.gte.${thirtyDaysAgo})`).neq('status', 'SUSPENDED').neq('status', 'UNINSTALLED');
+        } else if (params.status === 'ACTIVE') {
+          query = query.or(`status.eq.ACTIVE,and(last_seen_at.gte.${sevenDaysAgo},status.is.null)`).neq('status', 'SUSPENDED').neq('status', 'UNINSTALLED');
+        }
+      }
+
+      // Last Seen temporal filter
       if (params.lastSeenFilter && params.lastSeenFilter !== 'all') {
         if (params.lastSeenFilter === '24h') {
           const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -376,6 +431,8 @@ export class DeviceService {
       totalDevices: 0,
       active24h: 0,
       active7d: 0,
+      inactiveCount: 0,
+      uninstalledCount: 0,
       locationConsentCount: 0,
       noLocationConsentCount: 0,
       devicesWithLocationData: 0,
@@ -390,6 +447,7 @@ export class DeviceService {
       const now = new Date();
       const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const since30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // 1. Total registered devices
       const { count: totalCount, error: totalErr } = await client
@@ -416,19 +474,42 @@ export class DeviceService {
         .select('id', { count: 'exact', head: true })
         .gte('last_seen_at', since7d);
 
-      // 4. Devices with Location Consent (location_consent = true)
+      // 4. Inactive Count (last_seen_at < 7d and >= 30d, not uninstalled/suspended)
+      let inactiveCount = 0;
+      try {
+        const { count: inactC } = await client
+          .from('app_devices')
+          .select('id', { count: 'exact', head: true })
+          .lt('last_seen_at', since7d)
+          .gte('last_seen_at', since30d)
+          .neq('status', 'SUSPENDED')
+          .neq('status', 'UNINSTALLED');
+        inactiveCount = inactC || 0;
+      } catch {}
+
+      // 5. Uninstalled Count (status = UNINSTALLED or uninstall_detected_at is not null or last_seen_at < 30d)
+      let uninstalledCount = 0;
+      try {
+        const { count: uninstC } = await client
+          .from('app_devices')
+          .select('id', { count: 'exact', head: true })
+          .or(`status.eq.UNINSTALLED,uninstall_detected_at.not.is.null,last_seen_at.lt.${since30d}`);
+        uninstalledCount = uninstC || 0;
+      } catch {}
+
+      // 6. Devices with Location Consent (location_consent = true)
       const { count: locConsentCount } = await client
         .from('app_devices')
         .select('id', { count: 'exact', head: true })
         .eq('location_consent', true);
 
-      // 5. Devices without Location Consent (location_consent = false)
+      // 7. Devices without Location Consent (location_consent = false)
       const { count: noLocConsentCount } = await client
         .from('app_devices')
         .select('id', { count: 'exact', head: true })
         .eq('location_consent', false);
 
-      // 6. Devices with Available Location Data (latitude IS NOT NULL)
+      // 8. Devices with Available Location Data (latitude IS NOT NULL)
       const { count: locDataCount } = await client
         .from('app_devices')
         .select('id', { count: 'exact', head: true })
@@ -440,6 +521,8 @@ export class DeviceService {
           totalDevices,
           active24h: count24h || 0,
           active7d: count7d || 0,
+          inactiveCount,
+          uninstalledCount,
           locationConsentCount: locConsentCount || 0,
           noLocationConsentCount: noLocConsentCount || 0,
           devicesWithLocationData: locDataCount || 0,
@@ -448,6 +531,145 @@ export class DeviceService {
       };
     } catch {
       return { stats: emptyStats, tableMissing: false };
+    }
+  }
+
+  /**
+   * Update status of an individual device (e.g. mark UNINSTALLED, ACTIVE, or SUSPENDED)
+   * Records an audit log event.
+   */
+  static async updateDeviceStatus(
+    installationId: string, 
+    newStatus: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED', 
+    adminEmail: string
+  ): Promise<{ success: boolean; message: string }> {
+    const client = SupabaseService.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase client is not configured.' };
+    }
+
+    try {
+      const updatePayload: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (newStatus === 'UNINSTALLED') {
+        updatePayload.uninstall_detected_at = new Date().toISOString();
+      } else if (newStatus === 'ACTIVE') {
+        updatePayload.uninstall_detected_at = null;
+      }
+
+      const { error: updErr } = await client
+        .from('app_devices')
+        .update(updatePayload)
+        .eq('installation_id', installationId);
+
+      if (updErr) {
+        return { success: false, message: updErr.message };
+      }
+
+      // Log audit event
+      await SupabaseService.logAudit({
+        action: 'DEVICE_STATUS_CHANGED',
+        targetEntity: 'AppDevice',
+        targetId: installationId,
+        adminEmail: adminEmail || 'admin@sitaramayurveda.com',
+        details: `Administrator changed status of device "${installationId}" to ${newStatus}.`,
+      });
+
+      return { success: true, message: `Status updated to ${newStatus}.` };
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Failed to update status.' };
+    }
+  }
+
+  /**
+   * Applies the Heartbeat Inactivity Rule across all devices in app_devices:
+   * - Inactivity > 30 days: Status = 'UNINSTALLED' (uninstalled detected)
+   * - Inactivity 7-30 days: Status = 'INACTIVE' (inactive)
+   * - Inactivity <= 7 days: Status = 'ACTIVE' (active)
+   * Preserves manual 'SUSPENDED' statuses.
+   * Logs an audit record for regulatory traceability.
+   */
+  static async syncHeartbeatInactivityStatuses(adminEmail: string): Promise<{ success: boolean; updatedCount: number; message: string }> {
+    const client = SupabaseService.getClient();
+    if (!client) {
+      return { success: false, updatedCount: 0, message: 'Supabase client is not configured.' };
+    }
+
+    try {
+      // 1. Fetch non-suspended devices
+      const { data: rows, error: fetchErr } = await client
+        .from('app_devices')
+        .select('id, installation_id, last_seen_at, status, uninstall_detected_at')
+        .neq('status', 'SUSPENDED');
+
+      if (fetchErr) {
+        return { success: false, updatedCount: 0, message: fetchErr.message };
+      }
+
+      if (!rows || rows.length === 0) {
+        return { success: true, updatedCount: 0, message: 'No devices found to sync.' };
+      }
+
+      const nowMs = Date.now();
+      let updatedCount = 0;
+
+      for (const row of rows) {
+        const lastSeenStr = row.last_seen_at || row.created_at;
+        const diffMs = nowMs - (lastSeenStr ? new Date(lastSeenStr).getTime() : 0);
+        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+        let targetStatus: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' = 'ACTIVE';
+        if (diffDays > 30) {
+          targetStatus = 'UNINSTALLED';
+        } else if (diffDays > 7) {
+          targetStatus = 'INACTIVE';
+        } else {
+          targetStatus = 'ACTIVE';
+        }
+
+        const needsUpdate = row.status !== targetStatus || 
+          (targetStatus === 'UNINSTALLED' && !row.uninstall_detected_at);
+
+        if (needsUpdate) {
+          const payload: any = {
+            status: targetStatus,
+            updated_at: new Date().toISOString(),
+          };
+          if (targetStatus === 'UNINSTALLED' && !row.uninstall_detected_at) {
+            payload.uninstall_detected_at = new Date().toISOString();
+          } else if (targetStatus === 'ACTIVE' && row.uninstall_detected_at) {
+            payload.uninstall_detected_at = null;
+          }
+
+          const { error: updErr } = await client
+            .from('app_devices')
+            .update(payload)
+            .eq('id', row.id);
+
+          if (!updErr) {
+            updatedCount++;
+          }
+        }
+      }
+
+      // Log audit
+      await SupabaseService.logAudit({
+        action: 'HEARTBEAT_INACTIVITY_SYNC',
+        targetEntity: 'AppDevice',
+        adminEmail: adminEmail || 'admin@sitaramayurveda.com',
+        details: `Heartbeat Inactivity Rule evaluated on ${rows.length} devices. Updated status for ${updatedCount} devices (Rule: <=7d Active, 7-30d Inactive, >30d Uninstalled).`,
+      });
+
+      return {
+        success: true,
+        updatedCount,
+        message: `Successfully synchronized ${updatedCount} device status(es) based on heartbeat inactivity rule.`,
+      };
+    } catch (err: any) {
+      return { success: false, updatedCount: 0, message: err.message || 'Sync failed.' };
     }
   }
 

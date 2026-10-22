@@ -121,6 +121,13 @@ export interface AppDevice {
   lastSyncAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Heartbeat, status & hardware identifiers
+  status?: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED';
+  imei?: string | null;
+  macAddress?: string | null;
+  uninstallDetectedAt?: string | null;
+  daysSinceLastSeen?: number;
+  heartbeatStatus?: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED';
   // Computed / joined fields
   locationsCount?: number;
   latestLocation?: AppDeviceLocation | null;
@@ -144,7 +151,10 @@ export interface DeviceStats {
   totalDevices: number;
   active24h: number;
   active7d: number;
+  inactiveCount?: number;
+  uninstalledCount?: number;
   locationConsentCount: number;
   noLocationConsentCount: number;
   devicesWithLocationData: number;
 }
+

@@ -19,8 +19,7 @@ import {
   Activity,
   Calendar,
   Lock,
-  Layers,
-  FileCode
+  Layers
 } from 'lucide-react';
 import { User, AppDevice, DeviceStats } from '../../types';
 import { DeviceService, DeviceQueryParams } from '../../services/deviceService';
@@ -54,6 +53,7 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
 
   // Search, Filters & Sorting
   const [search, setSearch] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [androidFilter, setAndroidFilter] = useState<string>('all');
   const [appVersionFilter, setAppVersionFilter] = useState<string>('all');
   const [deviceTypeFilter, setDeviceTypeFilter] = useState<string>('all');
@@ -62,6 +62,10 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
 
   const [sortField, setSortField] = useState<'last_seen_at' | 'first_seen_at' | 'device_model' | 'manufacturer' | 'app_version'>('last_seen_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Inactivity Sync feedback
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   // Pagination
   const [page, setPage] = useState<number>(1);
@@ -112,6 +116,7 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
     try {
       const params: DeviceQueryParams = {
         search,
+        status: statusFilter,
         androidVersion: androidFilter,
         appVersion: appVersionFilter,
         deviceType: deviceTypeFilter,
@@ -148,7 +153,24 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthorizedAdmin, search, androidFilter, appVersionFilter, deviceTypeFilter, consentFilter, lastSeenFilter, sortField, sortDirection, page, selectedDevice]);
+  }, [isAuthorizedAdmin, search, statusFilter, androidFilter, appVersionFilter, deviceTypeFilter, consentFilter, lastSeenFilter, sortField, sortDirection, page, selectedDevice]);
+
+  // Heartbeat Inactivity Sync across all devices
+  const handleSyncInactivity = async () => {
+    setIsSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const res = await DeviceService.syncHeartbeatInactivityStatuses(activeUser?.email || 'admin@sitaramayurveda.com');
+      setSyncFeedback(res.message);
+      await loadDevices();
+      await loadStats();
+    } catch (err: any) {
+      setSyncFeedback(`Sync failed: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncFeedback(null), 6000);
+    }
+  };
 
   useEffect(() => {
     loadStats();
@@ -259,12 +281,13 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
         {/* Global Toolbar Actions */}
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => setIsMigrationModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0D281C] hover:bg-[#133829] border border-[#23493C] text-emerald-300 hover:text-white text-xs font-medium transition cursor-pointer"
-            title="Inspect Supabase SQL Schema"
+            onClick={handleSyncInactivity}
+            disabled={isSyncing || isLoading}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#081C13] hover:bg-[#133829] border border-[#23493C] text-emerald-300 hover:text-white text-xs font-semibold transition cursor-pointer shadow-sm disabled:opacity-50"
+            title="Evaluate Heartbeat Inactivity Rule (>30d uninstalled, 7–30d inactive, <=7d active)"
           >
-            <FileCode className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">SQL Schema</span>
+            <Activity className={`w-3.5 h-3.5 text-emerald-400 ${isSyncing ? 'animate-pulse' : ''}`} />
+            <span>{isSyncing ? 'Evaluating...' : 'Sync Inactivity Rule'}</span>
           </button>
 
           <button
@@ -282,6 +305,22 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Sync Inactivity Feedback Notification */}
+      {syncFeedback && (
+        <div className="bg-emerald-950/80 border border-emerald-600/80 rounded-xl p-3 text-xs text-emerald-200 flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{syncFeedback}</span>
+          </div>
+          <button
+            onClick={() => setSyncFeedback(null)}
+            className="text-gray-400 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Table Missing Alert Banner */}
       {tableMissing && (
@@ -312,34 +351,34 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
         </div>
 
         <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-3.5">
-          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Active 24 Hours</span>
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Active (≤ 7d)</span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-extrabold text-emerald-300 font-mono">{stats.active24h}</span>
-            <span className="text-[11px] text-gray-400">recent</span>
+            <span className="text-2xl font-extrabold text-emerald-300 font-mono">{stats.active7d}</span>
+            <span className="text-[11px] text-emerald-400/80">healthy</span>
           </div>
         </div>
 
         <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-3.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Active 7 Days</span>
+          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Inactive (7–30d)</span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-extrabold text-gray-200 font-mono">{stats.active7d}</span>
-            <span className="text-[11px] text-gray-400">this week</span>
+            <span className="text-2xl font-extrabold text-amber-300 font-mono">{stats.inactiveCount || 0}</span>
+            <span className="text-[11px] text-amber-400/80">dormant</span>
           </div>
         </div>
 
         <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-3.5">
-          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Location Consented</span>
+          <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider block">Uninstalled (&gt;30d)</span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-extrabold text-emerald-400 font-mono">{stats.locationConsentCount}</span>
-            <span className="text-[11px] text-gray-400">approved</span>
+            <span className="text-2xl font-extrabold text-rose-300 font-mono">{stats.uninstalledCount || 0}</span>
+            <span className="text-[11px] text-rose-400/80">inactivity rule</span>
           </div>
         </div>
 
         <div className="bg-[#0D281C] border border-[#23493C] rounded-xl p-3.5 col-span-2 sm:col-span-1">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">With Coordinates</span>
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Location Consented</span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-2xl font-extrabold text-white font-mono">{stats.devicesWithLocationData}</span>
-            <span className="text-[11px] text-gray-400">geo-fixes</span>
+            <span className="text-2xl font-extrabold text-emerald-400 font-mono">{stats.locationConsentCount}</span>
+            <span className="text-[11px] text-gray-400">approved</span>
           </div>
         </div>
       </div>
@@ -386,6 +425,19 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
             <Filter className="w-3 h-3 text-emerald-400" />
             <span>Filters:</span>
           </span>
+
+          {/* Heartbeat Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="bg-[#081C13] border border-[#23493C] rounded-lg px-2.5 py-1 text-emerald-300 font-semibold focus:outline-none focus:border-emerald-500 text-xs"
+          >
+            <option value="all">All Heartbeat Statuses</option>
+            <option value="ACTIVE">Active (≤ 7 days)</option>
+            <option value="INACTIVE">Inactive (7–30 days)</option>
+            <option value="UNINSTALLED">Uninstalled (&gt; 30d Inactivity)</option>
+            <option value="SUSPENDED">Suspended (Admin Locked)</option>
+          </select>
 
           {/* Android Version */}
           <select
@@ -451,10 +503,11 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
           </select>
 
           {/* Reset Filters button */}
-          {(androidFilter !== 'all' || appVersionFilter !== 'all' || deviceTypeFilter !== 'all' || consentFilter !== 'all' || lastSeenFilter !== 'all' || search) && (
+          {(statusFilter !== 'all' || androidFilter !== 'all' || appVersionFilter !== 'all' || deviceTypeFilter !== 'all' || consentFilter !== 'all' || lastSeenFilter !== 'all' || search) && (
             <button
               onClick={() => {
                 setSearch('');
+                setStatusFilter('all');
                 setAndroidFilter('all');
                 setAppVersionFilter('all');
                 setDeviceTypeFilter('all');
@@ -486,6 +539,7 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
             <thead className="bg-[#081C13] text-gray-300 border-b border-[#23493C]">
               <tr>
                 <th className="py-3 px-3.5 font-semibold whitespace-nowrap">Installation ID</th>
+                <th className="py-3 px-3.5 font-semibold whitespace-nowrap">Heartbeat Status</th>
                 <th 
                   onClick={() => handleSort('manufacturer')}
                   className="py-3 px-3.5 font-semibold whitespace-nowrap cursor-pointer hover:text-emerald-400"
@@ -534,7 +588,7 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
             <tbody className="divide-y divide-[#23493C]/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={11} className="py-14 text-center">
+                  <td colSpan={12} className="py-14 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-8 h-8 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin mb-3" />
                       <span className="text-xs font-mono text-emerald-300">Retrieving device records from app_devices...</span>
@@ -543,7 +597,7 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
                 </tr>
               ) : devices.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-14 text-center">
+                  <td colSpan={12} className="py-14 text-center">
                     <div className="max-w-md mx-auto space-y-2">
                       <Smartphone className="w-10 h-10 text-emerald-500/40 mx-auto" />
                       <h4 className="text-sm font-semibold text-gray-200">No Device Records Found</h4>
@@ -574,6 +628,30 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
                       <td className="py-3 px-3.5 font-mono text-emerald-300">
                         <span title={dev.installationId} className="select-all">
                           {dev.installationId.length > 14 ? `${dev.installationId.slice(0, 14)}...` : dev.installationId}
+                        </span>
+                      </td>
+
+                      {/* Heartbeat Status */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          dev.status === 'ACTIVE'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-600/70'
+                            : dev.status === 'INACTIVE'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-600/70'
+                            : dev.status === 'UNINSTALLED'
+                            ? 'bg-rose-950 text-rose-300 border border-rose-600/70'
+                            : 'bg-gray-800 text-gray-300 border border-gray-600'
+                        }`}>
+                          {dev.status === 'ACTIVE' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                          {dev.status === 'INACTIVE' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                          {dev.status === 'UNINSTALLED' && <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />}
+                          {dev.status === 'SUSPENDED' && <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />}
+                          <span>
+                            {dev.status === 'ACTIVE' && `Active (${dev.daysSinceLastSeen ?? 0}d)`}
+                            {dev.status === 'INACTIVE' && `Inactive (${dev.daysSinceLastSeen ?? 0}d)`}
+                            {dev.status === 'UNINSTALLED' && `Uninstalled (${dev.daysSinceLastSeen ?? 0}d)`}
+                            {dev.status === 'SUSPENDED' && 'Suspended'}
+                          </span>
                         </span>
                       </td>
 
@@ -709,6 +787,11 @@ export const DeviceRecordsView: React.FC<DeviceRecordsViewProps> = ({
         onClose={handleCloseSidePanel}
         device={selectedDevice}
         onDeleteDevice={handleDeleteDevice}
+        onStatusUpdated={async () => {
+          await loadDevices();
+          await loadStats();
+        }}
+        adminEmail={activeUser?.email || 'admin@sitaramayurveda.com'}
       />
 
       {/* SQL Migration Modal */}

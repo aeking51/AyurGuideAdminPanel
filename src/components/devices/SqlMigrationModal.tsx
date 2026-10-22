@@ -38,6 +38,12 @@ ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS first_seen_at timestamp 
 ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS last_seen_at timestamp with time zone NULL DEFAULT now();
 ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS last_sync_at timestamp with time zone NULL DEFAULT now();
 
+-- Status, Lifecycle & Hardware Identifiers
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS status character varying(30) NULL DEFAULT 'ACTIVE';
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS imei character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS mac_address character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS uninstall_detected_at timestamp with time zone NULL;
+
 -- Location Telemetry Columns
 ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS latitude double precision NULL;
 ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS longitude double precision NULL;
@@ -52,6 +58,7 @@ ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS updated_at timestamp wit
 
 -- 3. INDEXES
 CREATE INDEX IF NOT EXISTS idx_app_devices_installation_id ON public.app_devices (installation_id);
+CREATE INDEX IF NOT EXISTS idx_app_devices_status ON public.app_devices (status);
 CREATE INDEX IF NOT EXISTS idx_app_devices_last_seen_at ON public.app_devices (last_seen_at DESC);
 CREATE INDEX IF NOT EXISTS idx_app_devices_device_reporting_consent ON public.app_devices (device_reporting_consent);
 CREATE INDEX IF NOT EXISTS idx_app_devices_location_consent ON public.app_devices (location_consent);

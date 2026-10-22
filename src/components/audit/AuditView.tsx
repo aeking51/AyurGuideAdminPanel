@@ -14,25 +14,59 @@ import {
   Sparkles,
   UserX,
   X,
-  RefreshCw
+  RefreshCw,
+  PlusCircle,
+  CheckCircle2,
+  ClipboardCheck
 } from 'lucide-react';
-import { AuditLog } from '../../types';
+import { AuditLog, User } from '../../types';
+import { SupabaseService } from '../../services/supabase';
 
 interface AuditViewProps {
   logs: AuditLog[];
   onReload?: () => void;
   isReloading?: boolean;
+  activeUser?: User | null;
 }
 
 export const AuditView: React.FC<AuditViewProps> = ({ 
   logs,
   onReload,
-  isReloading = false
+  isReloading = false,
+  activeUser = null
 }) => {
   const [filterAction, setFilterAction] = useState<string>('ALL');
   const [filterEntity, setFilterEntity] = useState<string>('ALL');
   const [filterUser, setFilterUser] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
+
+  // Checkpoint Modal State for live logging
+  const [isCheckpointModalOpen, setIsCheckpointModalOpen] = useState(false);
+  const [checkpointDetails, setCheckpointDetails] = useState('');
+  const [checkpointEntity, setCheckpointEntity] = useState('ClinicalGovernance');
+  const [isLoggingCheckpoint, setIsLoggingCheckpoint] = useState(false);
+
+  const handleCreateCheckpoint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkpointDetails.trim()) return;
+    setIsLoggingCheckpoint(true);
+    try {
+      await SupabaseService.logAudit({
+        action: 'AUDIT_CHECKPOINT',
+        targetEntity: checkpointEntity,
+        targetId: activeUser?.email || 'Admin',
+        details: checkpointDetails.trim(),
+        adminEmail: activeUser?.email || undefined
+      });
+      setCheckpointDetails('');
+      setIsCheckpointModalOpen(false);
+      if (onReload) onReload();
+    } catch (err) {
+      console.error('Failed to log audit checkpoint:', err);
+    } finally {
+      setIsLoggingCheckpoint(false);
+    }
+  };
 
   // Extract unique users/actors
   const uniqueUsers = useMemo(() => {
@@ -225,6 +259,44 @@ export const AuditView: React.FC<AuditViewProps> = ({
         </div>
       </div>
 
+      {/* Active Session Identity Card */}
+      <div className="bg-[#081C13] border border-[#23493C] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-600 flex items-center justify-center text-sm font-bold text-emerald-300 shrink-0 font-mono">
+            {activeUser ? (activeUser.name || activeUser.email).slice(0, 2).toUpperCase() : 'GU'}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-400 text-xs font-medium">Platform Audit Identity:</span>
+              <span className="text-emerald-300 font-bold font-mono text-xs">
+                {activeUser?.email || 'Guest user'}
+              </span>
+              {activeUser && (
+                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold uppercase">
+                  {activeUser.roleTitle || activeUser.role}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800 font-mono">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                Live Sync Enabled
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-2xl">
+              All clinical modifications (formulations, categories, botanicals, users, device records) are immediately recorded in <code className="text-emerald-400 font-mono">public.audit_logs</code> under this active account.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setIsCheckpointModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition cursor-pointer shrink-0 shadow-sm"
+          title="Record a clinical governance audit checkpoint in Supabase"
+        >
+          <PlusCircle className="w-3.5 h-3.5" />
+          <span>Record Audit Checkpoint</span>
+        </button>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="bg-[#0D281C]/90 p-4 rounded-xl border border-[#23493C] flex flex-col lg:flex-row items-center justify-between gap-3">
         
@@ -355,16 +427,16 @@ export const AuditView: React.FC<AuditViewProps> = ({
                       {/* Actor / User Email */}
                       <td className="py-3 px-3">
                         {isGuest ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-bold bg-amber-950/80 text-amber-300 border border-amber-800">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-sans font-bold bg-amber-950/80 text-amber-300 border border-amber-800">
                             <UserX className="w-3 h-3 text-amber-400" />
                             Guest user
                           </span>
                         ) : (
                           <div className="flex items-center gap-1.5 font-sans">
-                            <div className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-700 flex items-center justify-center text-[9px] font-bold text-emerald-300 shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-emerald-950 border border-emerald-700 flex items-center justify-center text-[9px] font-bold text-emerald-300 shrink-0 font-mono">
                               {email.slice(0, 2).toUpperCase()}
                             </div>
-                            <span className="text-emerald-300 font-medium truncate max-w-[150px]" title={email}>
+                            <span className="text-emerald-300 font-semibold whitespace-nowrap text-xs font-mono" title={email}>
                               {email}
                             </span>
                           </div>
@@ -411,6 +483,102 @@ export const AuditView: React.FC<AuditViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Record Audit Checkpoint Modal */}
+      {isCheckpointModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="bg-[#081C13] border border-[#23493C] rounded-2xl w-full max-w-lg p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-[#23493C]">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-serif font-bold text-base text-gray-100">Record Audit Checkpoint</h3>
+              </div>
+              <button
+                onClick={() => setIsCheckpointModalOpen(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-[#0D281C]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCheckpoint} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-200 mb-1">
+                  Logging Identity (Current Session)
+                </label>
+                <div className="p-2.5 rounded-xl bg-[#0D281C] border border-[#23493C] text-xs font-mono text-emerald-300 flex items-center justify-between">
+                  <span>{activeUser?.email || 'Guest user'}</span>
+                  <span className="text-[10px] text-gray-400">
+                    {activeUser?.roleTitle || activeUser?.role || 'Admin'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-200 mb-1">
+                  Target Entity / Scope
+                </label>
+                <select
+                  value={checkpointEntity}
+                  onChange={(e) => setCheckpointEntity(e.target.value)}
+                  className="w-full bg-[#0D281C] border border-[#23493C] rounded-xl px-3 py-2 text-xs text-gray-100 focus:outline-none focus:border-emerald-500 font-sans"
+                >
+                  <option value="ClinicalGovernance">Clinical Governance & Compliance</option>
+                  <option value="InventoryAudit">Dispensary Inventory Monograph Audit</option>
+                  <option value="SecurityReview">Security & Access Permission Review</option>
+                  <option value="ProductVerification">Formulation Batch Quality Verification</option>
+                  <option value="System">System & Database Verification</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-200 mb-1">
+                  Audit Checkpoint Details *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={checkpointDetails}
+                  onChange={(e) => setCheckpointDetails(e.target.value)}
+                  placeholder="e.g. Verified medicine stock levels and active practitioner accounts. All batch records comply with regulatory standards."
+                  className="w-full bg-[#0D281C] border border-[#23493C] rounded-xl p-3 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500 font-sans"
+                />
+              </div>
+
+              <p className="text-[11px] text-gray-400">
+                This record will be permanently saved to Supabase <code className="text-emerald-400 font-mono">public.audit_logs</code> with your verified email, client timestamp, and IP address.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#23493C]">
+                <button
+                  type="button"
+                  onClick={() => setIsCheckpointModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#0D281C] hover:bg-[#133829] border border-[#23493C] text-xs font-semibold text-gray-300 hover:text-white transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoggingCheckpoint || !checkpointDetails.trim()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {isLoggingCheckpoint ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Writing to Supabase...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Record to Audit Trail</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

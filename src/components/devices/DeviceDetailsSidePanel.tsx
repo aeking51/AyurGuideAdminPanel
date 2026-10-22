@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Smartphone, 
@@ -18,15 +18,23 @@ import {
   Compass,
   Radio,
   Layers,
-  Info
+  Info,
+  Activity,
+  AlertOctagon,
+  PauseCircle,
+  CheckCircle2,
+  HardDrive
 } from 'lucide-react';
 import { AppDevice } from '../../types';
+import { DeviceService } from '../../services/deviceService';
 
 interface DeviceDetailsSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
   device: AppDevice | null;
   onDeleteDevice?: (installationId: string) => Promise<void> | void;
+  onStatusUpdated?: (installationId: string, newStatus: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED') => Promise<void> | void;
+  adminEmail?: string;
 }
 
 export const DeviceDetailsSidePanel: React.FC<DeviceDetailsSidePanelProps> = ({
@@ -34,12 +42,50 @@ export const DeviceDetailsSidePanel: React.FC<DeviceDetailsSidePanelProps> = ({
   onClose,
   device,
   onDeleteDevice,
+  onStatusUpdated,
+  adminEmail = 'admin@sitaramayurveda.com',
 }) => {
   const [copiedId, setCopiedId] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Status management
+  const [currentStatus, setCurrentStatus] = useState<'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED'>('ACTIVE');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (device) {
+      setCurrentStatus(device.status || device.heartbeatStatus || 'ACTIVE');
+      setStatusMessage(null);
+    }
+  }, [device]);
+
   if (!isOpen || !device) return null;
+
+  const handleUpdateStatus = async (newStatus: 'ACTIVE' | 'INACTIVE' | 'UNINSTALLED' | 'SUSPENDED') => {
+    if (isUpdatingStatus || !device) return;
+    setIsUpdatingStatus(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await DeviceService.updateDeviceStatus(device.installationId, newStatus, adminEmail);
+      if (res.success) {
+        setCurrentStatus(newStatus);
+        setStatusMessage(`Status updated to ${newStatus}`);
+        if (onStatusUpdated) {
+          await onStatusUpdated(device.installationId, newStatus);
+        }
+      } else {
+        setStatusMessage(`Failed: ${res.message}`);
+      }
+    } catch (err: any) {
+      setStatusMessage(`Error: ${err.message || 'Update failed'}`);
+    } finally {
+      setIsUpdatingStatus(false);
+      setTimeout(() => setStatusMessage(null), 3500);
+    }
+  };
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(device.installationId);
@@ -138,6 +184,127 @@ export const DeviceDetailsSidePanel: React.FC<DeviceDetailsSidePanelProps> = ({
         {/* Drawer Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           
+          {/* Status Update Toast / Feedback */}
+          {statusMessage && (
+            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-xs text-emerald-200 flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{statusMessage}</span>
+            </div>
+          )}
+
+          {/* Heartbeat & Installation Lifecycle Card */}
+          <div className="bg-[#0D281C] border border-[#23493C] rounded-2xl p-4 space-y-3.5 shadow-md">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5" />
+                <span>Heartbeat & Lifecycle Status</span>
+              </span>
+              
+              {/* Status Badge */}
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                currentStatus === 'ACTIVE'
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500 shadow-sm'
+                  : currentStatus === 'INACTIVE'
+                  ? 'bg-amber-950 text-amber-300 border border-amber-500 shadow-sm'
+                  : currentStatus === 'UNINSTALLED'
+                  ? 'bg-rose-950 text-rose-300 border border-rose-500 shadow-sm'
+                  : 'bg-gray-800 text-gray-300 border border-gray-600'
+              }`}>
+                {currentStatus === 'ACTIVE' && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
+                {currentStatus === 'INACTIVE' && <span className="w-2 h-2 rounded-full bg-amber-400" />}
+                {currentStatus === 'UNINSTALLED' && <AlertOctagon className="w-3 h-3 text-rose-400" />}
+                {currentStatus === 'SUSPENDED' && <PauseCircle className="w-3 h-3 text-gray-400" />}
+                <span>
+                  {currentStatus === 'ACTIVE' && 'Active (≤ 7d)'}
+                  {currentStatus === 'INACTIVE' && 'Inactive (7–30d)'}
+                  {currentStatus === 'UNINSTALLED' && 'Uninstalled (> 30d)'}
+                  {currentStatus === 'SUSPENDED' && 'Suspended'}
+                </span>
+              </span>
+            </div>
+
+            {/* Inactivity Telemetry Diagnostics */}
+            <div className="p-3 rounded-xl bg-[#081C13] border border-[#23493C]/80 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Last Telemetry Heartbeat:</span>
+                <span className="font-mono text-emerald-300 font-bold">
+                  {getRelativeTime(device.lastSeenAt)} ({formatTimestamp(device.lastSeenAt)})
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Days Since Last Ping:</span>
+                <span className="font-mono font-bold text-gray-200">
+                  {device.daysSinceLastSeen !== undefined ? `${device.daysSinceLastSeen} day(s)` : '0 days'}
+                </span>
+              </div>
+
+              {device.uninstallDetectedAt && (
+                <div className="flex justify-between items-center pt-1.5 border-t border-[#23493C]/50">
+                  <span className="text-rose-400 flex items-center gap-1 font-semibold">
+                    <AlertOctagon className="w-3 h-3" />
+                    <span>Uninstall Detected At:</span>
+                  </span>
+                  <span className="font-mono text-rose-300 font-bold">
+                    {formatTimestamp(device.uninstallDetectedAt)}
+                  </span>
+                </div>
+              )}
+
+              {/* Heartbeat Rule Explanation */}
+              <div className="pt-2 border-t border-[#23493C]/60 text-[11px] text-gray-400 leading-relaxed flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Heartbeat Inactivity Rule:</strong> Devices reporting within 7 days are Active; between 7 and 30 days are Inactive; silent &gt; 30 days are classified as uninstalled.
+                </span>
+              </div>
+            </div>
+
+            {/* Status Override Actions */}
+            <div className="pt-1">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+                Admin Lifecycle Override
+              </span>
+              <div className="flex items-center gap-2">
+                {currentStatus !== 'ACTIVE' && (
+                  <button
+                    onClick={() => handleUpdateStatus('ACTIVE')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    Mark Active
+                  </button>
+                )}
+                {currentStatus !== 'UNINSTALLED' && (
+                  <button
+                    onClick={() => handleUpdateStatus('UNINSTALLED')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-rose-950/70 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    Mark Uninstalled
+                  </button>
+                )}
+                {currentStatus !== 'SUSPENDED' ? (
+                  <button
+                    onClick={() => handleUpdateStatus('SUSPENDED')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-gray-800/80 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    Suspend
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleUpdateStatus('ACTIVE')}
+                    disabled={isUpdatingStatus}
+                    className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 text-xs font-semibold cursor-pointer disabled:opacity-50 transition"
+                  >
+                    Unsuspend
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Status Metric Badges */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-[#0D281C] border border-[#23493C]">
@@ -173,22 +340,6 @@ export const DeviceDetailsSidePanel: React.FC<DeviceDetailsSidePanelProps> = ({
             </div>
           </div>
 
-          {/* Activity Window Pill */}
-          <div className="p-3.5 rounded-xl bg-[#0D281C]/70 border border-[#23493C] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-emerald-400" />
-              <div>
-                <span className="text-xs font-semibold text-gray-200">Last Seen:</span>
-                <span className="text-xs text-emerald-300 font-bold ml-1.5 font-mono">
-                  {getRelativeTime(device.lastSeenAt)}
-                </span>
-              </div>
-            </div>
-            <span className="text-[11px] text-gray-400 font-mono">
-              {formatTimestamp(device.lastSeenAt)}
-            </span>
-          </div>
-
           {/* Hardware & OS Specifications */}
           <div className="bg-[#0D281C]/50 border border-[#23493C] rounded-xl p-4 space-y-2.5">
             <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2 pb-1 border-b border-[#23493C]/50">
@@ -201,6 +352,32 @@ export const DeviceDetailsSidePanel: React.FC<DeviceDetailsSidePanelProps> = ({
                 <span className="text-gray-400">Installation ID:</span>
                 <span className="font-mono text-emerald-200 select-all truncate max-w-[220px]" title={device.installationId}>
                   {device.installationId}
+                </span>
+              </div>
+
+              <div className="flex justify-between py-1 border-b border-[#23493C]/40">
+                <span className="text-gray-400">IMEI (Hardware ID):</span>
+                <span className="font-mono text-xs select-all truncate max-w-[220px]">
+                  {device.imei ? (
+                    <span className="text-emerald-300 font-bold">{device.imei}</span>
+                  ) : (
+                    <span className="text-gray-500 italic" title="Restricted on Android 10+ (READ_PRIVILEGED_PHONE_STATE permission policy)">
+                      Protected by Android 10+ OS
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between py-1 border-b border-[#23493C]/40">
+                <span className="text-gray-400">MAC Address:</span>
+                <span className="font-mono text-xs select-all truncate max-w-[220px]">
+                  {device.macAddress ? (
+                    <span className="text-emerald-300 font-bold">{device.macAddress}</span>
+                  ) : (
+                    <span className="text-gray-500 italic" title="Restricted on Android 6.0+ (OS returns randomized 02:00:00:00:00:00 for privacy)">
+                      Protected by Android OS
+                    </span>
+                  )}
                 </span>
               </div>
 

@@ -254,6 +254,31 @@ function inferTargetEntity(action: string): string {
 const INGREDIENTS_LOCAL_KEY = 'ayurindex_botanicals_cache';
 
 export class SupabaseService {
+  private static activeUser: User | null = null;
+  private static auditListeners: ((log: AuditLog) => void)[] = [];
+
+  static setActiveUser(user: User | null): void {
+    this.activeUser = user;
+    StorageService.setActiveUser(user);
+  }
+
+  static getActiveUser(): User | null {
+    if (this.activeUser) return this.activeUser;
+    const stored = StorageService.getActiveUser();
+    if (stored) {
+      this.activeUser = stored;
+      return stored;
+    }
+    return null;
+  }
+
+  static addAuditListener(listener: (log: AuditLog) => void): () => void {
+    this.auditListeners.push(listener);
+    return () => {
+      this.auditListeners = this.auditListeners.filter(l => l !== listener);
+    };
+  }
+
   static getClient(): SupabaseClient | null {
     if (supabaseInstance) return supabaseInstance;
 
@@ -378,7 +403,7 @@ export class SupabaseService {
       }
 
       const created = mapRowToProduct(data);
-      this.logAudit('MEDICINE_CREATE', created.code, `Created medicine "${created.name}" in public.products.`);
+      await this.logAudit('MEDICINE_CREATE', created.code, `Created medicine "${created.name}" in public.products.`);
       StorageService.upsertProduct(created);
       if (created.ingredients && created.ingredients.length > 0) {
         this.syncMedicineIngredientsToSupabase(created.ingredients).catch(() => {});
@@ -433,7 +458,7 @@ export class SupabaseService {
       }
 
       const updated = mapRowToProduct(data);
-      this.logAudit('MEDICINE_UPDATE', updated.code, `Updated formulation "${updated.name}" (${updated.code}).`);
+      await this.logAudit('MEDICINE_UPDATE', updated.code, `Updated formulation "${updated.name}" (${updated.code}).`);
       StorageService.upsertProduct(updated);
       if (updated.ingredients && updated.ingredients.length > 0) {
         this.syncMedicineIngredientsToSupabase(updated.ingredients).catch(() => {});
@@ -511,7 +536,7 @@ export class SupabaseService {
         return false;
       }
 
-      this.logAudit('MEDICINE_DELETE', String(id), `Deleted medicine record ID #${id} from public.products.`);
+      await this.logAudit('MEDICINE_DELETE', String(id), `Deleted medicine record ID #${id} from public.products.`);
       return true;
     } catch (err) {
       console.error('Error deleting product in Supabase:', err);
@@ -542,7 +567,7 @@ export class SupabaseService {
         return false;
       }
 
-      this.logAudit('MEDICINE_DELETE', `${ids.length} formulations`, `Bulk deleted ${ids.length} medicine records from public.products.`);
+      await this.logAudit('MEDICINE_DELETE', `${ids.length} formulations`, `Bulk deleted ${ids.length} medicine records from public.products.`);
       return true;
     } catch (err) {
       console.error('Error bulk deleting products in Supabase:', err);
@@ -600,7 +625,7 @@ export class SupabaseService {
 
       const created = mapRowToCategory(data);
       StorageService.upsertCategory(created);
-      this.logAudit('CATEGORY_CREATE', created.code || created.name, `Created category "${created.name}" in public.categories.`);
+      await this.logAudit('CATEGORY_CREATE', created.code || created.name, `Created category "${created.name}" in public.categories.`);
       return created;
     } catch {
       return StorageService.upsertCategory({ ...categoryData, code: categoryData.code || categoryData.name.slice(0, 3).toUpperCase() });
@@ -628,7 +653,7 @@ export class SupabaseService {
 
       const updated = mapRowToCategory(data);
       StorageService.upsertCategory(updated);
-      this.logAudit('CATEGORY_UPDATE', updated.code || updated.name, `Updated category "${updated.name}" (${updated.code}).`);
+      await this.logAudit('CATEGORY_UPDATE', updated.code || updated.name, `Updated category "${updated.name}" (${updated.code}).`);
       return updated;
     } catch {
       return StorageService.upsertCategory({ ...categoryData, id: Number(id), name: categoryData.name || '', code: categoryData.code || '' });
@@ -639,7 +664,7 @@ export class SupabaseService {
     const client = this.getClient();
     const cats = StorageService.getCategories().filter(c => String(c.id) !== String(id));
     StorageService.saveCategories(cats);
-    this.logAudit('CATEGORY_DELETE', String(id), `Deleted category ID #${id} from public.categories.`);
+    await this.logAudit('CATEGORY_DELETE', String(id), `Deleted category ID #${id} from public.categories.`);
 
     if (!client) return true;
 
@@ -737,7 +762,7 @@ export class SupabaseService {
       const current = await this.fetchBotanicalIngredients();
       current.unshift(created);
       localStorage.setItem(INGREDIENTS_LOCAL_KEY, JSON.stringify(current));
-      this.logAudit('INGREDIENT_CREATE', created.name, `Added botanical ingredient "${created.name}" to public.ingredients.`);
+      await this.logAudit('INGREDIENT_CREATE', created.name, `Added botanical ingredient "${created.name}" to public.ingredients.`);
       return created;
     } catch {
       return fallback;
@@ -791,7 +816,7 @@ export class SupabaseService {
       const updated = mapRowToBotanicalIngredient(data);
       if (idx !== -1) current[idx] = updated;
       localStorage.setItem(INGREDIENTS_LOCAL_KEY, JSON.stringify(current));
-      this.logAudit('INGREDIENT_UPDATE', updated.name, `Updated botanical ingredient "${updated.name}".`);
+      await this.logAudit('INGREDIENT_UPDATE', updated.name, `Updated botanical ingredient "${updated.name}".`);
       return updated;
     } catch {
       return fallback;
@@ -807,7 +832,7 @@ export class SupabaseService {
 
     try {
       await client.from('ingredients').delete().eq('id', id);
-      this.logAudit('INGREDIENT_DELETE', String(id), `Deleted botanical ingredient ID #${id} from public.ingredients.`);
+      await this.logAudit('INGREDIENT_DELETE', String(id), `Deleted botanical ingredient ID #${id} from public.ingredients.`);
       return true;
     } catch {
       return false;
@@ -1418,7 +1443,7 @@ export class SupabaseService {
               const users = StorageService.getUsers().filter(u => String(u.id) !== String(created.id) && u.email !== created.email);
               users.unshift(created);
               StorageService.saveUsers(users);
-              this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
+              await this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
               return created;
             }
           } catch {}
@@ -1434,7 +1459,7 @@ export class SupabaseService {
       const users = StorageService.getUsers().filter(u => String(u.id) !== String(created.id) && u.email !== created.email);
       users.unshift(created);
       StorageService.saveUsers(users);
-      this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
+      await this.logAudit('USER_CREATE', created.email, `Created user profile "${created.name}" (${created.email}) with role ${created.role}.`);
       return created;
     } catch {
       const users = StorageService.getUsers().filter(u => String(u.id) !== String(newUser.id) && u.email !== newUser.email);
@@ -1455,7 +1480,7 @@ export class SupabaseService {
         .update({ role, updated_at: new Date().toISOString() })
         .eq('id', userId);
 
-      this.logAudit('ROLE_CHANGE', String(userId), `Updated role to ${role} for user #${userId}.`);
+      await this.logAudit('ROLE_CHANGE', String(userId), `Updated role to ${role} for user #${userId}.`);
     } catch (e) {
       console.warn('Supabase updateUserRole failed:', e);
     }
@@ -1466,7 +1491,7 @@ export class SupabaseService {
     const u = users.find(x => String(x.id) === String(userId));
     const nextStatus = u?.status === 'Active' ? 'Suspended' : 'Active';
     StorageService.toggleUserStatus(userId);
-    this.logAudit('STATUS_CHANGE', String(userId), `Toggled account status to ${nextStatus} for user #${userId}.`);
+    await this.logAudit('STATUS_CHANGE', String(userId), `Toggled account status to ${nextStatus} for user #${userId}.`);
 
     const client = this.getClient();
     if (!client) return;
@@ -1484,7 +1509,7 @@ export class SupabaseService {
   static async deleteUser(userId: string | number): Promise<boolean> {
     const users = StorageService.getUsers().filter(u => String(u.id) !== String(userId));
     StorageService.saveUsers(users);
-    this.logAudit('USER_DELETE', String(userId), `Deleted user profile #${userId} from public.profiles.`);
+    await this.logAudit('USER_DELETE', String(userId), `Deleted user profile #${userId} from public.profiles.`);
 
     const client = this.getClient();
     if (!client) return true;
@@ -1554,7 +1579,7 @@ export class SupabaseService {
     }
 
     // 4. Record audit trail
-    this.logAudit(
+    await this.logAudit(
       'PASSWORD_CHANGE',
       userEmail || String(userId),
       `Admin updated password in database (public.profiles.password) for "${userEmail}" without asking for current password.`
@@ -1599,8 +1624,8 @@ export class SupabaseService {
           // Verify password against public.profiles.password
           if (profileRow.password) {
             if (profileRow.password === password) {
-              StorageService.setActiveUser(user);
-              this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) successfully signed in to Admin Panel.`);
+              this.setActiveUser(user);
+              await this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) successfully signed in to Admin Panel.`);
               return { success: true, user, message: 'Signed in successfully.' };
             } else {
               return { success: false, message: 'Invalid password. Please check your credentials.' };
@@ -1611,8 +1636,8 @@ export class SupabaseService {
               await client.from('profiles').update({ password, updated_at: new Date().toISOString() }).eq('id', user.id);
               user.password = password;
             } catch {}
-            StorageService.setActiveUser(user);
-            this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) authenticated and established initial password.`);
+            this.setActiveUser(user);
+            await this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) authenticated and established initial password.`);
             return { success: true, user, message: 'Signed in successfully.' };
           }
         }
@@ -1639,8 +1664,8 @@ export class SupabaseService {
             createdAt: authData.user.created_at
           };
 
-          StorageService.setActiveUser(user);
-          this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) signed in via Supabase Auth.`);
+          this.setActiveUser(user);
+          await this.logAudit('USER_LOGIN', user.email, `User "${user.name}" (${user.email}) signed in via Supabase Auth.`);
           return { success: true, user, message: 'Signed in successfully.' };
         }
       } catch (authErr) {
@@ -1661,8 +1686,8 @@ export class SupabaseService {
           StorageService.updateUserPassword(localMatch.id, password);
           localMatch.password = password;
         }
-        StorageService.setActiveUser(localMatch);
-        this.logAudit('USER_LOGIN', localMatch.email, `User "${localMatch.name}" (${localMatch.email}) signed in to Admin Panel.`);
+        this.setActiveUser(localMatch);
+        await this.logAudit('USER_LOGIN', localMatch.email, `User "${localMatch.name}" (${localMatch.email}) signed in to Admin Panel.`);
         return { success: true, user: localMatch, message: 'Signed in successfully.' };
       }
       return { success: false, message: 'Invalid password. Please check your credentials.' };
@@ -1695,8 +1720,8 @@ export class SupabaseService {
         } catch {}
       }
 
-      StorageService.setActiveUser(adminUser);
-      this.logAudit('USER_LOGIN', adminUser.email, `Administrator "${adminUser.name}" (${adminUser.email}) authenticated.`);
+      this.setActiveUser(adminUser);
+      await this.logAudit('USER_LOGIN', adminUser.email, `Administrator "${adminUser.name}" (${adminUser.email}) authenticated.`);
       return { success: true, user: adminUser, message: 'Signed in successfully.' };
     }
 
@@ -1713,10 +1738,10 @@ export class SupabaseService {
         await client.auth.signOut();
       } catch {}
     }
-    const current = StorageService.getActiveUser();
+    const current = this.getActiveUser();
     const email = userEmail || current?.email || 'Administrator';
-    this.logAudit('USER_LOGOUT', email, `User "${email}" signed out of the Admin Panel.`);
-    StorageService.setActiveUser(null);
+    await this.logAudit('USER_LOGOUT', email, `User "${email}" signed out of the Admin Panel.`);
+    this.setActiveUser(null);
   }
 
   // ==========================================
@@ -1758,7 +1783,7 @@ export class SupabaseService {
     legacyTargetId?: string,
     legacyDetails?: string,
     legacyTargetEntity?: string
-  ): Promise<void> {
+  ): Promise<AuditLog> {
     let action = '';
     let targetEntity = 'General';
     let targetId = '';
@@ -1766,22 +1791,25 @@ export class SupabaseService {
     let adminEmail = '';
     let ipAddress = '';
 
+    const currentUser = this.getActiveUser();
+    const effectiveEmail = currentUser?.email || StorageService.getEffectiveUserEmail();
+
     if (typeof actionOrParams === 'object') {
       action = actionOrParams.action;
       targetEntity = actionOrParams.targetEntity || 'General';
       targetId = actionOrParams.targetId ? String(actionOrParams.targetId) : '';
       details = actionOrParams.details || '';
-      adminEmail = actionOrParams.adminEmail || StorageService.getEffectiveUserEmail();
+      adminEmail = actionOrParams.adminEmail || effectiveEmail;
       ipAddress = actionOrParams.ipAddress || '';
     } else {
       action = actionOrParams;
       targetId = legacyTargetId ? String(legacyTargetId) : '';
       details = legacyDetails || '';
       targetEntity = legacyTargetEntity || inferTargetEntity(action);
-      adminEmail = StorageService.getEffectiveUserEmail();
+      adminEmail = effectiveEmail;
     }
 
-    // Default to 'Guest user' if empty or not logged in
+    // Default to 'Guest user' only if no identity is found
     if (!adminEmail || !adminEmail.trim()) {
       adminEmail = 'Guest user';
     }
@@ -1799,26 +1827,66 @@ export class SupabaseService {
       ipAddress
     });
 
+    const now = new Date().toISOString();
+    let newLog: AuditLog = {
+      id: `LOG-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      adminEmail,
+      action,
+      targetEntity,
+      targetId,
+      details,
+      ipAddress,
+      createdAt: now,
+      userEmail: adminEmail,
+      actionType: action as any,
+      entityId: targetId,
+      timestamp: now,
+    };
+
     const client = this.getClient();
-    if (!client) return;
+    if (client) {
+      try {
+        const row = {
+          admin_email: adminEmail,
+          action,
+          target_entity: targetEntity || null,
+          target_id: targetId || null,
+          details: details || null,
+          ip_address: ipAddress || null,
+        };
 
-    try {
-      const row = {
-        admin_email: adminEmail,
-        action,
-        target_entity: targetEntity || null,
-        target_id: targetId || null,
-        details: details || null,
-        ip_address: ipAddress || null,
-      };
-
-      const { error } = await client.from('audit_logs').insert([row]);
-      if (error) {
-        console.warn('Supabase logAudit notice:', error.message);
+        const { data, error } = await client.from('audit_logs').insert([row]).select().single();
+        if (!error && data) {
+          newLog = mapRowToAuditLog(data);
+        } else if (error) {
+          console.warn('Supabase logAudit notice:', error.message);
+          // Fallback with standard columns
+          try {
+            const baseRow = {
+              admin_email: adminEmail,
+              action,
+              target_id: targetId || null,
+              details: details || null,
+            };
+            const retryRes = await client.from('audit_logs').insert([baseRow]).select().single();
+            if (!retryRes.error && retryRes.data) {
+              newLog = mapRowToAuditLog(retryRes.data);
+            }
+          } catch {}
+        }
+      } catch (e) {
+        console.warn('Supabase logAudit notice:', e);
       }
-    } catch (e) {
-      console.warn('Supabase logAudit notice:', e);
     }
+
+    // Notify any active UI listeners
+    for (const listener of this.auditListeners) {
+      try {
+        listener(newLog);
+      } catch {}
+    }
+
+    return newLog;
   }
 
   // ==========================================
