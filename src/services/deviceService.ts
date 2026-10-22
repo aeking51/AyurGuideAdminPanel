@@ -38,6 +38,28 @@ export interface LocationFetchResult {
 }
 
 export function mapRowToDevice(row: any): AppDevice {
+  const hasCoordinates = row.latitude !== null && row.latitude !== undefined &&
+                         row.longitude !== null && row.longitude !== undefined;
+
+  let historyCount = 0;
+  if (Array.isArray(row.location_history)) {
+    historyCount = row.location_history.length;
+  }
+
+  const latestLocation: AppDeviceLocation | null = hasCoordinates ? {
+    id: row.id,
+    installationId: row.installation_id || '',
+    deviceModel: row.device_model || row.model || undefined,
+    latitude: Number(row.latitude) || 0,
+    longitude: Number(row.longitude) || 0,
+    accuracy: row.accuracy !== null && row.accuracy !== undefined ? Number(row.accuracy) : undefined,
+    locationPrecision: row.location_precision === 'precise' ? 'precise' : 'approximate',
+    locationSource: row.location_source || 'gps',
+    recordedAt: row.location_recorded_at || row.recorded_at || row.last_seen_at || row.created_at || new Date().toISOString(),
+    uploadedAt: row.location_uploaded_at || row.uploaded_at || row.last_seen_at || row.created_at || new Date().toISOString(),
+    createdAt: row.created_at || new Date().toISOString(),
+  } : null;
+
   return {
     id: row.id,
     installationId: row.installation_id || '',
@@ -59,6 +81,8 @@ export function mapRowToDevice(row: any): AppDevice {
     lastSyncAt: row.last_sync_at || undefined,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString(),
+    locationsCount: hasCoordinates ? (1 + historyCount) : 0,
+    latestLocation,
   };
 }
 
@@ -72,15 +96,15 @@ export function mapRowToLocation(row: any): AppDeviceLocation {
     accuracy: row.accuracy !== null && row.accuracy !== undefined ? Number(row.accuracy) : undefined,
     locationPrecision: row.location_precision === 'precise' ? 'precise' : 'approximate',
     locationSource: row.location_source || 'gps',
-    recordedAt: row.recorded_at || row.created_at || new Date().toISOString(),
-    uploadedAt: row.uploaded_at || row.created_at || new Date().toISOString(),
+    recordedAt: row.location_recorded_at || row.recorded_at || row.created_at || new Date().toISOString(),
+    uploadedAt: row.location_uploaded_at || row.uploaded_at || row.created_at || new Date().toISOString(),
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
 
 export class DeviceService {
   /**
-   * Quick probe to test if public.app_devices exists in the Supabase schema
+   * Quick probe to test if public.app_devices single table exists in Supabase
    */
   static async checkTablesExist(): Promise<{ devicesTable: boolean; locationsTable: boolean }> {
     const client = SupabaseService.getClient();
@@ -89,8 +113,6 @@ export class DeviceService {
     }
 
     let devicesTable = false;
-    let locationsTable = false;
-
     try {
       const { error: devErr } = await client.from('app_devices').select('id', { count: 'exact', head: true });
       if (!devErr || devErr.code !== 'PGRST205') {
@@ -100,20 +122,11 @@ export class DeviceService {
       devicesTable = false;
     }
 
-    try {
-      const { error: locErr } = await client.from('app_device_locations').select('id', { count: 'exact', head: true });
-      if (!locErr || locErr.code !== 'PGRST205') {
-        locationsTable = true;
-      }
-    } catch {
-      locationsTable = false;
-    }
-
-    return { devicesTable, locationsTable };
+    return { devicesTable, locationsTable: devicesTable };
   }
 
   /**
-   * Fetch device records with filters, search, sort, and pagination.
+   * Fetch device records with filters, search, sort, and pagination from single table app_devices.
    */
   static async fetchDevices(params: DeviceQueryParams = {}): Promise<DeviceFetchResult> {
     const client = SupabaseService.getClient();
@@ -201,52 +214,6 @@ export class DeviceService {
       }
 
       const devices = (data || []).map(mapRowToDevice);
-
-      // Fetch location summary for the retrieved devices in this page
-      if (devices.length > 0) {
-        const ids = devices.map(d => d.installationId);
-        try {
-          const { data: locs } = await client
-            .from('app_device_locations')
-            .select('installation_id, latitude, longitude, accuracy, location_precision, location_source, recorded_at, uploaded_at')
-            .in('installation_id', ids)
-            .order('recorded_at', { ascending: false });
-
-          if (locs && locs.length > 0) {
-            const locMap = new Map<string, { count: number; latest: AppDeviceLocation }>();
-            for (const row of locs) {
-              const current = locMap.get(row.installation_id);
-              if (!current) {
-                locMap.set(row.installation_id, {
-                  count: 1,
-                  latest: mapRowToLocation(row),
-                });
-              } else {
-                current.count += 1;
-              }
-            }
-
-            for (const dev of devices) {
-              const info = locMap.get(dev.installationId);
-              if (info) {
-                dev.locationsCount = info.count;
-                dev.latestLocation = info.latest;
-              } else {
-                dev.locationsCount = 0;
-                dev.latestLocation = null;
-              }
-            }
-          } else {
-            for (const dev of devices) {
-              dev.locationsCount = 0;
-              dev.latestLocation = null;
-            }
-          }
-        } catch {
-          // If locations table query fails, keep devices intact
-        }
-      }
-
       return { devices, total: count || devices.length, tableMissing: false };
     } catch (err: any) {
       return { devices: [], total: 0, tableMissing: false, errorMessage: err.message || 'Failed to fetch devices' };
@@ -254,7 +221,7 @@ export class DeviceService {
   }
 
   /**
-   * Fetch single device complete details including full latest location.
+   * Fetch single device complete details including full latest location from single table.
    */
   static async fetchDeviceById(installationId: string): Promise<{ device: AppDevice | null; locations: AppDeviceLocation[]; tableMissing: boolean }> {
     const client = SupabaseService.getClient();
@@ -277,19 +244,35 @@ export class DeviceService {
       }
 
       const device = mapRowToDevice(devData);
+      const locations: AppDeviceLocation[] = [];
 
-      // Fetch location history for this device (up to 20 recent records)
-      const { data: locData } = await client
-        .from('app_device_locations')
-        .select('*')
-        .eq('installation_id', installationId)
-        .order('recorded_at', { ascending: false })
-        .limit(20);
+      // Add primary latest location if present
+      if (device.latestLocation) {
+        locations.push(device.latestLocation);
+      }
 
-      const locations = (locData || []).map(mapRowToLocation);
+      // If location_history array is present in row, unpack it
+      if (Array.isArray(devData.location_history)) {
+        for (const item of devData.location_history) {
+          if (item && item.latitude !== undefined && item.longitude !== undefined) {
+            locations.push({
+              id: item.id || `hist_${locations.length}`,
+              installationId: devData.installation_id,
+              deviceModel: devData.device_model,
+              latitude: Number(item.latitude),
+              longitude: Number(item.longitude),
+              accuracy: item.accuracy != null ? Number(item.accuracy) : undefined,
+              locationPrecision: item.location_precision === 'precise' ? 'precise' : 'approximate',
+              locationSource: item.location_source || 'gps',
+              recordedAt: item.location_recorded_at || item.recorded_at || devData.last_seen_at || new Date().toISOString(),
+              uploadedAt: item.location_uploaded_at || item.uploaded_at || devData.last_seen_at || new Date().toISOString(),
+              createdAt: item.created_at || devData.created_at || new Date().toISOString(),
+            });
+          }
+        }
+      }
+
       device.locationsCount = locations.length;
-      device.latestLocation = locations.length > 0 ? locations[0] : null;
-
       return { device, locations, tableMissing: false };
     } catch {
       return { device: null, locations: [], tableMissing: false };
@@ -297,7 +280,7 @@ export class DeviceService {
   }
 
   /**
-   * Fetch paginated and filtered location history.
+   * Fetch paginated and filtered location history from the single table app_devices.
    */
   static async fetchLocationHistory(params: LocationQueryParams = {}): Promise<LocationFetchResult> {
     const client = SupabaseService.getClient();
@@ -311,7 +294,12 @@ export class DeviceService {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      let query = client.from('app_device_locations').select('*', { count: 'exact' });
+      // Query app_devices where coordinates are not null
+      let query = client
+        .from('app_devices')
+        .select('*', { count: 'exact' })
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
 
       if (params.installationId && params.installationId.trim()) {
         query = query.ilike('installation_id', `%${params.installationId.trim()}%`);
@@ -325,18 +313,18 @@ export class DeviceService {
       if (params.dateRange && params.dateRange !== 'all') {
         if (params.dateRange === 'today') {
           const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-          query = query.gte('recorded_at', startOfDay);
+          query = query.gte('last_seen_at', startOfDay);
         } else if (params.dateRange === '7d') {
           const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-          query = query.gte('recorded_at', since);
+          query = query.gte('last_seen_at', since);
         } else if (params.dateRange === '30d') {
           const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          query = query.gte('recorded_at', since);
+          query = query.gte('last_seen_at', since);
         }
       }
 
       const ascending = params.sortDirection === 'asc';
-      query = query.order('recorded_at', { ascending }).range(from, to);
+      query = query.order('last_seen_at', { ascending }).range(from, to);
 
       const { data, count, error } = await query;
 
@@ -347,7 +335,33 @@ export class DeviceService {
         return { locations: [], total: 0, tableMissing: false, errorMessage: error.message };
       }
 
-      const locations = (data || []).map(mapRowToLocation);
+      const locations: AppDeviceLocation[] = [];
+      for (const row of (data || [])) {
+        if (row.latitude != null && row.longitude != null) {
+          locations.push(mapRowToLocation(row));
+        }
+        // Also unpack any nested location_history entries
+        if (Array.isArray(row.location_history)) {
+          for (const item of row.location_history) {
+            if (item && item.latitude != null && item.longitude != null) {
+              locations.push({
+                id: item.id || `h_${row.id}_${locations.length}`,
+                installationId: row.installation_id,
+                deviceModel: row.device_model,
+                latitude: Number(item.latitude),
+                longitude: Number(item.longitude),
+                accuracy: item.accuracy != null ? Number(item.accuracy) : undefined,
+                locationPrecision: item.location_precision === 'precise' ? 'precise' : 'approximate',
+                locationSource: item.location_source || 'gps',
+                recordedAt: item.location_recorded_at || item.recorded_at || row.last_seen_at,
+                uploadedAt: item.location_uploaded_at || item.uploaded_at || row.last_seen_at,
+                createdAt: item.created_at || row.created_at,
+              });
+            }
+          }
+        }
+      }
+
       return { locations, total: count || locations.length, tableMissing: false };
     } catch (err: any) {
       return { locations: [], total: 0, tableMissing: false, errorMessage: err.message || 'Failed to fetch location records' };
@@ -355,7 +369,7 @@ export class DeviceService {
   }
 
   /**
-   * Fetch overview dashboard metrics calculated from actual database records.
+   * Fetch overview dashboard metrics calculated from actual single table app_devices.
    */
   static async fetchDeviceStats(): Promise<{ stats: DeviceStats; tableMissing: boolean }> {
     const emptyStats: DeviceStats = {
@@ -414,21 +428,12 @@ export class DeviceService {
         .select('id', { count: 'exact', head: true })
         .eq('location_consent', false);
 
-      // 6. Devices with Available Location Data
-      // Query distinct installation_id from app_device_locations
-      let devicesWithLocationData = 0;
-      try {
-        const { data: locDevices } = await client
-          .from('app_device_locations')
-          .select('installation_id');
-
-        if (locDevices) {
-          const uniqueIds = new Set(locDevices.map(d => d.installation_id));
-          devicesWithLocationData = uniqueIds.size;
-        }
-      } catch {
-        devicesWithLocationData = 0;
-      }
+      // 6. Devices with Available Location Data (latitude IS NOT NULL)
+      const { count: locDataCount } = await client
+        .from('app_devices')
+        .select('id', { count: 'exact', head: true })
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
 
       return {
         stats: {
@@ -437,7 +442,7 @@ export class DeviceService {
           active7d: count7d || 0,
           locationConsentCount: locConsentCount || 0,
           noLocationConsentCount: noLocConsentCount || 0,
-          devicesWithLocationData,
+          devicesWithLocationData: locDataCount || 0,
         },
         tableMissing: false,
       };
@@ -447,7 +452,7 @@ export class DeviceService {
   }
 
   /**
-   * Delete device record and its associated cascaded locations.
+   * Delete device record and its coordinates in a single atomic operation.
    * Logs an audit record for regulatory traceability.
    */
   static async deleteDevice(installationId: string, adminEmail: string): Promise<{ success: boolean; message: string }> {
@@ -457,7 +462,6 @@ export class DeviceService {
     }
 
     try {
-      // 1. Delete from app_devices (cascades to app_device_locations via foreign key)
       const { error: delErr } = await client
         .from('app_devices')
         .delete()
@@ -467,21 +471,16 @@ export class DeviceService {
         return { success: false, message: delErr.message };
       }
 
-      // 2. Also ensure any orphaned locations are deleted if FK wasn't cascaded
-      try {
-        await client.from('app_device_locations').delete().eq('installation_id', installationId);
-      } catch {}
-
-      // 3. Log audit event
+      // Log audit event
       await SupabaseService.logAudit({
         action: 'DEVICE_DELETED',
         targetEntity: 'AppDevice',
         targetId: installationId,
         adminEmail: adminEmail || 'admin@sitaramayurveda.com',
-        details: `Administrator deleted device installation "${installationId}" and cascaded all associated location records.`,
+        details: `Administrator deleted device installation "${installationId}" and all associated telemetry records.`,
       });
 
-      return { success: true, message: `Device record ${installationId} and associated location history permanently removed.` };
+      return { success: true, message: `Device record ${installationId} permanently removed.` };
     } catch (err: any) {
       return { success: false, message: err.message || 'Deletion failed.' };
     }

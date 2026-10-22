@@ -115,7 +115,7 @@ export const LocationHistoryTab: React.FC<LocationHistoryTabProps> = ({
           <div className="flex items-center gap-3">
             <Database className="w-5 h-5 text-amber-400 shrink-0" />
             <p className="text-xs text-amber-200">
-              Table <code className="font-mono bg-amber-900/60 px-1 py-0.5 rounded">public.app_device_locations</code> does not exist yet. Run the SQL migration to enable location capture.
+              Table <code className="font-mono bg-amber-900/60 px-1 py-0.5 rounded">public.app_devices</code> does not exist yet. Run the SQL migration to enable device and location capture.
             </p>
           </div>
           <button

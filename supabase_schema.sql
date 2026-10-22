@@ -280,59 +280,52 @@ TO authenticated, anon
 USING (bucket_id = 'apks');
 
 -- ====================================================================
--- 11. DEVICE & LOCATION MANAGEMENT (Android Telemetry & Consent)
+-- 11. DEVICE & LOCATION MANAGEMENT (Single-Table Telemetry & Consent)
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.app_devices (
-  id bigserial NOT NULL,
-  installation_id character varying(100) NOT NULL,
-  manufacturer character varying(100) NULL,
-  device_model character varying(100) NULL,
-  android_version character varying(50) NULL,
-  sdk_version integer NULL,
-  app_version character varying(50) NULL,
-  app_version_name character varying(50) NULL,
-  app_version_code integer NULL,
-  device_type character varying(50) NULL DEFAULT 'Phone'::character varying,
-  language character varying(50) NULL,
-  timezone character varying(100) NULL,
-  network_type character varying(50) NULL,
-  device_reporting_consent boolean NOT NULL DEFAULT false,
-  location_consent boolean NOT NULL DEFAULT false,
-  first_seen_at timestamp with time zone NULL DEFAULT now(),
-  last_seen_at timestamp with time zone NULL DEFAULT now(),
-  last_sync_at timestamp with time zone NULL DEFAULT now(),
-  created_at timestamp with time zone NULL DEFAULT now(),
-  updated_at timestamp with time zone NULL DEFAULT now(),
+  id                          bigserial NOT NULL,
+  installation_id             character varying(100) NOT NULL,
   CONSTRAINT app_devices_pkey PRIMARY KEY (id),
   CONSTRAINT app_devices_installation_id_key UNIQUE (installation_id)
 ) TABLESPACE pg_default;
+
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS manufacturer character varying(100) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS device_model character varying(100) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS android_version character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS sdk_version integer NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS app_version character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS app_version_name character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS app_version_code integer NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS device_type character varying(50) NULL DEFAULT 'Phone';
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS language character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS timezone character varying(100) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS network_type character varying(50) NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS device_reporting_consent boolean NOT NULL DEFAULT false;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_consent boolean NOT NULL DEFAULT false;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS first_seen_at timestamp with time zone NULL DEFAULT now();
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS last_seen_at timestamp with time zone NULL DEFAULT now();
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS last_sync_at timestamp with time zone NULL DEFAULT now();
+
+-- Location Telemetry Columns
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS latitude double precision NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS longitude double precision NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS accuracy double precision NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_precision character varying(50) NULL DEFAULT 'approximate';
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_source character varying(100) NULL DEFAULT 'gps';
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_recorded_at timestamp with time zone NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_uploaded_at timestamp with time zone NULL;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS location_history jsonb NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS created_at timestamp with time zone NULL DEFAULT now();
+ALTER TABLE public.app_devices ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone NULL DEFAULT now();
 
 CREATE INDEX IF NOT EXISTS idx_app_devices_installation_id ON public.app_devices (installation_id);
 CREATE INDEX IF NOT EXISTS idx_app_devices_last_seen_at ON public.app_devices (last_seen_at DESC);
 CREATE INDEX IF NOT EXISTS idx_app_devices_device_reporting_consent ON public.app_devices (device_reporting_consent);
 CREATE INDEX IF NOT EXISTS idx_app_devices_location_consent ON public.app_devices (location_consent);
 CREATE INDEX IF NOT EXISTS idx_app_devices_device_type ON public.app_devices (device_type);
-
-CREATE TABLE IF NOT EXISTS public.app_device_locations (
-  id bigserial NOT NULL,
-  installation_id character varying(100) NOT NULL,
-  latitude double precision NOT NULL,
-  longitude double precision NOT NULL,
-  accuracy double precision NULL,
-  location_precision character varying(50) NOT NULL DEFAULT 'approximate'::character varying,
-  location_source character varying(100) NULL DEFAULT 'gps'::character varying,
-  recorded_at timestamp with time zone NOT NULL DEFAULT now(),
-  uploaded_at timestamp with time zone NOT NULL DEFAULT now(),
-  created_at timestamp with time zone NULL DEFAULT now(),
-  CONSTRAINT app_device_locations_pkey PRIMARY KEY (id),
-  CONSTRAINT app_device_locations_installation_id_fkey FOREIGN KEY (installation_id)
-    REFERENCES public.app_devices (installation_id) ON UPDATE CASCADE ON DELETE CASCADE,
-  CONSTRAINT chk_location_precision CHECK (location_precision IN ('approximate', 'precise'))
-) TABLESPACE pg_default;
-
-CREATE INDEX IF NOT EXISTS idx_app_device_locations_installation_id ON public.app_device_locations (installation_id);
-CREATE INDEX IF NOT EXISTS idx_app_device_locations_recorded_at ON public.app_device_locations (recorded_at DESC);
-CREATE INDEX IF NOT EXISTS idx_app_device_locations_uploaded_at ON public.app_device_locations (uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_app_devices_android_version ON public.app_devices (android_version);
+CREATE INDEX IF NOT EXISTS idx_app_devices_app_version ON public.app_devices (app_version);
+CREATE INDEX IF NOT EXISTS idx_app_devices_coords ON public.app_devices (latitude, longitude) WHERE latitude IS NOT NULL;
 
 DROP TRIGGER IF EXISTS set_updated_at_app_devices ON public.app_devices;
 CREATE TRIGGER set_updated_at_app_devices
@@ -341,17 +334,12 @@ CREATE TRIGGER set_updated_at_app_devices
   EXECUTE FUNCTION public.handle_updated_at();
 
 ALTER TABLE public.app_devices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_device_locations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Admin Full Access App Devices" ON public.app_devices;
 DROP POLICY IF EXISTS "Device Telemetry Reporting Insert" ON public.app_devices;
 DROP POLICY IF EXISTS "Device Telemetry Reporting Update" ON public.app_devices;
-DROP POLICY IF EXISTS "Admin Full Access App Device Locations" ON public.app_device_locations;
-DROP POLICY IF EXISTS "Device Location Reporting Insert" ON public.app_device_locations;
 
 CREATE POLICY "Admin Full Access App Devices" ON public.app_devices FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Device Telemetry Reporting Insert" ON public.app_devices FOR INSERT WITH CHECK (installation_id IS NOT NULL AND length(installation_id) > 5);
 CREATE POLICY "Device Telemetry Reporting Update" ON public.app_devices FOR UPDATE USING (true) WITH CHECK (installation_id IS NOT NULL);
-CREATE POLICY "Admin Full Access App Device Locations" ON public.app_device_locations FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Device Location Reporting Insert" ON public.app_device_locations FOR INSERT WITH CHECK (installation_id IS NOT NULL);
 

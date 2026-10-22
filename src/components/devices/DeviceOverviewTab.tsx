@@ -51,10 +51,10 @@ export const DeviceOverviewTab: React.FC<DeviceOverviewTabProps> = ({
             </div>
             <div>
               <h4 className="text-sm font-bold text-amber-200">
-                Supabase Tables Pending Creation
+                Supabase Table Pending Creation
               </h4>
               <p className="text-xs text-amber-300/80 mt-1 leading-relaxed">
-                The tables <code className="font-mono bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">public.app_devices</code> and <code className="font-mono bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">public.app_device_locations</code> have not been created yet in your Supabase project. Displaying zero counts until the schema migration is applied.
+                The table <code className="font-mono bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">public.app_devices</code> has not been created yet in your Supabase project. Displaying zero counts until the schema migration is applied.
               </p>
             </div>
           </div>
@@ -226,7 +226,7 @@ export const DeviceOverviewTab: React.FC<DeviceOverviewTabProps> = ({
             <span className="text-xs text-gray-400">verified in database</span>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">
-            Has &ge;1 valid coordinate record in <code className="text-emerald-400 font-mono">app_device_locations</code> (distinguished from consent alone)
+            Has valid coordinate fields in <code className="text-emerald-400 font-mono">app_devices</code> (distinguished from consent alone)
           </p>
         </div>
 
@@ -250,7 +250,7 @@ export const DeviceOverviewTab: React.FC<DeviceOverviewTabProps> = ({
           </div>
           <div className="space-y-1.5">
             <p>
-              <strong className="text-emerald-200">Consent vs Location Availability:</strong> Consent does not equate to coordinates. A device is counted as having available location data <em>only</em> if verified coordinate records exist in <code className="font-mono text-emerald-400">app_device_locations</code>.
+              <strong className="text-emerald-200">Consent vs Location Availability:</strong> Consent does not equate to coordinates. A device is counted as having available location data <em>only</em> if verified coordinate fields exist in <code className="font-mono text-emerald-400">app_devices</code>.
             </p>
             <p className="text-gray-400">
               All coordinates originate strictly from device GPS/network sensors with user consent. IP addresses are never used to fabricate coordinates.
