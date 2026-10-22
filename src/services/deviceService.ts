@@ -602,7 +602,7 @@ export class DeviceService {
       // 1. Fetch non-suspended devices
       const { data: rows, error: fetchErr } = await client
         .from('app_devices')
-        .select('id, installation_id, last_seen_at, status, uninstall_detected_at')
+        .select('id, installation_id, last_seen_at, status, uninstall_detected_at, created_at')
         .neq('status', 'SUSPENDED');
 
       if (fetchErr) {
